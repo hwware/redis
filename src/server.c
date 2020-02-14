@@ -6926,7 +6926,6 @@ void infoCommand(client *c) {
 
     addReplyVerbatim(c,info,sdslen(info),"txt");
     sdsfree(info);
-
     return;
 }
 
