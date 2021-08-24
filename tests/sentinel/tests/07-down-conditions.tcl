@@ -24,6 +24,7 @@ proc ensure_master_up {} {
     }
 }
 
+
 proc ensure_master_down {} {
     S $::alive_sentinel sentinel debug info-period 1000
     S $::alive_sentinel sentinel debug ping-period 100
