@@ -76,6 +76,7 @@ typedef struct sentinelAddr {
 #define SRI_RECONF_DONE (1<<10)     /* Slave synchronized with new master. */
 #define SRI_FORCE_FAILOVER (1<<11)  /* Force failover with master up. */
 #define SRI_SCRIPT_KILL_SENT (1<<12) /* SCRIPT KILL already sent on -BUSY */
+#define SRI_MASTER_REBOOT  (1<<13)
 
 /* Note: times are in milliseconds. */
 #define SENTINEL_PING_PERIOD 1000
@@ -193,6 +194,8 @@ typedef struct sentinelRedisInstance {
     mstime_t s_down_since_time; /* Subjectively down since time. */
     mstime_t o_down_since_time; /* Objectively down since time. */
     mstime_t down_after_period; /* Consider it down after that period. */
+    mstime_t master_reboot_timeframe; /* Consider it down after that period. */
+    mstime_t master_reboot_since_time; /* Consider it down after that period. */
     mstime_t info_refresh;  /* Time at which we received INFO output from it. */
     dict *renamed_commands;     /* Commands renamed in this instance:
                                    Sentinel will use the alternative commands
@@ -564,6 +567,21 @@ void sentinelCheckConfigFile(void) {
     }
 }
 
+void sentinelInitialRebootTimeFrame(void) {
+    dictIterator *di;
+    dictEntry *de;
+    
+    di = dictGetIterator(sentinel.masters);
+    while((de = dictNext(di)) != NULL) {
+        sentinelRedisInstance *ri = dictGetVal(de);
+        if(ri->down_after_period > SENTINEL_PING_PERIOD)
+            ri->master_reboot_timeframe = SENTINEL_PING_PERIOD * 10;
+        else
+            ri->master_reboot_timeframe = ri->down_after_period * 10;
+    }
+    dictReleaseIterator(di);
+}
+
 /* This function gets called when the server is in Sentinel mode, started,
  * loaded the configuration, and is ready for normal operations. */
 void sentinelIsRunning(void) {
@@ -583,7 +601,7 @@ void sentinelIsRunning(void) {
 
     /* Log its ID to make debugging of issues simpler. */
     serverLog(LL_WARNING,"Sentinel ID is %s", sentinel.myid);
-
+    sentinelInitialRebootTimeFrame();
     /* We want to generate a +monitor event for every configured master
      * at startup. */
     sentinelGenerateInitialMonitorEvents();
@@ -696,19 +714,18 @@ void sentinelEvent(int level, char *type, sentinelRedisInstance *ri,
     va_list ap;
     char msg[LOG_MAX_LEN];
     robj *channel, *payload;
-
+    
     /* Handle %@ */
     if (fmt[0] == '%' && fmt[1] == '@') {
         sentinelRedisInstance *master = (ri->flags & SRI_MASTER) ?
                                          NULL : ri->master;
-
         if (master) {
             snprintf(msg, sizeof(msg), "%s %s %s %d @ %s %s %d",
                 sentinelRedisInstanceTypeStr(ri),
                 ri->name, announceSentinelAddr(ri->addr), ri->addr->port,
                 master->name, announceSentinelAddr(master->addr), master->addr->port);
         } else {
-            snprintf(msg, sizeof(msg), "%s %s %s %d",
+            snprintf(msg, sizeof(msg), "new-epoch CAS %s %s %s %d",
                 sentinelRedisInstanceTypeStr(ri),
                 ri->name, announceSentinelAddr(ri->addr), ri->addr->port);
         }
@@ -755,11 +772,11 @@ void sentinelEvent(int level, char *type, sentinelRedisInstance *ri,
 void sentinelGenerateInitialMonitorEvents(void) {
     dictIterator *di;
     dictEntry *de;
-
+    
     di = dictGetIterator(sentinel.masters);
     while((de = dictNext(di)) != NULL) {
         sentinelRedisInstance *ri = dictGetVal(de);
-        sentinelEvent(LL_WARNING,"+monitor",ri,"%@ quorum %d",ri->quorum);
+        sentinelEvent(LL_WARNING,"+monitor",ri,"%@ quorum %d",ri->quorum);       
     }
     dictReleaseIterator(di);
 }
@@ -1298,6 +1315,7 @@ sentinelRedisInstance *createSentinelRedisInstance(char *name, int flags, char *
 
     serverAssert(flags & (SRI_MASTER|SRI_SLAVE|SRI_SENTINEL));
     serverAssert((flags & SRI_MASTER) || master != NULL);
+    printf("------------- We are in the createSentinelRedisInstance()\n");
 
     /* Check address validity. */
     addr = createSentinelAddr(hostname,port);
@@ -1340,6 +1358,9 @@ sentinelRedisInstance *createSentinelRedisInstance(char *name, int flags, char *
     ri->o_down_since_time = 0;
     ri->down_after_period = master ? master->down_after_period :
                             sentinel_default_down_after;
+    if(ri->flags & SRI_SLAVE){
+        ri->master_reboot_timeframe = master ? master->master_reboot_timeframe :10000;
+    }
     ri->master_link_down_time = 0;
     ri->auth_pass = NULL;
     ri->auth_user = NULL;
@@ -2523,7 +2544,17 @@ void sentinelRefreshInstanceInfo(sentinelRedisInstance *ri, const char *info) {
                 ri->runid = sdsnewlen(l+7,40);
             } else {
                 if (strncmp(ri->runid,l+7,40) != 0) {
-                    sentinelEvent(LL_NOTICE,"+reboot",ri,"%@");
+                    sentinelEvent(LL_NOTICE,"+Lucas2 reboot",ri,"%@");
+                    if(ri->flags & SRI_MASTER)
+                    {
+                        ri->flags |= SRI_MASTER_REBOOT;
+                        ri->master_reboot_since_time = mstime();
+                    }
+                    if(server.loading)
+                        printf("Server is loading\n");
+                    else
+                        printf("Server is NOT loading\n");
+                    
                     sdsfree(ri->runid);
                     ri->runid = sdsnewlen(l+7,40);
                 }
@@ -2791,6 +2822,48 @@ void sentinelPingReplyCallback(redisAsyncContext *c, void *reply, void *privdata
         {
             link->last_avail_time = mstime();
             link->act_ping_time = 0; /* Flag the pong as received. */
+
+            if((ri->flags & SRI_MASTER_REBOOT) && (ri->flags & SRI_MASTER)){
+                printf("-----------  We are in the MASTER reboot process ------------------ \n. ");
+            }
+            if((ri->flags & SRI_MASTER_REBOOT) && (ri->flags & SRI_SLAVE)){
+                printf("******************  We are in the SLAVE reboot process \n. ");
+            }
+            
+            if(ri->flags & SRI_MASTER){
+               printf("--------This is From Master, master_reboot_timeframe is %lld ", ri->master_reboot_timeframe);
+            
+                if (strncmp(r->str,"PONG",4) == 0 )
+                {
+                    printf("    This is a MASTER PONG reply ---\n");
+                    if(ri->flags & SRI_MASTER_REBOOT){
+                        ri->flags &= ~SRI_MASTER_REBOOT;
+                }
+
+                }
+                if (strncmp(r->str,"LOADING",7) == 0 )
+                {
+                    printf("This is a MASTER Loading reply ---\n");
+                    if(mstime()-ri->master_reboot_since_time > ri->master_reboot_timeframe)
+                        printf("***************** Master should be set SDOWN  ****************\n");
+                    printf("This is master already loading ---%lld\n", mstime()-ri->master_reboot_since_time);
+                }
+            }
+            else if(ri->flags & SRI_SLAVE){
+                 printf("******************** This is From SLAVE, master_reboot_timeframe is %lld ", ri->master_reboot_timeframe);
+            
+                if (strncmp(r->str,"PONG",4) == 0 )
+                {
+                    printf("******************* This is a SLAVE PONG reply ---\n");
+
+                }
+                if (strncmp(r->str,"LOADING",7) == 0 )
+                {
+                    printf("******************* This is a SLAVE Loading reply ---\n");
+                }
+            }
+            
+           
         } else {
             /* Send a SCRIPT KILL command if the instance appears to be
              * down because of a busy script. */
