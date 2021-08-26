@@ -2550,11 +2550,7 @@ void sentinelRefreshInstanceInfo(sentinelRedisInstance *ri, const char *info) {
                         ri->flags |= SRI_MASTER_REBOOT;
                         ri->master_reboot_since_time = mstime();
                     }
-                    if(server.loading)
-                        printf("Server is loading\n");
-                    else
-                        printf("Server is NOT loading\n");
-                    
+                
                     sdsfree(ri->runid);
                     ri->runid = sdsnewlen(l+7,40);
                 }
