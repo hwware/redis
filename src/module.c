@@ -1007,6 +1007,16 @@ int RM_SignalModifiedKey(RedisModuleCtx *ctx, RedisModuleString *keyname) {
     return REDISMODULE_OK;
 }
 
+/*Looks up a key and returns 1 if key exists and returns 0 otherwise*/
+int RM_KeyExist(RedisModuleCtx *ctx, RedisModuleString *keyname) {
+    if (lookupKey(ctx->client->db, keyname, LOOKUP_NOTOUCH)){
+        return 1;
+    }
+    else{
+        return 0;
+    }
+}
+
 /* --------------------------------------------------------------------------
  * ## Automatic memory management for modules
  * -------------------------------------------------------------------------- */
