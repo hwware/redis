@@ -18,6 +18,9 @@ jobs:
         ./runtest --verbose --tags -slow
     - name: module api test
       run: ./runtest-moduleapi --verbose
+      
+    - name: sentinel test
+      run: ./runtest-sentinel
 
   build-debian-old:
     runs-on: ubuntu-latest
