@@ -23,7 +23,7 @@ on:
         default: ''
       use_repo:
         description: 'repo owner and name'
-        default: 'redis/redis'
+        default: 'hwware/redis'
       use_git_ref:
         description: 'git branch or sha to use'
         default: 'unstable'
@@ -33,9 +33,7 @@ jobs:
 
   test-ubuntu-jemalloc:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.repository == 'redis/redis')
+    if: github.repository == 'hwware/redis'
     timeout-minutes: 14400
     steps:
     - name: prep
@@ -70,9 +68,7 @@ jobs:
 
   test-ubuntu-libc-malloc:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.repository == 'redis/redis')
+    if: github.repository == 'hwware/redis'
     timeout-minutes: 14400
     steps:
     - name: prep
@@ -103,9 +99,7 @@ jobs:
 
   test-ubuntu-no-malloc-usable-size:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.repository == 'redis/redis')
+    if: github.repository == 'hwware/redis'
     timeout-minutes: 14400
     steps:
     - name: prep
@@ -136,9 +130,7 @@ jobs:
 
   test-ubuntu-32bit:
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.repository == 'redis/redis')) && !contains(github.event.inputs.skipjobs, '32bit')
+    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, '32bit')
     timeout-minutes: 14400
     steps:
     - name: prep
@@ -176,9 +168,7 @@ jobs:
 
   test-ubuntu-tls:
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.repository == 'redis/redis')) && !contains(github.event.inputs.skipjobs, 'tls')
+    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'tls')
     timeout-minutes: 14400
     steps:
     - name: prep
@@ -256,6 +246,7 @@ jobs:
 
   test-ubuntu-io-threads:
     runs-on: ubuntu-latest
+    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'iothreads')
     timeout-minutes: 14400
     steps:
     - name: prep
@@ -278,9 +269,7 @@ jobs:
 
   test-valgrind:
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.repository == 'redis/redis')) && !contains(github.event.inputs.skipjobs, 'valgrind')
+    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'valgrind')
     timeout-minutes: 14400
     steps:
     - name: prep
@@ -310,9 +299,7 @@ jobs:
         if grep -q 0x err.txt; then cat err.txt; exit 1; fi
   test-valgrind-no-malloc-usable-size:
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.repository == 'redis/redis')) && !contains(github.event.inputs.skipjobs, 'valgrind')
+    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'valgrind')
     timeout-minutes: 14400
     steps:
     - name: prep
@@ -423,9 +410,7 @@ jobs:
 
   test-centos7-jemalloc:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.repository == 'redis/redis')
+    if: github.repository == 'hwware/redis'
     container: centos:7
     timeout-minutes: 14400
     steps:
@@ -459,9 +444,7 @@ jobs:
 
   test-centos7-tls:
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.repository == 'redis/redis')) && !contains(github.event.inputs.skipjobs, 'tls')
+    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'tls')
     container: centos:7
     timeout-minutes: 14400
     steps:
@@ -544,9 +527,7 @@ jobs:
         ./runtest-cluster ${{github.event.inputs.cluster_test_args}}
   test-macos-latest:
     runs-on: macos-latest
-    if: |
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.repository == 'redis/redis')) && !contains(github.event.inputs.skipjobs, 'macos')
+    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'macos')
     timeout-minutes: 14400
     steps:
     - name: prep
@@ -648,9 +629,7 @@ jobs:
           if echo "${{github.event.inputs.skiptests}}" | grep -vq cluster ; then ./runtest-cluster ${{github.event.inputs.cluster_test_args}} || exit 1 ; fi ;
   test-alpine-jemalloc:
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.repository == 'redis/redis')) && !contains(github.event.inputs.skipjobs, 'alpine')
+    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'alpine')
     container: alpine:latest
     steps:
     - name: prep
@@ -683,9 +662,7 @@ jobs:
 
   test-alpine-libc-malloc:
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.repository == 'redis/redis')) && !contains(github.event.inputs.skipjobs, 'alpine')
+    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'alpine')
     container: alpine:latest
     steps:
     - name: prep
