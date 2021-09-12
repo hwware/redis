@@ -20,7 +20,7 @@ test "Start/Stop sentinel on same port with a different runID should not change 
         set pid [exec_instance "sentinel" $dirname $orgfilename]
         lappend ::pids $pid
 
-        after 1000
+        after 5000
 
         # Get new count of total sentinel
         set b [S 0 SENTINEL master mymaster]
