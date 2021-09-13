@@ -3,7 +3,7 @@ source "../tests/includes/start-init-tests.tcl"
 source "../tests/includes/init-tests.tcl"
 
 foreach_sentinel_id id {
-    S $id sentinel debug default-down-after 2000
+    S $id sentinel debug default-down-after 900
 }
 
 if {$::simulate_error} {
@@ -18,8 +18,8 @@ test "Basic failover works if the master is down" {
     assert {[lindex $addr 1] == $old_port}
     kill_instance redis $master_id
     foreach_sentinel_id id {
-        S $id sentinel debug ping-period 1000
-        S $id sentinel debug ask-period 1000
+        S $id sentinel debug ping-period 900
+        S $id sentinel debug ask-period 900
         wait_for_condition 1000 50 {
             [lindex [S $id SENTINEL GET-MASTER-ADDR-BY-NAME mymaster] 1] != $old_port
         } else {
