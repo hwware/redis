@@ -61,6 +61,7 @@ test "SDOWN is triggered by misconfigured instance replying with errors" {
     R 0 config set dbfilename tmp
     R 0 config set save "1000000 1000000"
     R 0 bgsave
+    after 5000
     ensure_master_down
     R 0 config set save $orig_save
     R 0 config set dir $orig_dir
