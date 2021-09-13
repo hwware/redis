@@ -50,7 +50,9 @@ proc 02_crash_and_failover {} {
 02_crash_and_failover
 
 foreach_sentinel_id id {
-    
+    S $id sentinel debug info-period 10000
+    S $id sentinel debug default-down-after 30000
+    S $id sentinel debug publish-period 2000
 }
 
 02_test_slaves_replication
