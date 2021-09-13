@@ -4,11 +4,11 @@ source "../tests/includes/init-tests.tcl"
 source "../../../tests/support/cli.tcl"
 
 foreach_sentinel_id id {
-    S $id sentinel debug info-period 10000
-    S $id sentinel debug ask-period 1000
-    S $id sentinel debug default-down-after 30000
-    S $id sentinel debug publish-period 2000
-    S $id sentinel debug ping-period 10000
+    S $id sentinel debug info-period 1000
+    S $id sentinel debug ask-period 100
+    S $id sentinel debug default-down-after 3000
+    S $id sentinel debug publish-period 200
+    S $id sentinel debug ping-period 100
 }
 
 set ::alive_sentinel [expr {$::instances_count/2+2}]
@@ -68,6 +68,7 @@ test "SDOWN is triggered by misconfigured instance replying with errors" {
     R 0 config set dir /
     R 0 config set dbfilename tmp
     R 0 config set save "1000000 1000000"
+    after 5000
     R 0 bgsave
     after 5000
     ensure_master_down
