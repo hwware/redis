@@ -69,8 +69,6 @@ jobs:
       run: make REDIS_CFLAGS='-Werror -DREDIS_TEST'
     - name: testprep
       run: sudo apt-get install tcl8.6 tclx
-    - name: test
-      run: ./runtest --accurate --verbose --dump-logs
     - name: module api test
       run: ./runtest-moduleapi --verbose
     - name: sentinel tests
@@ -109,8 +107,6 @@ jobs:
       run: make MALLOC=libc CFLAGS=-DNO_MALLOC_USABLE_SIZE
     - name: testprep
       run: sudo apt-get install tcl8.6 tclx
-    - name: test
-      run: ./runtest --accurate --verbose --dump-logs
     - name: module api test
       run: ./runtest-moduleapi --verbose
     - name: sentinel tests
