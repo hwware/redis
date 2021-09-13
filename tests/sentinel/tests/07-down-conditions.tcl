@@ -3,6 +3,13 @@
 source "../tests/includes/init-tests.tcl"
 source "../../../tests/support/cli.tcl"
 
+foreach_sentinel_id id {
+    S $id sentinel debug info-period 1000
+    S $id sentinel debug ask-period 1000
+    S $id sentinel debug default-down-after 3000
+    S $id sentinel debug publish-period 1000
+}
+
 set ::alive_sentinel [expr {$::instances_count/2+2}]
 proc ensure_master_up {} {
     wait_for_condition 1000 50 {
