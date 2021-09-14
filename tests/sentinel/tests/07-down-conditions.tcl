@@ -5,10 +5,10 @@ source "../../../tests/support/cli.tcl"
 
 set ::alive_sentinel [expr {$::instances_count/2+2}]
 proc ensure_master_up {} {
-    S $::alive_sentinel sentinel debug info-period 900
-    S $::alive_sentinel sentinel debug ping-period 900
-    S $::alive_sentinel sentinel debug ask-period 900
-    S $::alive_sentinel sentinel debug publish-period 900
+    S $::alive_sentinel sentinel debug info-period 3000
+    S $::alive_sentinel sentinel debug ping-period 1000
+    S $::alive_sentinel sentinel debug ask-period 1000
+    S $::alive_sentinel sentinel debug publish-period 1000
     wait_for_condition 1000 50 {
         [dict get [S $::alive_sentinel sentinel master mymaster] flags] eq "master"
     } else {
@@ -18,10 +18,10 @@ proc ensure_master_up {} {
 
 
 proc ensure_master_down {} {
-    S $::alive_sentinel sentinel debug info-period 900
-    S $::alive_sentinel sentinel debug ping-period 900
-    S $::alive_sentinel sentinel debug ask-period 900
-    S $::alive_sentinel sentinel debug publish-period 900
+    S $::alive_sentinel sentinel debug info-period 3000
+    S $::alive_sentinel sentinel debug ping-period 1000
+    S $::alive_sentinel sentinel debug ask-period 1000
+    S $::alive_sentinel sentinel debug publish-period 1000
     wait_for_condition 1000 50 {
         [string match *down* \
             [dict get [S $::alive_sentinel sentinel master mymaster] flags]]
@@ -39,7 +39,7 @@ test "Crash the majority of Sentinels to prevent failovers for this unit" {
 test "SDOWN is triggered by non-responding but not crashed instance" {
     lassign [S $::alive_sentinel SENTINEL GET-MASTER-ADDR-BY-NAME mymaster] host port
     ensure_master_up
-    exec ../../../src/redis-cli -h $host -p $port {*}[rediscli_tls_config "../../../tests"] debug sleep 4 > /dev/null &
+    exec ../../../src/redis-cli -h $host -p $port {*}[rediscli_tls_config "../../../tests"] debug sleep 5 > /dev/null &
     ensure_master_down
     ensure_master_up
 }
