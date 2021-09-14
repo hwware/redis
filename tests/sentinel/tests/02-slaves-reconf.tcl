@@ -7,14 +7,6 @@
 
 source "../tests/includes/init-tests.tcl"
 
-foreach_sentinel_id id {
-    S $id sentinel debug info-period 1000
-    S $id sentinel debug ask-period 100
-    S $id sentinel debug default-down-after 3000
-    S $id sentinel debug publish-period 200
-    S $id sentinel debug ping-period 100
-}
-
 proc 02_test_slaves_replication {} {
     uplevel 1 {
         test "Check that slaves replicate from current master" {
@@ -56,12 +48,6 @@ proc 02_crash_and_failover {} {
 
 02_test_slaves_replication
 02_crash_and_failover
-
-foreach_sentinel_id id {
-    S $id sentinel debug info-period 100
-    S $id sentinel debug default-down-after 1000
-    S $id sentinel debug publish-period 100
-}
 
 02_test_slaves_replication
 
