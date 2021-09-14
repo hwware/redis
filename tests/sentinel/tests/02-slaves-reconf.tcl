@@ -48,7 +48,6 @@ proc 02_crash_and_failover {} {
 
 02_test_slaves_replication
 02_crash_and_failover
-
 02_test_slaves_replication
 
 test "Kill a slave instance" {
