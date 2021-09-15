@@ -6,7 +6,7 @@ on:
       # any PR to a release branch.
       - '[0-9].[0-9]'
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 4,16 * * *'
   workflow_dispatch:
     inputs:
       skipjobs:
@@ -231,64 +231,6 @@ jobs:
     - name: cluster tests
       if: true && !contains(github.event.inputs.skiptests, 'cluster')
       run: ./runtest-cluster --config io-threads 4 --config io-threads-do-reads yes ${{github.event.inputs.cluster_test_args}}
-
-  test-valgrind:
-    runs-on: ubuntu-latest
-    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'valgrind')
-    timeout-minutes: 14400
-    steps:
-    - name: prep
-      if: github.event_name == 'workflow_dispatch'
-      run: |
-        echo "GITHUB_REPOSITORY=${{github.event.inputs.use_repo}}" >> $GITHUB_ENV
-        echo "GITHUB_HEAD_REF=${{github.event.inputs.use_git_ref}}" >> $GITHUB_ENV
-    - uses: actions/checkout@v2
-      with:
-        repository: ${{ env.GITHUB_REPOSITORY }}
-        ref: ${{ env.GITHUB_HEAD_REF }}
-    - name: make
-      run: make valgrind REDIS_CFLAGS='-Werror -DREDIS_TEST'
-    - name: testprep
-      run: |
-        sudo apt-get update
-        sudo apt-get install tcl8.6 tclx valgrind -y
-    - name: test
-      if: true && !contains(github.event.inputs.skiptests, 'redis')
-      run: ./runtest --valgrind --verbose --clients 1 --tags -large-memory --dump-logs ${{github.event.inputs.test_args}}
-    - name: module api test
-      if: true && !contains(github.event.inputs.skiptests, 'modules')
-      run: ./runtest-moduleapi --valgrind --no-latency --verbose --clients 1 ${{github.event.inputs.test_args}}
-    - name: unittest
-      run: |
-        valgrind --track-origins=yes --suppressions=./src/valgrind.sup --show-reachable=no --show-possibly-lost=no --leak-check=full --log-file=err.txt ./src/redis-server test all
-        if grep -q 0x err.txt; then cat err.txt; exit 1; fi
-
-  test-valgrind-no-malloc-usable-size:
-    runs-on: ubuntu-latest
-    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'valgrind')
-    timeout-minutes: 14400
-    steps:
-    - name: prep
-      if: github.event_name == 'workflow_dispatch'
-      run: |
-        echo "GITHUB_REPOSITORY=${{github.event.inputs.use_repo}}" >> $GITHUB_ENV
-        echo "GITHUB_HEAD_REF=${{github.event.inputs.use_git_ref}}" >> $GITHUB_ENV
-    - uses: actions/checkout@v2
-      with:
-        repository: ${{ env.GITHUB_REPOSITORY }}
-        ref: ${{ env.GITHUB_HEAD_REF }}
-    - name: make
-      run: make valgrind CFLAGS="-DNO_MALLOC_USABLE_SIZE"
-    - name: testprep
-      run: |
-        sudo apt-get update
-        sudo apt-get install tcl8.6 tclx valgrind -y
-    - name: test
-      if: true && !contains(github.event.inputs.skiptests, 'redis')
-      run: ./runtest --valgrind --verbose --clients 1 --tags -large-memory --dump-logs ${{github.event.inputs.test_args}}
-    - name: module api test
-      if: true && !contains(github.event.inputs.skiptests, 'modules')
-      run: ./runtest-moduleapi --valgrind --no-latency --verbose --clients 1 ${{github.event.inputs.test_args}}
 
   test-centos7-jemalloc:
     runs-on: ubuntu-latest
