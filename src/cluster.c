@@ -224,7 +224,7 @@ int clusterLoadConfig(char *filename) {
             return errno;
         }
 
-        n->ip = sdsnew(ip);
+        memcpy(n->ip,ip,sizeof(n->ip));
         n->hostname = sdsnew(hostname);
 
         char *port = p+1;
