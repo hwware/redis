@@ -214,7 +214,19 @@ int clusterLoadConfig(char *filename) {
             goto fmterr;
         }
         *p = '\0';
-        memcpy(n->ip,argv[1],strlen(argv[1])+1);
+
+        char* hostname = argv[1];
+        char ip[NET_IP_STR_LEN];
+
+        if (anetResolve(NULL,hostname,ip,sizeof(ip),
+            server.cluster->resolve_hostnames ? ANET_NONE : ANET_IP_ONLY) == ANET_ERR) {
+            errno = ENOENT;
+            return NULL;
+        }
+
+        n->ip = sdsnew(ip)
+        n->hostname = sdsnew(hostname)
+
         char *port = p+1;
         char *busp = strchr(port,'@');
         if (busp) {
