@@ -221,11 +221,11 @@ int clusterLoadConfig(char *filename) {
         if (anetResolve(NULL,hostname,ip,sizeof(ip),
             server.cluster->resolve_hostnames ? ANET_NONE : ANET_IP_ONLY) == ANET_ERR) {
             errno = ENOENT;
-            return NULL;
+            return errno;
         }
 
-        n->ip = sdsnew(ip)
-        n->hostname = sdsnew(hostname)
+        n->ip = sdsnew(ip);
+        n->hostname = sdsnew(hostname);
 
         char *port = p+1;
         char *busp = strchr(port,'@');
