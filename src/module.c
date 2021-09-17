@@ -6366,7 +6366,7 @@ int RM_GetClusterNodeInfo(RedisModuleCtx *ctx, const char *id, char *ip, char *m
         return REDISMODULE_ERR;
     }
 
-    if (ip) strncpy(ip,node->ip,NET_IP_STR_LEN);
+    if (ip) strncpy(ip,node->ca->ip,NET_IP_STR_LEN);
 
     if (master_id) {
         /* If the information is not available, the function will set the
@@ -6377,7 +6377,7 @@ int RM_GetClusterNodeInfo(RedisModuleCtx *ctx, const char *id, char *ip, char *m
         else
             memset(master_id,0,REDISMODULE_NODE_ID_LEN);
     }
-    if (port) *port = node->port;
+    if (port) *port = node->ca->port;
 
     /* As usually we have to remap flags for modules, in order to ensure
      * we can provide binary compatibility. */
