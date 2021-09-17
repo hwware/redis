@@ -89,6 +89,8 @@ unsigned int delKeysInSlot(unsigned int hashslot);
 
 #define RCVBUF_INIT_LEN 1024
 #define RCVBUF_MAX_PREALLOC (1<<20) /* 1MB */
+#define CLUSTER_DEFAULT_RESOLVE_HOSTNAMES 0
+#define CLUSTER_DEFAULT_ANNOUNCE_HOSTNAMES 0
 
 /* Cluster nodes hash table, mapping nodes addresses 1.2.3.4:6379 to
  * clusterNode structures. */
@@ -212,7 +214,7 @@ int clusterLoadConfig(char *filename) {
             goto fmterr;
         }
         *p = '\0';
-        memcpy(n->ip,argv[1],strlen(argv[1])+1);
+        memcpy(n->ca->ip,argv[1],strlen(argv[1])+1);
         char *port = p+1;
         char *busp = strchr(port,'@');
         if (busp) {
@@ -529,6 +531,8 @@ void clusterInit(void) {
     server.cluster->failover_auth_epoch = 0;
     server.cluster->cant_failover_reason = CLUSTER_CANT_FAILOVER_NONE;
     server.cluster->lastVoteEpoch = 0;
+    server.cluster->resolve_hostnames = CLUSTER_DEFAULT_RESOLVE_HOSTNAMES;
+    server.cluster->announce_hostnames = CLUSTER_DEFAULT_ANNOUNCE_HOSTNAMES;
     for (int i = 0; i < CLUSTERMSG_TYPE_COUNT; i++) {
         server.cluster->stats_bus_messages_sent[i] = 0;
         server.cluster->stats_bus_messages_received[i] = 0;
@@ -834,8 +838,11 @@ clusterNode *createClusterNode(char *nodename, int flags) {
     node->data_received = 0;
     node->fail_time = 0;
     node->link = NULL;
-    memset(node->ip,0,sizeof(node->ip));
-    node->port = 0;
+    // memset(node->ca->ip,0,sizeof(node->ca->ip));
+    // node->ca->port = 0;
+    node->ca = zmalloc(sizeof(*node->ca));
+    node->ca->hostname = sdsnew(hostname);
+    node->ca->ip = sdsnew(ip);
     node->cport = 0;
     node->pport = 0;
     node->fail_reports = listCreate();
@@ -1383,17 +1390,29 @@ void clearNodeFailureIfNeeded(clusterNode *node) {
 /* Return true if we already have a node in HANDSHAKE state matching the
  * specified ip address and port number. This function is used in order to
  * avoid adding a new handshake node for the same address multiple times. */
-int clusterHandshakeInProgress(char *ip, int port, int cport) {
+int clusterHandshakeInProgress(char *hostname, int port, int cport) {
+    char ip[NET_IP_STR_LEN];
     dictIterator *di;
     dictEntry *de;
+    clusterAddr * ca;
+
+    if (port < 0 || port > 65535) {
+        errno = EINVAL;
+        return NULL;
+    }
+    if (anetResolve(NULL,hostname,ip,sizeof(ip),
+                    server.cluster->resolve_hostnames ? ANET_NONE : ANET_IP_ONLY) == ANET_ERR) {
+        errno = ENOENT;
+        return NULL;
+    }
 
     di = dictGetSafeIterator(server.cluster->nodes);
     while((de = dictNext(di)) != NULL) {
         clusterNode *node = dictGetVal(de);
 
         if (!nodeInHandshake(node)) continue;
-        if (!strcasecmp(node->ip,ip) &&
-            node->port == port &&
+        if (!strcasecmp(node->ca->ip,ip) &&
+            node->ca->port == port &&
             node->cport == cport) break;
     }
     dictReleaseIterator(di);
@@ -1453,7 +1472,7 @@ int clusterStartHandshake(char *ip, int port, int cport) {
      * createClusterNode()). Everything will be fixed during the
      * handshake. */
     n = createClusterNode(NULL,CLUSTER_NODE_HANDSHAKE|CLUSTER_NODE_MEET);
-    memcpy(n->ip,norm_ip,sizeof(n->ip));
+    memcpy(n->ca->ip,norm_ip,sizeof(n->ca->ip));
     n->port = port;
     n->cport = cport;
     clusterAddNode(n);
@@ -1537,13 +1556,13 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
             if (node->flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_PFAIL) &&
                 !(flags & CLUSTER_NODE_NOADDR) &&
                 !(flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_PFAIL)) &&
-                (strcasecmp(node->ip,g->ip) ||
-                 node->port != ntohs(g->port) ||
+                (strcasecmp(node->ca->ip,g->ip) ||
+                 node->ca->port != ntohs(g->port) ||
                  node->cport != ntohs(g->cport)))
             {
                 if (node->link) freeClusterLink(node->link);
-                memcpy(node->ip,g->ip,NET_IP_STR_LEN);
-                node->port = ntohs(g->port);
+                memcpy(node->ca->ip,g->ip,NET_IP_STR_LEN);
+                node->ca->port = ntohs(g->port);
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
                 node->flags &= ~CLUSTER_NODE_NOADDR;
@@ -1564,8 +1583,8 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
             {
                 clusterNode *node;
                 node = createClusterNode(g->nodename, flags);
-                memcpy(node->ip,g->ip,NET_IP_STR_LEN);
-                node->port = ntohs(g->port);
+                memcpy(node->ca->ip,g->ip,NET_IP_STR_LEN);
+                node->ca->port = ntohs(g->port);
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
                 clusterAddNode(node);
@@ -1618,23 +1637,23 @@ int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
     if (link == node->link) return 0;
 
     nodeIp2String(ip,link,hdr->myip);
-    if (node->port == port && node->cport == cport && node->pport == pport &&
-        strcmp(ip,node->ip) == 0) return 0;
+    if (node->ca->port == port && node->cport == cport && node->pport == pport &&
+        strcmp(ip,node->ca->ip) == 0) return 0;
 
     /* IP / port is different, update it. */
-    memcpy(node->ip,ip,sizeof(ip));
-    node->port = port;
+    memcpy(node->ca->ip,ip,sizeof(ip));
+    node->ca->port = port;
     node->pport = pport;
     node->cport = cport;
     if (node->link) freeClusterLink(node->link);
     node->flags &= ~CLUSTER_NODE_NOADDR;
     serverLog(LL_WARNING,"Address updated for node %.40s, now %s:%d",
-        node->name, node->ip, node->port);
+        node->name, node->ca->ip, node->ca->port);
 
     /* Check if this is our master and we have to change the
      * replication target as well. */
     if (nodeIsSlave(myself) && myself->slaveof == node)
-        replicationSetMaster(node->ip, node->port);
+        replicationSetMaster(node->ca->ip, node->ca->port);
     return 1;
 }
 
@@ -1907,17 +1926,17 @@ int clusterProcessPacket(clusterLink *link) {
          * However if we don't have an address at all, we update the address
          * even with a normal PING packet. If it's wrong it will be fixed
          * by MEET later. */
-        if ((type == CLUSTERMSG_TYPE_MEET || myself->ip[0] == '\0') &&
+        if ((type == CLUSTERMSG_TYPE_MEET || myself->ca->ip[0] == '\0') &&
             server.cluster_announce_ip == NULL)
         {
             char ip[NET_IP_STR_LEN];
 
             if (connSockName(link->conn,ip,sizeof(ip),NULL) != -1 &&
-                strcmp(ip,myself->ip))
+                strcmp(ip,myself->ca->ip))
             {
-                memcpy(myself->ip,ip,NET_IP_STR_LEN);
+                memcpy(myself->ca->ip,ip,NET_IP_STR_LEN);
                 serverLog(LL_WARNING,"IP address for this node updated to %s",
-                    myself->ip);
+                    myself->ca->ip);
                 clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
             }
         }
@@ -1930,8 +1949,8 @@ int clusterProcessPacket(clusterLink *link) {
             clusterNode *node;
 
             node = createClusterNode(NULL,CLUSTER_NODE_HANDSHAKE);
-            nodeIp2String(node->ip,link,hdr->myip);
-            node->port = ntohs(hdr->port);
+            nodeIp2String(node->ca->ip,link,hdr->myip);
+            node->ca->port = ntohs(hdr->port);
             node->pport = ntohs(hdr->pport);
             node->cport = ntohs(hdr->cport);
             clusterAddNode(node);
@@ -1993,8 +2012,8 @@ int clusterProcessPacket(clusterLink *link) {
                     (int)(now-(link->node->ctime)),
                     link->node->flags);
                 link->node->flags |= CLUSTER_NODE_NOADDR;
-                link->node->ip[0] = '\0';
-                link->node->port = 0;
+                link->node->ca->ip[0] = '\0';
+                link->node->ca->port = 0;
                 link->node->pport = 0;
                 link->node->cport = 0;
                 freeClusterLink(link);
@@ -2315,7 +2334,7 @@ void clusterLinkConnectHandler(connection *conn) {
     /* Check if connection succeeded */
     if (connGetState(conn) != CONN_STATE_CONNECTED) {
         serverLog(LL_VERBOSE, "Connection with Node %.40s at %s:%d failed: %s",
-                node->name, node->ip, node->cport,
+                node->name, node->ca->ip, node->cport,
                 connGetLastError(conn));
         freeClusterLink(link);
         return;
@@ -2347,7 +2366,7 @@ void clusterLinkConnectHandler(connection *conn) {
     node->flags &= ~CLUSTER_NODE_MEET;
 
     serverLog(LL_DEBUG,"Connecting with Node %.40s at %s:%d",
-            node->name, node->ip, node->cport);
+            node->name, node->ca->ip, node->cport);
 }
 
 /* Read data. Try to read the first field of the header first to check the
@@ -2560,7 +2579,7 @@ void clusterSetGossipEntry(clusterMsg *hdr, int i, clusterNode *n) {
     memcpy(gossip->nodename,n->name,CLUSTER_NAMELEN);
     gossip->ping_sent = htonl(n->ping_sent/1000);
     gossip->pong_received = htonl(n->pong_received/1000);
-    memcpy(gossip->ip,n->ip,sizeof(n->ip));
+    memcpy(gossip->ip,n->ca->ip,sizeof(n->ca->ip));
     gossip->port = htons(n->port);
     gossip->cport = htons(n->cport);
     gossip->flags = htons(n->flags);
@@ -3554,7 +3573,7 @@ int clusterNodeCronHandleReconnect(clusterNode *node, mstime_t handshake_timeout
         clusterLink *link = createClusterLink(node);
         link->conn = server.tls_cluster ? connCreateTLS() : connCreateSocket();
         connSetPrivateData(link->conn, link);
-        if (connConnect(link->conn, node->ip, node->cport, server.bind_source_addr,
+        if (connConnect(link->conn, node->ca->ip, node->cport, server.bind_source_addr,
                     clusterLinkConnectHandler) == -1) {
             /* We got a synchronous error from connect before
              * clusterSendPing() had a chance to be called.
@@ -3563,7 +3582,7 @@ int clusterNodeCronHandleReconnect(clusterNode *node, mstime_t handshake_timeout
              * be really sent as soon as the link is obtained). */
             if (node->ping_sent == 0) node->ping_sent = mstime();
             serverLog(LL_DEBUG, "Unable to connect to "
-                "Cluster Node [%s]:%d -> %s", node->ip,
+                "Cluster Node [%s]:%d -> %s", node->ca->ip,
                 node->cport, server.neterr);
 
             freeClusterLink(link);
@@ -3621,10 +3640,10 @@ void clusterCron(void) {
                  * duplicating the string. This way later we can check if
                  * the address really changed. */
                 prev_ip = zstrdup(prev_ip);
-                strncpy(myself->ip,server.cluster_announce_ip,NET_IP_STR_LEN);
-                myself->ip[NET_IP_STR_LEN-1] = '\0';
+                strncpy(myself->ca->ip,server.cluster_announce_ip,NET_IP_STR_LEN);
+                myself->ca->ip[NET_IP_STR_LEN-1] = '\0';
             } else {
-                myself->ip[0] = '\0'; /* Force autodetection. */
+                myself->ca->ip[0] = '\0'; /* Force autodetection. */
             }
         }
     }
@@ -3790,7 +3809,7 @@ void clusterCron(void) {
         myself->slaveof &&
         nodeHasAddr(myself->slaveof))
     {
-        replicationSetMaster(myself->slaveof->ip, myself->slaveof->port);
+        replicationSetMaster(myself->slaveof->ca->ip, myself->slaveof->ca->port);
     }
 
     /* Abort a manual failover if the timeout is reached. */
@@ -4181,7 +4200,7 @@ void clusterSetMaster(clusterNode *n) {
     }
     myself->slaveof = n;
     clusterNodeAddSlave(n,myself);
-    replicationSetMaster(n->ip, n->port);
+    replicationSetMaster(n->ca->ip, n->ca->port);
     resetManualFailover();
 }
 
@@ -4227,12 +4246,12 @@ sds representClusterNodeFlags(sds ci, uint16_t flags) {
 sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     int j, start;
     sds ci;
-    int port = use_pport && node->pport ? node->pport : node->port;
+    int port = use_pport && node->pport ? node->pport : node->ca->port;
 
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
     ci = sdscatfmt(ci," %s:%i@%i ",
-        node->ip,
+        node->ca->ip,
         port,
         node->cport);
 
@@ -4416,11 +4435,11 @@ void addNodeReplyForClusterSlot(client *c, clusterNode *node, int start_slot, in
     addReplyLongLong(c, start_slot);
     addReplyLongLong(c, end_slot);
     addReplyArrayLen(c, 3);
-    addReplyBulkCString(c, node->ip);
+    addReplyBulkCString(c, node->ca->ip);
     /* Report non-TLS ports to non-TLS client in TLS cluster if available. */
     int use_pport = (server.tls_cluster &&
                      c->conn && connGetType(c->conn) != CONN_TYPE_TLS);
-    addReplyLongLong(c, use_pport && node->pport ? node->pport : node->port);
+    addReplyLongLong(c, use_pport && node->pport ? node->pport : node->ca->port);
     addReplyBulkCBuffer(c, node->name, CLUSTER_NAMELEN);
 
     /* Remaining nodes in reply are replicas for slot range */
@@ -4429,7 +4448,7 @@ void addNodeReplyForClusterSlot(client *c, clusterNode *node, int start_slot, in
          * with modifications for per-slot node aggregation. */
         if (nodeFailed(node->slaves[i])) continue;
         addReplyArrayLen(c, 3);
-        addReplyBulkCString(c, node->slaves[i]->ip);
+        addReplyBulkCString(c, node->slaves[i]->ca->ip);
         /* Report slave's non-TLS port to non-TLS client in TLS cluster */
         addReplyLongLong(c, (use_pport && node->slaves[i]->pport ?
                              node->slaves[i]->pport :
@@ -6029,7 +6048,7 @@ void clusterRedirectClient(client *c, clusterNode *n, int hashslot, int error_co
         addReplyErrorSds(c,sdscatprintf(sdsempty(),
             "-%s %d %s:%d",
             (error_code == CLUSTER_REDIR_ASK) ? "ASK" : "MOVED",
-            hashslot, n->ip, port));
+            hashslot, n->ca->ip, port));
     } else {
         serverPanic("getNodeByQuery() unknown error.");
     }
