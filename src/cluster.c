@@ -220,7 +220,7 @@ int clusterLoadConfig(char *filename) {
         memcpy(hostname,argv[1],strlen(argv[1])+1);
 
         if (anetResolve(NULL,hostname,ip,sizeof(ip),
-            sentinel.resolve_hostnames ? ANET_NONE : ANET_IP_ONLY) == ANET_ERR) {
+            server.cluster.resolve_hostnames ? ANET_NONE : ANET_IP_ONLY) == ANET_ERR) {
             errno = ENOENT;
             return NULL;
         }
@@ -4464,7 +4464,7 @@ void addNodeReplyForClusterSlot(client *c, clusterNode *node, int start_slot, in
         /* Report slave's non-TLS port to non-TLS client in TLS cluster */
         addReplyLongLong(c, (use_pport && node->slaves[i]->pport ?
                              node->slaves[i]->pport :
-                             node->slaves[i]->port));
+                             node->slaves[i]->ca->port));
         addReplyBulkCBuffer(c, node->slaves[i]->name, CLUSTER_NAMELEN);
         nested_elements++;
     }
