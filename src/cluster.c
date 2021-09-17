@@ -221,11 +221,11 @@ int clusterLoadConfig(char *filename) {
             *busp = '\0';
             busp++;
         }
-        n->port = atoi(port);
+        n->ca->port = atoi(port);
         /* In older versions of nodes.conf the "@busport" part is missing.
          * In this case we set it to the default offset of 10000 from the
          * base port. */
-        n->cport = busp ? atoi(busp) : n->port + CLUSTER_PORT_INCR;
+        n->cport = busp ? atoi(busp) : n->ca->port + CLUSTER_PORT_INCR;
 
         /* The plaintext port for client in a TLS cluster (n->pport) is not
          * stored in nodes.conf. It is received later over the bus protocol. */
@@ -1473,7 +1473,7 @@ int clusterStartHandshake(char *ip, int port, int cport) {
      * handshake. */
     n = createClusterNode(NULL,CLUSTER_NODE_HANDSHAKE|CLUSTER_NODE_MEET);
     memcpy(n->ca->ip,norm_ip,sizeof(n->ca->ip));
-    n->port = port;
+    n->ca->port = port;
     n->cport = cport;
     clusterAddNode(n);
     return 1;
@@ -2580,7 +2580,7 @@ void clusterSetGossipEntry(clusterMsg *hdr, int i, clusterNode *n) {
     gossip->ping_sent = htonl(n->ping_sent/1000);
     gossip->pong_received = htonl(n->pong_received/1000);
     memcpy(gossip->ip,n->ca->ip,sizeof(n->ca->ip));
-    gossip->port = htons(n->port);
+    gossip->port = htons(n->ca->port);
     gossip->cport = htons(n->cport);
     gossip->flags = htons(n->flags);
     gossip->pport = htons(n->pport);
@@ -6044,7 +6044,7 @@ void clusterRedirectClient(client *c, clusterNode *n, int hashslot, int error_co
          * client is non-TLS. */
         int use_pport = (server.tls_cluster &&
                          c->conn && connGetType(c->conn) != CONN_TYPE_TLS);
-        int port = use_pport && n->pport ? n->pport : n->port;
+        int port = use_pport && n->pport ? n->pport : n->ca->port;
         addReplyErrorSds(c,sdscatprintf(sdsempty(),
             "-%s %d %s:%d",
             (error_code == CLUSTER_REDIR_ASK) ? "ASK" : "MOVED",

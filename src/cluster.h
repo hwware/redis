@@ -141,7 +141,7 @@ typedef struct clusterNode {
     long long repl_offset;      /* Last known repl offset for this node. */
     // char ip[NET_IP_STR_LEN];  /* Latest known IP address of this node */
     // int port;                   /* Latest known clients port (TLS or plain). */
-    clusterAddr ca;
+    clusterAddr *ca;
     int pport;                  /* Latest known clients plaintext port. Only used
                                    if the main clients port is for TLS. */
     int cport;                  /* Latest known cluster port of this node. */
