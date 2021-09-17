@@ -220,7 +220,7 @@ int clusterLoadConfig(char *filename) {
         memcpy(hostname,argv[1],strlen(argv[1])+1);
 
         if (anetResolve(NULL,hostname,ip,sizeof(ip),
-            server.cluster.resolve_hostnames ? ANET_NONE : ANET_IP_ONLY) == ANET_ERR) {
+            server.cluster->resolve_hostnames ? ANET_NONE : ANET_IP_ONLY) == ANET_ERR) {
             errno = ENOENT;
             return NULL;
         }
