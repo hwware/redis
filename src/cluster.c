@@ -214,6 +214,20 @@ int clusterLoadConfig(char *filename) {
             goto fmterr;
         }
         *p = '\0';
+
+        char ip[NET_IP_STR_LEN];
+        char* hostname;
+        memcpy(hostname,argv[1],strlen(argv[1])+1);
+
+        if (anetResolve(NULL,hostname,ip,sizeof(ip),
+            sentinel.resolve_hostnames ? ANET_NONE : ANET_IP_ONLY) == ANET_ERR) {
+            errno = ENOENT;
+            return NULL;
+        }
+
+        n->ca->hostname = sdsnew(hostname);
+        n->ca->ip = sdsnew(ip);
+
         memcpy(n->ca->ip,argv[1],strlen(argv[1])+1);
         char *port = p+1;
         char *busp = strchr(port,'@');
@@ -590,7 +604,7 @@ void clusterInit(void) {
 
     /* Set myself->port/cport/pport to my listening ports, we'll just need to
      * discover the IP address via MEET messages. */
-    deriveAnnouncedPorts(&myself->port, &myself->pport, &myself->cport);
+    deriveAnnouncedPorts(&myself->ca->port, &myself->pport, &myself->cport);
 
     server.cluster->mf_end = 0;
     resetManualFailover();
@@ -841,8 +855,6 @@ clusterNode *createClusterNode(char *nodename, int flags) {
     // memset(node->ca->ip,0,sizeof(node->ca->ip));
     // node->ca->port = 0;
     node->ca = zmalloc(sizeof(*node->ca));
-    node->ca->hostname = sdsnew(hostname);
-    node->ca->ip = sdsnew(ip);
     node->cport = 0;
     node->pport = 0;
     node->fail_reports = listCreate();
