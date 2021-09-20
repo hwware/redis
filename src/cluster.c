@@ -850,6 +850,7 @@ clusterNode *createClusterNode(char *nodename, int flags) {
     node->data_received = 0;
     node->fail_time = 0;
     node->link = NULL;
+    node->hostname = NULL;
     memset(node->ip,0,sizeof(node->ip));
     node->port = 0;
     node->cport = 0;
@@ -1399,9 +1400,16 @@ void clearNodeFailureIfNeeded(clusterNode *node) {
 /* Return true if we already have a node in HANDSHAKE state matching the
  * specified ip address and port number. This function is used in order to
  * avoid adding a new handshake node for the same address multiple times. */
-int clusterHandshakeInProgress(char *ip, int port, int cport) {
+int clusterHandshakeInProgress(char *hostname, int port, int cport) {
     dictIterator *di;
     dictEntry *de;
+    char ip[NET_IP_STR_LEN];
+
+    if (anetResolve(NULL,hostname,ip,sizeof(ip),
+        server.cluster->resolve_hostnames ? ANET_NONE : ANET_IP_ONLY) == ANET_ERR) {
+        errno = ENOENT;
+        return 0;
+    }
 
     di = dictGetSafeIterator(server.cluster->nodes);
     while((de = dictNext(di)) != NULL) {
@@ -1410,6 +1418,7 @@ int clusterHandshakeInProgress(char *ip, int port, int cport) {
         if (!nodeInHandshake(node)) continue;
         if (!strcasecmp(node->ip,ip) &&
             node->port == port &&
+            node->hostname == hostname &&
             node->cport == cport) break;
     }
     dictReleaseIterator(di);
@@ -1467,7 +1476,7 @@ int clusterStartHandshake(char *hostname, int port, int cport) {
             (void*)&(((struct sockaddr_in6 *)&sa)->sin6_addr),
             norm_ip,NET_IP_STR_LEN);
 
-    if (clusterHandshakeInProgress(norm_ip,port,cport)) {
+    if (clusterHandshakeInProgress(hostname,port,cport)) {
         errno = EAGAIN;
         return 0;
     }
