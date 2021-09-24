@@ -4248,7 +4248,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     serverLog(LL_WARNING, "---------------------- hname is: %s", node->hname);
 
     // ci = sdscatfmt(ci," %s ",node->hname);
-    ci = sdscatfmt(ci," %s:%s:%i@%i ",
+    ci = sdscatfmt(ci," %s:%i@%i ",
         node->ip,
         port,
         node->cport);
