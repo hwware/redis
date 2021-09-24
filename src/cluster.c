@@ -224,6 +224,7 @@ int clusterLoadConfig(char *filename) {
          * In this case we set it to the default offset of 10000 from the
          * base port. */
         n->cport = busp ? atoi(busp) : n->port + CLUSTER_PORT_INCR;
+        setClusterNodeName(n);
 
         /* The plaintext port for client in a TLS cluster (n->pport) is not
          * stored in nodes.conf. It is received later over the bus protocol. */
