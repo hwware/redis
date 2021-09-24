@@ -813,7 +813,7 @@ void setClusterNodeName(clusterNode *node){
     int post_digits = floor(log10(abs(node->port))) + 1;
     name = malloc(strlen(node->ip) + post_digits + 2);
     sprintf(name, "%s%s%d", node->ip, "_", node->port);
-    node->name = name;
+    node->hname = name;
 }
 
 
