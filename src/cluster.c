@@ -812,7 +812,13 @@ unsigned int keyHashSlot(char *key, int keylen) {
 void setClusterNodeName(clusterNode *node){
     serverLog(LL_WARNING, "-----------------Started setClusterNodeName");
     char *name;
-    int post_digits = floor(log10(abs(node->port))) + 1;
+    int post_digits;
+    if (node->port == 0){
+        post_digits = 0;
+    }
+    else{
+        floor(log10(abs(node->port))) + 1;
+    }
     int allocate_len = sizeof(node->ip) + post_digits + 2;
     serverLog(LL_WARNING, "-----------------Len to alloc = %d ( %d + %d + 2) port num is %d", allocate_len, sizeof(node->ip), post_digits, node->port);
     name = zmalloc(allocate_len);
