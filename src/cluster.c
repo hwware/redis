@@ -814,7 +814,7 @@ void setClusterNodeName(clusterNode *node){
     char *name;
     int post_digits = floor(log10(abs(node->port))) + 1;
     int allocate_len = sizeof(node->ip) + post_digits + 2;
-    serverLog(LL_WARNING, "-----------------Len to alloc = %d ( %d + %d + 2)", allocate_len, sizeof(node->ip), post_digits);
+    serverLog(LL_WARNING, "-----------------Len to alloc = %d ( %d + %d + 2) port num is %d", allocate_len, sizeof(node->ip), post_digits, node->port);
     name = zmalloc(allocate_len);
     sprintf(name, "%s%s%d", node->ip, "_", node->port);
     serverLog(LL_WARNING, "----------changed to : %s", name);
