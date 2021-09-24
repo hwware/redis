@@ -4244,10 +4244,11 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
 
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
-    ci = sdscatfmt(ci," %s:%i@%i ",
+    ci = sdscatfmt(ci," %s:%i@%i : %s",
         node->ip,
         port,
-        node->cport);
+        node->cport,
+        node->hname);
 
     /* Flags */
     ci = representClusterNodeFlags(ci, node->flags);
