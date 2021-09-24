@@ -810,6 +810,7 @@ unsigned int keyHashSlot(char *key, int keylen) {
 
 /* Assign a name to nodes for clusters*/
 void setClusterNodeName(clusterNode *node){
+    serverLog(LL_WARNING, "-----------------Started setClusterNodeName", name);
     char *name;
     int post_digits = floor(log10(abs(node->port))) + 1;
     name = malloc(strlen(node->ip) + post_digits + 2);
