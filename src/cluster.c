@@ -807,6 +807,15 @@ unsigned int keyHashSlot(char *key, int keylen) {
  * CLUSTER node API
  * -------------------------------------------------------------------------- */
 
+/* Assign a name to nodes for clusters*/
+void setClusterNodeName(clusterNode *node){
+    char *name;
+    name = malloc(strlen(node->ip) + strlen(node->port) + 2);
+    sprintf(name, "%s%s%s", node->ip, "_", node->port);
+    node->nodename = name;
+}
+
+
 /* Create a new cluster node, with the specified flags.
  * If "nodename" is NULL this is considered a first handshake and a random
  * node name is assigned to this node (it will be fixed later when we'll
@@ -1456,6 +1465,7 @@ int clusterStartHandshake(char *ip, int port, int cport) {
     memcpy(n->ip,norm_ip,sizeof(n->ip));
     n->port = port;
     n->cport = cport;
+    setClusterNodeName(n);
     clusterAddNode(n);
     return 1;
 }
@@ -1568,6 +1578,7 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->port = ntohs(g->port);
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
+                setClusterNodeName(node);
                 clusterAddNode(node);
             }
         }
@@ -1934,6 +1945,7 @@ int clusterProcessPacket(clusterLink *link) {
             node->port = ntohs(hdr->port);
             node->pport = ntohs(hdr->pport);
             node->cport = ntohs(hdr->cport);
+            setClusterNodeName(node);
             clusterAddNode(node);
             clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
         }
