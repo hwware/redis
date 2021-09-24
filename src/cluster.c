@@ -4246,7 +4246,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
     ci = sdscatfmt(ci," %s:%s:%i@%i ",
         node->ip,
-        node->hname;
+        node->hname,
         port,
         node->cport);
 
