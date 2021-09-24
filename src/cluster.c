@@ -4245,7 +4245,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
 
-    serverLog(LL_WARNING, "---------------------- hname is: %s", node->hname);
+    serverLog(LL_WARNING, "---------------------- hname is: %s", node->name);
 
     // ci = sdscatfmt(ci," %s ",node->hname);
     ci = sdscatfmt(ci," %s:%s:%i@%i ",
