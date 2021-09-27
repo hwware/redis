@@ -2002,6 +2002,7 @@ int clusterProcessPacket(clusterLink *link) {
                     link->node->name);
                 link->node->flags &= ~CLUSTER_NODE_HANDSHAKE;
                 link->node->flags |= flags&(CLUSTER_NODE_MASTER|CLUSTER_NODE_SLAVE);
+                setClusterNodeName(link->node);
                 clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
             } else if (memcmp(link->node->name,hdr->sender,
                         CLUSTER_NAMELEN) != 0)
@@ -4254,7 +4255,8 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
 
     if (node->hname)
-        ci = sdscatfmt(ci," %s ",node->hname); 
+        ci = sdscatfmt(ci," %s ",node->hname);
+
     ci = sdscatfmt(ci," %s:%i@%i ",
         node->ip,
         port,
