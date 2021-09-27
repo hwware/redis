@@ -857,13 +857,28 @@ clusterNode *createClusterNode(char *nodename, int flags) {
      * IP address. */
     memset(norm_ip,0,NET_IP_STR_LEN);
 
-    inet_ntop(AF_INET,
+    /* IP sanity check */
+    if (inet_pton(AF_INET,ip,
+            &(((struct sockaddr_in *)&sa)->sin_addr)))
+    {
+        sa.ss_family = AF_INET;
+    } else if (inet_pton(AF_INET6,ip,
+            &(((struct sockaddr_in6 *)&sa)->sin6_addr)))
+    {
+        sa.ss_family = AF_INET6;
+    } else {
+        errno = EINVAL;
+        return 0;
+    }
+
+    if (sa.ss_family == AF_INET)
+        inet_ntop(AF_INET,
             (void*)&(((struct sockaddr_in *)&sa)->sin_addr),
             norm_ip,NET_IP_STR_LEN);
-    
-        // inet_ntop(AF_INET6,
-        //     (void*)&(((struct sockaddr_in6 *)&sa)->sin6_addr),
-        //     norm_ip,NET_IP_STR_LEN);
+    else
+        inet_ntop(AF_INET6,
+            (void*)&(((struct sockaddr_in6 *)&sa)->sin6_addr),
+            norm_ip,NET_IP_STR_LEN);
 
     memcpy(node->ip,norm_ip,sizeof(node->ip));
     return node;
