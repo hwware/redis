@@ -4249,7 +4249,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     int j, start;
     sds ci;
     int port = use_pport && node->pport ? node->pport : node->port;
-        serverLog(LL_WARNING, "========================== 13, announce ip = %s", server->cluster_announce_ip);
+        serverLog(LL_WARNING, "========================== 13, announce ip = %s", server.cluster_announce_ip);
 
 
     /* Node coordinates */
