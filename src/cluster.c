@@ -1566,6 +1566,7 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
                 node->flags &= ~CLUSTER_NODE_NOADDR;
+                setClusterNodeName(node);
             }
         } else {
             /* If it's not in NOADDR state and we don't have it, we
