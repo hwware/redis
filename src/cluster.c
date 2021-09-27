@@ -513,6 +513,8 @@ void clusterUpdateMyselfFlags(void) {
 }
 
 void clusterInit(void) {
+        serverLog(LL_WARNING,"================================ xxxxxxxxxxxxxxxxx")
+
     int saveconf = 0;
 
     server.cluster = zmalloc(sizeof(clusterState));
