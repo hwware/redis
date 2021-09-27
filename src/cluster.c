@@ -592,7 +592,7 @@ void clusterInit(void) {
     deriveAnnouncedPorts(&myself->port, &myself->pport, &myself->cport);
 
     server.cluster->mf_end = 0;
-    myself->ip = server.bind_source_addr;
+    memcpy(myself->ip, server.bind_source_addr, sizeof(server.bind_source_addr));
     resetManualFailover();
     clusterUpdateMyselfFlags();
 }
