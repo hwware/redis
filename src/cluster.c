@@ -4251,10 +4251,13 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     int port = use_pport && node->pport ? node->pport : node->port;
         serverLog(LL_WARNING, "========================== 13");
 
+    char ip[NET_IP_STR_LEN];
+
+    anetResolve(NULL,NULL,ip,sizeof(ip), ANET_IP_ONLY);
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
     ci = sdscatfmt(ci," %s:%i@%i ",
-        node->ip,
+        ip,
         port,
         node->cport);
 
