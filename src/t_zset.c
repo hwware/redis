@@ -2117,7 +2117,8 @@ dictType setAccumulatorDictType = {
     NULL,                      /* val dup */
     dictSdsKeyCompare,         /* key compare */
     NULL,                      /* key destructor */
-    NULL                       /* val destructor */
+    NULL,                      /* val destructor */
+    NULL                       /* allow to expand */
 };
 
 void zunionInterGenericCommand(client *c, robj *dstkey, int op) {

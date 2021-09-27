@@ -97,6 +97,21 @@ unsigned long long estimateObjectIdleTime(robj *o) {
     }
 }
 
+/* Return 1 if used memory is more than maxmemory after allocating more memory,
+ * return 0 if not. Redis may reject user's requests or evict some keys if used
+ * memory exceeds maxmemory, especially, when we allocate huge memory at once. */
+int overMaxmemoryAfterAlloc(size_t moremem) {
+    if (!server.maxmemory) return  0; /* No limit. */
+
+    /* Check quickly. */
+    size_t mem_used = zmalloc_used_memory();
+    if (mem_used + moremem <= server.maxmemory) return 0;
+
+    size_t overhead = freeMemoryGetNotCountedMemory();
+    mem_used = (mem_used > overhead) ? mem_used - overhead : 0;
+    return mem_used + moremem > server.maxmemory;
+}
+
 /* freeMemoryIfNeeded() gets called when 'maxmemory' is set on the config
  * file to limit the max memory used by the server, before processing a
  * command.

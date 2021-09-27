@@ -401,7 +401,8 @@ dictType instancesDictType = {
     NULL,                      /* val dup */
     dictSdsKeyCompare,         /* key compare */
     NULL,                      /* key destructor */
-    dictInstancesValDestructor /* val destructor */
+    dictInstancesValDestructor, /* val destructor */
+    NULL                       /* allow to expand */
 };
 
 /* Instance runid (sds) -> votes (long casted to void*)
@@ -414,7 +415,8 @@ dictType leaderVotesDictType = {
     NULL,                      /* val dup */
     dictSdsKeyCompare,         /* key compare */
     NULL,                      /* key destructor */
-    NULL                       /* val destructor */
+    NULL,                      /* val destructor */
+    NULL                       /* allow to expand */
 };
 
 /* =========================== Initialization =============================== */
