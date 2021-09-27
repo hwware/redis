@@ -219,6 +219,7 @@ int clusterLoadConfig(char *filename) {
             *busp = '\0';
             busp++;
         }
+        serverLog(LL_WARNING, "========================== 1");
         n->port = atoi(port);
         /* In older versions of nodes.conf the "@busport" part is missing.
          * In this case we set it to the default offset of 10000 from the
@@ -835,6 +836,8 @@ clusterNode *createClusterNode(char *nodename, int flags) {
     node->fail_time = 0;
     node->link = NULL;
     memset(node->ip,0,sizeof(node->ip));
+        serverLog(LL_WARNING, "========================== 2");
+
     node->port = 0;
     node->cport = 0;
     node->pport = 0;
@@ -1386,6 +1389,7 @@ void clearNodeFailureIfNeeded(clusterNode *node) {
 int clusterHandshakeInProgress(char *ip, int port, int cport) {
     dictIterator *di;
     dictEntry *de;
+        serverLog(LL_WARNING, "========================== 3");
 
     di = dictGetSafeIterator(server.cluster->nodes);
     while((de = dictNext(di)) != NULL) {
@@ -1455,6 +1459,8 @@ int clusterStartHandshake(char *ip, int port, int cport) {
     n = createClusterNode(NULL,CLUSTER_NODE_HANDSHAKE|CLUSTER_NODE_MEET);
     memcpy(n->ip,norm_ip,sizeof(n->ip));
     n->port = port;
+        serverLog(LL_WARNING, "========================== 4");
+
     n->cport = cport;
     clusterAddNode(n);
     return 1;
@@ -1468,6 +1474,7 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
     uint16_t count = ntohs(hdr->count);
     clusterMsgDataGossip *g = (clusterMsgDataGossip*) hdr->data.ping.gossip;
     clusterNode *sender = link->node ? link->node : clusterLookupNode(hdr->sender);
+        serverLog(LL_WARNING, "========================== 5");
 
     while(count--) {
         uint16_t flags = ntohs(g->flags);
@@ -1534,6 +1541,8 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
              * can talk with this other node, update the address, disconnect
              * the old link if any, so that we'll attempt to connect with the
              * new address. */
+        serverLog(LL_WARNING, "========================== 6");
+
             if (node->flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_PFAIL) &&
                 !(flags & CLUSTER_NODE_NOADDR) &&
                 !(flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_PFAIL)) &&
@@ -1562,6 +1571,8 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 !(flags & CLUSTER_NODE_NOADDR) &&
                 !clusterBlacklistExists(g->nodename))
             {
+        serverLog(LL_WARNING, "========================== 7");
+
                 clusterNode *node;
                 node = createClusterNode(g->nodename, flags);
                 memcpy(node->ip,g->ip,NET_IP_STR_LEN);
@@ -1604,6 +1615,8 @@ void nodeIp2String(char *buf, clusterLink *link, char *announced_ip) {
 int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
                               clusterMsg *hdr)
 {
+        serverLog(LL_WARNING, "========================== 8");
+
     char ip[NET_IP_STR_LEN] = {0};
     int port = ntohs(hdr->port);
     int pport = ntohs(hdr->pport);
@@ -1926,6 +1939,8 @@ int clusterProcessPacket(clusterLink *link) {
          * In this stage we don't try to add the node with the right
          * flags, slaveof pointer, and so forth, as this details will be
          * resolved when we'll receive PONGs from the node. */
+        serverLog(LL_WARNING, "========================== 9");
+
         if (!sender && type == CLUSTERMSG_TYPE_MEET) {
             clusterNode *node;
 
@@ -1995,6 +2010,8 @@ int clusterProcessPacket(clusterLink *link) {
                 link->node->flags |= CLUSTER_NODE_NOADDR;
                 link->node->ip[0] = '\0';
                 link->node->port = 0;
+        serverLog(LL_WARNING, "========================== 10");
+
                 link->node->pport = 0;
                 link->node->cport = 0;
                 freeClusterLink(link);
@@ -2505,6 +2522,8 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     memset(hdr->slaveof,0,CLUSTER_NAMELEN);
     if (myself->slaveof != NULL)
         memcpy(hdr->slaveof,myself->slaveof->name, CLUSTER_NAMELEN);
+        serverLog(LL_WARNING, "========================== 11");
+
     hdr->port = htons(announced_port);
     hdr->pport = htons(announced_pport);
     hdr->cport = htons(announced_cport);
@@ -2561,6 +2580,8 @@ void clusterSetGossipEntry(clusterMsg *hdr, int i, clusterNode *n) {
     gossip->ping_sent = htonl(n->ping_sent/1000);
     gossip->pong_received = htonl(n->pong_received/1000);
     memcpy(gossip->ip,n->ip,sizeof(n->ip));
+        serverLog(LL_WARNING, "========================== 12");
+
     gossip->port = htons(n->port);
     gossip->cport = htons(n->cport);
     gossip->flags = htons(n->flags);
@@ -4228,6 +4249,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     int j, start;
     sds ci;
     int port = use_pport && node->pport ? node->pport : node->port;
+        serverLog(LL_WARNING, "========================== 13");
 
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
