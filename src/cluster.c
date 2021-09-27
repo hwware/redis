@@ -4249,16 +4249,8 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     int j, start;
     sds ci;
     int port = use_pport && node->pport ? node->pport : node->port;
-        serverLog(LL_WARNING, "========================== 13");
+        serverLog(LL_WARNING, "========================== 13, announce ip = %s", server->cluster_announce_ip);
 
-    char ip[NET_IP_STR_LEN];
-    int resolve_hostnames = 0;
-    if (anetResolve(NULL,NULL,ip,sizeof(ip),ANET_IP_ONLY) == ANET_ERR) {
-    serverLog(LL_WARNING, "========================== not found");
-    }
-
-    serverLog(LL_WARNING, "========================== ip is %s", ip);
-    
 
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
