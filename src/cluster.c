@@ -1647,6 +1647,7 @@ int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
     node->port = port;
     node->pport = pport;
     node->cport = cport;
+    setClusterNodeName(node);
     if (node->link) freeClusterLink(node->link);
     node->flags &= ~CLUSTER_NODE_NOADDR;
     serverLog(LL_WARNING,"Address updated for node %.40s, now %s:%d",
@@ -1956,7 +1957,6 @@ int clusterProcessPacket(clusterLink *link) {
             node->pport = ntohs(hdr->pport);
             node->cport = ntohs(hdr->cport);
             setClusterNodeName(node);
-            setClusterNodeName(sender);
             clusterAddNode(node);
             clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
         }
