@@ -820,7 +820,8 @@ unsigned int keyHashSlot(char *key, int keylen) {
  * added to the nodes hash table. */
 clusterNode *createClusterNode(char *nodename, int flags) {
     clusterNode *node = zmalloc(sizeof(*node));
-
+    struct sockaddr_storage sa;
+    
     if (nodename)
         memcpy(node->name, nodename, CLUSTER_NAMELEN);
     else
