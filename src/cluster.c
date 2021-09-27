@@ -48,6 +48,7 @@ clusterNode *myself = NULL;
 
 clusterNode *createClusterNode(char *nodename, int flags);
 void clusterAddNode(clusterNode *node);
+void setClusterNodeName(clusterNode *node);
 void clusterAcceptHandler(aeEventLoop *el, int fd, void *privdata, int mask);
 void clusterReadHandler(connection *conn);
 void clusterSendPing(clusterLink *link, int type);
@@ -1564,6 +1565,7 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
                 node->flags &= ~CLUSTER_NODE_NOADDR;
+                setClusterNodeName(node);
             }
         } else {
             /* If it's not in NOADDR state and we don't have it, we
@@ -1585,6 +1587,7 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->port = ntohs(g->port);
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
+                setClusterNodeName(node);
                 clusterAddNode(node);
             }
         }
@@ -1643,6 +1646,7 @@ int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
     node->port = port;
     node->pport = pport;
     node->cport = cport;
+    setClusterNodeName(node);
     if (node->link) freeClusterLink(node->link);
     node->flags &= ~CLUSTER_NODE_NOADDR;
     serverLog(LL_WARNING,"Address updated for node %.40s, now %s:%d",
