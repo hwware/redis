@@ -1082,7 +1082,15 @@ clusterNode *clusterLookupNode(const char *name) {
 
     de = dictFind(server.cluster->nodes,s);
     sdsfree(s);
-    if (de == NULL) return NULL;
+    if (de == NULL){
+        di = dictGetSafeIterator(server.cluster->nodes);
+        while((de = dictNext(di)) != NULL) {
+            clusterNode *node = dictGetVal(de);
+            if (strcmp(name,node->hname) == 0) return node;
+        }
+        dictReleaseIterator(di);
+        return NULL;
+    }
     return dictGetVal(de);
 }
 
