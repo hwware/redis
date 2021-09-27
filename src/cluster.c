@@ -821,7 +821,7 @@ unsigned int keyHashSlot(char *key, int keylen) {
 clusterNode *createClusterNode(char *nodename, int flags) {
     clusterNode *node = zmalloc(sizeof(*node));
     struct sockaddr_storage sa;
-    
+
     if (nodename)
         memcpy(node->name, nodename, CLUSTER_NAMELEN);
     else
@@ -856,14 +856,14 @@ clusterNode *createClusterNode(char *nodename, int flags) {
     /* Set norm_ip as the normalized string representation of the node
      * IP address. */
     memset(norm_ip,0,NET_IP_STR_LEN);
-    if (sa.ss_family == AF_INET)
-        inet_ntop(AF_INET,
+
+    inet_ntop(AF_INET,
             (void*)&(((struct sockaddr_in *)&sa)->sin_addr),
             norm_ip,NET_IP_STR_LEN);
-    else
-        inet_ntop(AF_INET6,
-            (void*)&(((struct sockaddr_in6 *)&sa)->sin6_addr),
-            norm_ip,NET_IP_STR_LEN);
+    
+        // inet_ntop(AF_INET6,
+        //     (void*)&(((struct sockaddr_in6 *)&sa)->sin6_addr),
+        //     norm_ip,NET_IP_STR_LEN);
 
     memcpy(node->ip,norm_ip,sizeof(node->ip));
     return node;
