@@ -592,7 +592,7 @@ void clusterInit(void) {
     deriveAnnouncedPorts(&myself->port, &myself->pport, &myself->cport);
 
     server.cluster->mf_end = 0;
-    memcpy(myself->ip, server.bind_source_addr, sizeof(server.bind_source_addr));
+
     resetManualFailover();
     clusterUpdateMyselfFlags();
 }
@@ -850,7 +850,21 @@ clusterNode *createClusterNode(char *nodename, int flags) {
     node->repl_offset_time = 0;
     node->repl_offset = 0;
     listSetFreeMethod(node->fail_reports,zfree);
-    clusterBroadcastPong(0);
+
+    char norm_ip[NET_IP_STR_LEN];
+    /* Set norm_ip as the normalized string representation of the node
+     * IP address. */
+    memset(norm_ip,0,NET_IP_STR_LEN);
+    if (sa.ss_family == AF_INET)
+        inet_ntop(AF_INET,
+            (void*)&(((struct sockaddr_in *)&sa)->sin_addr),
+            norm_ip,NET_IP_STR_LEN);
+    else
+        inet_ntop(AF_INET6,
+            (void*)&(((struct sockaddr_in6 *)&sa)->sin6_addr),
+            norm_ip,NET_IP_STR_LEN);
+
+    memcpy(n->ip,norm_ip,sizeof(n->ip));
     return node;
 }
 
