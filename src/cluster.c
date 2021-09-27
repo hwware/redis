@@ -224,7 +224,7 @@ int clusterLoadConfig(char *filename) {
          * In this case we set it to the default offset of 10000 from the
          * base port. */
         n->cport = busp ? atoi(busp) : n->port + CLUSTER_PORT_INCR;
-
+        setClusterNodeName(n);
         /* The plaintext port for client in a TLS cluster (n->pport) is not
          * stored in nodes.conf. It is received later over the bus protocol. */
 
@@ -815,7 +815,7 @@ void setClusterNodeName(clusterNode *node){
         post_digits = 0;
     }
     else{
-        floor(log10(abs(node->port))) + 1;
+        post_digits = floor(log10(abs(node->port))) + 1;
     }
     int allocate_len = sizeof(node->ip) + post_digits + 2;
     name = zmalloc(allocate_len);
@@ -1472,6 +1472,7 @@ int clusterStartHandshake(char *ip, int port, int cport) {
     memcpy(n->ip,norm_ip,sizeof(n->ip));
     n->port = port;
     n->cport = cport;
+    setClusterNodeName(n);
     clusterAddNode(n);
     return 1;
 }
