@@ -1956,6 +1956,7 @@ int clusterProcessPacket(clusterLink *link) {
             node->pport = ntohs(hdr->pport);
             node->cport = ntohs(hdr->cport);
             setClusterNodeName(node);
+            setClusterNodeName(myself);
             clusterAddNode(node);
             clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
         }
