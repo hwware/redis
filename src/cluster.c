@@ -924,6 +924,22 @@ unsigned int keyHashSlot(char *key, int keylen) {
  * CLUSTER node API
  * -------------------------------------------------------------------------- */
 
+/* Assign a human readable name to nodes for clusters*/
+void setClusterNodeName(clusterNode *node){
+    char *name;
+    int post_digits;
+    if (node->port == 0){
+        post_digits = 0;
+    }
+    else{
+        floor(log10(abs(node->port))) + 1;
+    }
+    int allocate_len = sizeof(node->ip) + post_digits + 2;
+    name = zmalloc(allocate_len);
+    sprintf(name, "%s%s%d", node->ip, "_", node->port);
+    node->hname = name;
+}
+
 /* Create a new cluster node, with the specified flags.
  * If "nodename" is NULL this is considered a first handshake and a random
  * node name is assigned to this node (it will be fixed later when we'll
