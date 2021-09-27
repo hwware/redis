@@ -816,7 +816,7 @@ void setClusterNodeName(clusterNode *node){
         post_digits = 0;
     }
     else{
-        floor(log10(abs(node->port))) + 1;
+        post_digits = floor(log10(abs(node->port))) + 1;
     }
     int allocate_len = sizeof(node->ip) + post_digits + 2;
     name = zmalloc(allocate_len);
