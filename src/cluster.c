@@ -932,7 +932,7 @@ void setClusterNodeName(clusterNode *node){
         post_digits = 0;
     }
     else{
-        floor(log10(abs(node->port))) + 1;
+        post_digits = floor(log10(abs(node->port))) + 1;
     }
     int allocate_len = sizeof(node->ip) + post_digits + 2;
     name = zmalloc(allocate_len);
@@ -1604,6 +1604,7 @@ int clusterStartHandshake(char *ip, int port, int cport) {
     memcpy(n->ip,norm_ip,sizeof(n->ip));
     n->port = port;
     n->cport = cport;
+    setClusterNodeName(n);
     clusterAddNode(n);
     return 1;
 }
