@@ -1079,6 +1079,7 @@ void clusterDelNode(clusterNode *delnode) {
 clusterNode *clusterLookupNode(const char *name) {
     sds s = sdsnewlen(name, CLUSTER_NAMELEN);
     dictEntry *de;
+    dictIterator *di;
 
     de = dictFind(server.cluster->nodes,s);
     sdsfree(s);
