@@ -864,7 +864,7 @@ clusterNode *createClusterNode(char *nodename, int flags) {
             (void*)&(((struct sockaddr_in6 *)&sa)->sin6_addr),
             norm_ip,NET_IP_STR_LEN);
 
-    memcpy(n->ip,norm_ip,sizeof(n->ip));
+    memcpy(node->ip,norm_ip,sizeof(node->ip));
     return node;
 }
 
