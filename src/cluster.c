@@ -4252,12 +4252,19 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
         serverLog(LL_WARNING, "========================== 13");
 
     char ip[NET_IP_STR_LEN];
+    int resolve_hostnames = 0;
+    if (anetResolve(NULL,hostname,ip,sizeof(ip),
+                    resolve_hostnames ? ANET_NONE : ANET_IP_ONLY) == ANET_ERR) {
+        return NULL;
+    }
 
-    anetResolve(NULL,NULL,ip,sizeof(ip), ANET_IP_ONLY);
+    serverLog(LL_WARNING, "========================== ip is %s", ip);
+    
+
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
     ci = sdscatfmt(ci," %s:%i@%i ",
-        ip,
+        node->ip,
         port,
         node->cport);
 
