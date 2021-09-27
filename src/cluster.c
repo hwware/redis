@@ -810,7 +810,6 @@ unsigned int keyHashSlot(char *key, int keylen) {
 
 /* Assign a name to nodes for clusters*/
 void setClusterNodeName(clusterNode *node){
-    serverLog(LL_WARNING, "-----------------Started setClusterNodeName");
     char *name;
     int post_digits;
     if (node->port == 0){
@@ -820,10 +819,8 @@ void setClusterNodeName(clusterNode *node){
         floor(log10(abs(node->port))) + 1;
     }
     int allocate_len = sizeof(node->ip) + post_digits + 2;
-    serverLog(LL_WARNING, "-----------------Len to alloc = %d ( %d + %d + 2) port num is %d", allocate_len, sizeof(node->ip), post_digits, node->port);
     name = zmalloc(allocate_len);
     sprintf(name, "%s%s%d", node->ip, "_", node->port);
-    serverLog(LL_WARNING, "----------changed to : %s", name);
     node->hname = name;
 }
 
@@ -4256,9 +4253,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
 
-    serverLog(LL_WARNING, "---------------------- hname is: %s", node->hname);
-
-    // ci = sdscatfmt(ci," %s ",node->hname);
+    ci = sdscatfmt(ci," %s ",node->hname); 
     ci = sdscatfmt(ci," %s:%i@%i ",
         node->ip,
         port,
