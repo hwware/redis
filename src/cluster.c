@@ -4253,7 +4253,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
 
     char ip[NET_IP_STR_LEN];
     int resolve_hostnames = 0;
-    if (anetResolve(NULL,hostname,ip,sizeof(ip),
+    if (anetResolve(NULL,NULL,ip,sizeof(ip),
                     resolve_hostnames ? ANET_NONE : ANET_IP_ONLY) == ANET_ERR) {
         return NULL;
     }
