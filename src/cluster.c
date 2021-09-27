@@ -4255,7 +4255,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     int resolve_hostnames = 0;
     if (anetResolve(NULL,NULL,ip,sizeof(ip),
                     resolve_hostnames ? ANET_NONE : ANET_IP_ONLY) == ANET_ERR) {
-        return NULL;
+    serverLog(LL_WARNING, "========================== not found");
     }
 
     serverLog(LL_WARNING, "========================== ip is %s", ip);
