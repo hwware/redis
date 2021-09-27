@@ -847,6 +847,7 @@ clusterNode *createClusterNode(char *nodename, int flags) {
     node->repl_offset_time = 0;
     node->repl_offset = 0;
     listSetFreeMethod(node->fail_reports,zfree);
+    clusterBroadcastPong(CLUSTER_BROADCAST_ALL);
     return node;
 }
 
