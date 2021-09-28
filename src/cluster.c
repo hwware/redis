@@ -4757,10 +4757,6 @@ sds clusterGenNodesDescription(int filter, int use_pport) {
 
         if (node->flags & filter) continue;
         ni = clusterGenNodeDescription(node, use_pport);
-
-        if (node->hname)
-            ni = sdscatfmt(ni," %s ",node->hname);
-
         ci = sdscatsds(ci,ni);
         sdsfree(ni);
         ci = sdscatlen(ci,"\n",1);
