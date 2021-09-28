@@ -4295,8 +4295,8 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
         port,
         node->cport);
 
-    if (node->hname)
-        ci = sdscatfmt(ci," %s ",node->hname);
+    // if (node->hname)
+    //     ci = sdscatfmt(ci," %s ",node->hname);
 
     /* Flags */
     ci = representClusterNodeFlags(ci, node->flags);
