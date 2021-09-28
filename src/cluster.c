@@ -1208,7 +1208,19 @@ clusterNode *clusterLookupNode(const char *name) {
 
     de = dictFind(server.cluster->nodes,s);
     sdsfree(s);
-    if (de == NULL) return NULL;
+    if (de == NULL){
+        dictIterator *di;
+        dictEntry *de2;
+
+        di = dictGetSafeIterator(server.cluster->nodes);
+        while((de2 = dictNext(di)) != NULL) {
+            clusterNode *node = dictGetVal(de2);
+            if (strcmp(node->hname,name ) == 0)
+                return node;
+        }
+        dictReleaseIterator(di);
+        return NULL;
+    } 
     return dictGetVal(de);
 }
 
