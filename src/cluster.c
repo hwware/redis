@@ -1272,8 +1272,10 @@ clusterNode *clusterLookupNode(const char *name, int length) {
         di = dictGetSafeIterator(server.cluster->nodes);
         while((de2 = dictNext(di)) != NULL) {
             clusterNode *node = dictGetVal(de2);
-            if (strcmp(node->hname,name ) == 0)
-                return node;
+            if (node->hname){
+                if (strcmp(node->hname,name ) == 0)
+                    return node;
+            }
         }
         dictReleaseIterator(di);
         return NULL;
