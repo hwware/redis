@@ -5288,7 +5288,7 @@ NULL
     } else if (!strcasecmp(c->argv[1]->ptr,"myname") && c->argc == 2) {
         /* CLUSTER MYID */
         if (myself->hname)
-            addReplyBulkCBuffer(c,myself->hname, sizeof(myself->hname));
+            addReplyBulkCBuffer(c,myself->hname, strlen(myself->hname));
         else
             addReplyError(c,"Node is not assigned name yet.");
     } else if (!strcasecmp(c->argv[1]->ptr,"slots") && c->argc == 2) {
