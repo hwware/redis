@@ -372,6 +372,7 @@ size_t freeMemoryGetNotCountedMemory(void) {
  *              (Populated both for C_ERR and C_OK)
  */
 int getMaxmemoryState(size_t *total, size_t *logical, size_t *tofree, float *level) {
+   
     size_t mem_reported, mem_used, mem_tofree;
 
     /* Check if we are over the memory usage limit. If we are not, no need
@@ -380,8 +381,11 @@ int getMaxmemoryState(size_t *total, size_t *logical, size_t *tofree, float *lev
     if (total) *total = mem_reported;
 
     /* We may return ASAP if there is no need to compute the level. */
-    int return_ok_asap = !server.maxmemory || mem_reported <= server.maxmemory;
-    if (return_ok_asap && !level) return C_OK;
+    if (!server.maxmemory) {
+        if (level) *level = 0;
+        return C_OK;
+    }
+    if (mem_reported <= server.maxmemory && !level) return C_OK;
 
     /* Remove the size of slaves output buffers and AOF buffer from the
      * count of used memory. */
@@ -390,15 +394,9 @@ int getMaxmemoryState(size_t *total, size_t *logical, size_t *tofree, float *lev
     mem_used = (mem_used > overhead) ? mem_used-overhead : 0;
 
     /* Compute the ratio of memory usage. */
-    if (level) {
-        if (!server.maxmemory) {
-            *level = 0;
-        } else {
-            *level = (float)mem_used / (float)server.maxmemory;
-        }
-    }
+    if (level) *level = (float)mem_used / (float)server.maxmemory;
 
-    if (return_ok_asap) return C_OK;
+    if (mem_reported <= server.maxmemory) return C_OK;
 
     /* Check if we are still over the memory limit. */
     if (mem_used <= server.maxmemory) return C_OK;
@@ -410,6 +408,8 @@ int getMaxmemoryState(size_t *total, size_t *logical, size_t *tofree, float *lev
     if (tofree) *tofree = mem_tofree;
 
     return C_ERR;
+  
+
 }
 
 /* Return 1 if used memory is more than maxmemory after allocating more memory,
@@ -521,10 +521,16 @@ int performEvictions(void) {
     int result = EVICT_FAIL;
 
     if (getMaxmemoryState(&mem_reported,NULL,&mem_tofree,NULL) == C_OK)
-        return EVICT_OK;
+    {
+        result = EVICT_OK;
+        goto update_metrics;
+    }
 
     if (server.maxmemory_policy == MAXMEMORY_NO_EVICTION)
-        return EVICT_FAIL;  /* We need to free memory, but policy forbids. */
+    {
+        result = EVICT_FAIL;  /* We need to free memory, but policy forbids. */
+        goto update_metrics;
+    }
 
     unsigned long eviction_time_limit_us = evictionTimeLimitUs();
 
@@ -572,10 +578,10 @@ int performEvictions(void) {
                     bestdbid = pool[k].dbid;
 
                     if (server.maxmemory_policy & MAXMEMORY_FLAG_ALLKEYS) {
-                        de = dictFind(server.db[pool[k].dbid].dict,
+                        de = dictFind(server.db[bestdbid].dict,
                             pool[k].key);
                     } else {
-                        de = dictFind(server.db[pool[k].dbid].expires,
+                        de = dictFind(server.db[bestdbid].expires,
                             pool[k].key);
                     }
 
@@ -705,6 +711,18 @@ cant_free:
 
     latencyEndMonitor(latency);
     latencyAddSampleIfNeeded("eviction-cycle",latency);
+
+
+update_metrics:
+    if (result == EVICT_RUNNING || result == EVICT_FAIL) {
+        if (server.stat_last_eviction_exceeded_time == 0)
+            elapsedStart(&server.stat_last_eviction_exceeded_time);
+    } else if (result == EVICT_OK) {
+        if (server.stat_last_eviction_exceeded_time != 0) {
+            server.stat_total_eviction_exceeded_time += elapsedUs(server.stat_last_eviction_exceeded_time);
+            server.stat_last_eviction_exceeded_time = 0;
+        }
+    }
     return result;
 }
 
