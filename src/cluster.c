@@ -5219,6 +5219,8 @@ void clusterCommand(client *c) {
 "    Connect nodes into a working cluster.",
 "MYID",
 "    Return the node id.",
+"MYNAME",
+"    Return the node name.",
 "NODES",
 "    Return cluster configuration seen by node. Output format:",
 "    <id> <ip:port> <flags> <master> <pings> <pongs> <epoch> <link> <slot> ...",
