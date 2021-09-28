@@ -926,7 +926,7 @@ unsigned int keyHashSlot(char *key, int keylen) {
  * -------------------------------------------------------------------------- */
 
 /* Assign a human readable name to nodes for clusters*/
-void setClusterNodeName(clusterNode *node){
+void setClusterNodeName(clusterNode *node) {
     char *name;
     int post_digits;
     if (node->port == 0){
