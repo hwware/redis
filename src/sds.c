@@ -69,6 +69,20 @@ static inline char sdsReqType(size_t string_size) {
     return SDS_TYPE_64;
 }
 
+static inline size_t sdsTypeMaxSize(char type) {
+    if (type == SDS_TYPE_5)
+        return (1<<5) - 1;
+    if (type == SDS_TYPE_8)
+        return (1<<8) - 1;
+    if (type == SDS_TYPE_16)
+        return (1<<16) - 1;
+#if (LONG_MAX == LLONG_MAX)
+    if (type == SDS_TYPE_32)
+        return (1ll<<32) - 1;
+#endif
+    return -1; /* this is equivalent to the max SDS_TYPE_64 or SDS_TYPE_32 */
+}
+
 /* Create a new sds string with the content specified by the 'init' pointer
  * and 'initlen'.
  * If NULL is used for 'init' the string is initialized with zero bytes.
@@ -194,12 +208,14 @@ void sdsclear(sds s) {
  *
  * Note: this does not change the *length* of the sds string as returned
  * by sdslen(), but only the free buffer space we have. */
-sds sdsMakeRoomFor(sds s, size_t addlen) {
+sds _sdsMakeRoomFor(sds s, size_t addlen, int greedy) {
+    
     void *sh, *newsh;
     size_t avail = sdsavail(s);
     size_t len, newlen;
     char type, oldtype = s[-1] & SDS_TYPE_MASK;
     int hdrlen;
+    size_t usable;
 
     /* Return ASAP if there is enough space left. */
     if (avail >= addlen) return s;
@@ -207,10 +223,13 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
     len = sdslen(s);
     sh = (char*)s-sdsHdrSize(oldtype);
     newlen = (len+addlen);
-    if (newlen < SDS_MAX_PREALLOC)
-        newlen *= 2;
-    else
-        newlen += SDS_MAX_PREALLOC;
+    assert(newlen > len);   /* Catch size_t overflow */
+    if (greedy == 1) {
+        if (newlen < SDS_MAX_PREALLOC)
+            newlen *= 2;
+        else
+            newlen += SDS_MAX_PREALLOC;
+    }
 
     type = sdsReqType(newlen);
 
@@ -220,14 +239,15 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
     if (type == SDS_TYPE_5) type = SDS_TYPE_8;
 
     hdrlen = sdsHdrSize(type);
+    assert(hdrlen + newlen + 1 > len);  /* Catch size_t overflow */
     if (oldtype==type) {
-        newsh = s_realloc(sh, hdrlen+newlen+1);
+        newsh = s_realloc_usable(sh, hdrlen+newlen+1, &usable);
         if (newsh == NULL) return NULL;
         s = (char*)newsh+hdrlen;
     } else {
         /* Since the header size changes, need to move the string forward,
          * and can't use realloc */
-        newsh = s_malloc(hdrlen+newlen+1);
+        newsh = s_malloc_usable(hdrlen+newlen+1, &usable);
         if (newsh == NULL) return NULL;
         memcpy((char*)newsh+hdrlen, s, len+1);
         s_free(sh);
@@ -235,8 +255,20 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
         s[-1] = type;
         sdssetlen(s, len);
     }
-    sdssetalloc(s, newlen);
+    usable = usable-hdrlen-1;
+    if (usable > sdsTypeMaxSize(type))
+        usable = sdsTypeMaxSize(type);
+    sdssetalloc(s, usable);
     return s;
+}
+
+sds sdsMakeRoomFor(sds s, size_t addlen) {
+    return _sdsMakeRoomFor(s, addlen, 1);
+}
+
+/* Unlike sdsMakeRoomFor(), this one just grows to the necessary size. */
+sds sdsMakeRoomForNonGreedy(sds s, size_t addlen) {
+    return _sdsMakeRoomFor(s, addlen, 0);
 }
 
 /* Reallocate the sds string so that it has no free space at the end. The

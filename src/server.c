@@ -818,7 +818,7 @@ int clientsCronResizeQueryBuffer(client *c) {
     /* There are two conditions to resize the query buffer:
      * 1) Query buffer is > BIG_ARG and too big for latest peak.
      * 2) Client is inactive and the buffer is bigger than 1k. */
-    if (((querybuf_size > PROTO_MBULK_BIG_ARG) &&
+    if (((querybuf_size > PROTO_RESIZE_THRESHOLD) &&
          (querybuf_size/(c->querybuf_peak+1)) > 2) ||
          (querybuf_size > 1024 && idletime > 2))
     {

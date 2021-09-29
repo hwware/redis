@@ -85,6 +85,11 @@ size_t zmalloc_get_private_dirty(long pid);
 size_t zmalloc_get_smap_bytes_by_field(char *field, long pid);
 size_t zmalloc_get_memory_size(void);
 void zlibc_free(void *ptr);
+void *zrealloc_usable(void *ptr, size_t size, size_t *usable);
+void *ztrycalloc_usable(size_t size, size_t *usable);
+void *zmalloc_usable(size_t size, size_t *usable);
+void *ztrymalloc_usable(size_t size, size_t *usable);
+void *ztryrealloc_usable(void *ptr, size_t size, size_t *usable);
 
 #ifdef HAVE_DEFRAG
 void zfree_no_tcache(void *ptr);

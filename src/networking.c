@@ -1279,7 +1279,7 @@ int processMultibulkBuffer(client *c) {
                 /* Hint the sds library about the amount of bytes this string is
                  * going to contain. */
                 if (qblen < (size_t)ll+2)
-                    c->querybuf = sdsMakeRoomFor(c->querybuf,ll+2-qblen);
+                    c->querybuf = sdsMakeRoomForNonGreedy(c->querybuf,ll+2-sdslen(c->querybuf));
             }
             c->bulklen = ll;
         }
@@ -1390,8 +1390,8 @@ void processInputBuffer(client *c) {
 
 void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     client *c = (client*) privdata;
-    int nread, readlen;
-    size_t qblen;
+    int nread, big_arg = 0;
+    size_t qblen, readlen;
     UNUSED(el);
     UNUSED(mask);
 
@@ -1406,13 +1406,26 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
         && c->bulklen >= PROTO_MBULK_BIG_ARG)
     {
         ssize_t remaining = (size_t)(c->bulklen+2)-sdslen(c->querybuf);
+        big_arg = 1;
 
-        if (remaining < readlen) readlen = remaining;
+        if (remaining > 0 && (size_t)remaining < readlen) readlen = remaining;
     }
 
     qblen = sdslen(c->querybuf);
     if (c->querybuf_peak < qblen) c->querybuf_peak = qblen;
-    c->querybuf = sdsMakeRoomFor(c->querybuf, readlen);
+    if (big_arg || sdsalloc(c->querybuf) < PROTO_IOBUF_LEN) {
+        /* When reading a BIG_ARG we won't be reading more than that one arg
+         * into the query buffer, so we don't need to pre-allocate more than we
+         * need, so using the non-greedy growing. For an initial allocation of
+         * the query buffer, we also don't wanna use the greedy growth, in order
+         * to avoid collision with the RESIZE_THRESHOLD mechanism. */
+        c->querybuf = sdsMakeRoomForNonGreedy(c->querybuf, readlen);
+    } else {
+        c->querybuf = sdsMakeRoomFor(c->querybuf, readlen);
+
+        /* Read as much as possible from the socket to save read(2) system calls. */
+        readlen = sdsavail(c->querybuf);
+    }
     nread = read(fd, c->querybuf+qblen, readlen);
     if (nread == -1) {
         if (errno == EAGAIN) {
