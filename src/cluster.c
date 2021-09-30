@@ -4412,6 +4412,11 @@ int getSlotOrReply(client *c, robj *o) {
 
 int checkSlotAssignmentsOrReply(client *c, unsigned char *slots, int del, int start_slot, int end_slot) {
     int slot;
+
+    for (slot = start_slot; slot <= end_slot; slot++) {
+        serverLog(LL_WARNING, " This slot is : %s", slots[slot]);
+    }
+
     for (slot = start_slot; slot <= end_slot; slot++) {
         if (del && server.cluster->slots[slot] == NULL) {
             addReplyErrorFormat(c,"Slot %d is already unassigned", slot);
