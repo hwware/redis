@@ -4412,11 +4412,6 @@ int getSlotOrReply(client *c, robj *o) {
 
 int checkSlotAssignmentsOrReply(client *c, unsigned char *slots, int del, int start_slot, int end_slot) {
     int slot;
-
-    for (slot = start_slot; slot <= end_slot; slot++) {
-        serverLog(LL_WARNING, " This slot is : %d", slot);
-    }
-
     for (slot = start_slot; slot <= end_slot; slot++) {
         if (del && server.cluster->slots[slot] == NULL) {
             addReplyErrorFormat(c,"Slot %d is already unassigned", slot);
@@ -4639,14 +4634,15 @@ NULL
         int del = !strcasecmp(c->argv[1]->ptr,"delslots");
 
         memset(slots,0,CLUSTER_SLOTS);
-        /* Check that all the arguments are parseable and that all the
-         * slots are not already busy. */
+        /* Check that all the arguments are parseable.*/
         for (j = 2; j < c->argc; j++) {
-            serverLog(LL_WARNING, " ============================ %s", c->argv[j]);
             if ((slot = getSlotOrReply(c,c->argv[j])) == C_ERR) {
                 zfree(slots);
                 return;
             }
+        }
+        /* Check that the slots are not already busy. */
+        for (j = 2; j < c->argc; j++) {
             if (checkSlotAssignmentsOrReply(c, slots, del, slot, slot) == C_ERR) {
                 zfree(slots);
                 return;
