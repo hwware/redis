@@ -4414,7 +4414,7 @@ int checkSlotAssignmentsOrReply(client *c, unsigned char *slots, int del, int st
     int slot;
 
     for (slot = start_slot; slot <= end_slot; slot++) {
-        serverLog(LL_WARNING, " This slot is : %s", slot);
+        serverLog(LL_WARNING, " This slot is : %d", slot);
     }
 
     for (slot = start_slot; slot <= end_slot; slot++) {
