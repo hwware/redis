@@ -4643,6 +4643,7 @@ NULL
         }
         /* Check that the slots are not already busy. */
         for (j = 2; j < c->argc; j++) {
+            slot = getSlotOrReply(c,c->argv[j]);
             if (checkSlotAssignmentsOrReply(c, slots, del, slot, slot) == C_ERR) {
                 zfree(slots);
                 return;
