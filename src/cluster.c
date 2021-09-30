@@ -4642,6 +4642,7 @@ NULL
         /* Check that all the arguments are parseable and that all the
          * slots are not already busy. */
         for (j = 2; j < c->argc; j++) {
+            serverLog(LL_WARNING, " ============================ %s", c->argv[j]);
             if ((slot = getSlotOrReply(c,c->argv[j])) == C_ERR) {
                 zfree(slots);
                 return;
