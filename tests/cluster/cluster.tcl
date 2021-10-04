@@ -18,18 +18,17 @@ proc get_cluster_nodes id {
         set l [string trim $l]
         if {$l eq {}} continue
         set args [split $l]
-        puts [lindex $args 2]
+        puts [lindex $args 1]
         set node [dict create \
             id [lindex $args 0] \
-            name [lindex $args 1] \
-            addr [lindex $args 2] \
-            flags [split [lindex $args 3] ,] \
-            slaveof [lindex $args 4] \
-            ping_sent [lindex $args 5] \
-            pong_recv [lindex $args 6] \
-            config_epoch [lindex $args 7] \
-            linkstate [lindex $args 8] \
-            slots [lrange $args 9 end] \
+            addr [lindex $args 1] \
+            flags [split [lindex $args 2] ,] \
+            slaveof [lindex $args 3] \
+            ping_sent [lindex $args 4] \
+            pong_recv [lindex $args 5] \
+            config_epoch [lindex $args 6] \
+            linkstate [lindex $args 7] \
+            slots [lrange $args 8 end] \
         ]
         lappend nodes $node
     }
