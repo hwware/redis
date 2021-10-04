@@ -632,6 +632,7 @@ proc restart_instance {type id} {
     # Execute the instance with its old setup and append the new pid
     # file for cleanup.
     set pid [exec_instance $type $dirname $cfgfile]
+    puts $pid
     puts "==================restart_instance 3 ========================"
     set_instance_attrib $type $id pid $pid
     lappend ::pids $pid

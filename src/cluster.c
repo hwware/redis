@@ -207,13 +207,15 @@ int clusterLoadConfig(char *filename) {
             n = createClusterNode(argv[0],0);
             clusterAddNode(n);
         }
+        if (strrchr(argv[1],'_') != NULL)
+            n->hname = argv[1];
         /* Address and port */
-        if ((p = strrchr(argv[1],':')) == NULL) {
+        if ((p = strrchr(argv[2],':')) == NULL) {
             sdsfreesplitres(argv,argc);
             goto fmterr;
         }
         *p = '\0';
-        memcpy(n->ip,argv[1],strlen(argv[1])+1);
+        memcpy(n->ip,argv[2],strlen(argv[2])+1);
         char *port = p+1;
         char *busp = strchr(port,'@');
         if (busp) {
@@ -231,7 +233,7 @@ int clusterLoadConfig(char *filename) {
          * stored in nodes.conf. It is received later over the bus protocol. */
 
         /* Parse flags */
-        p = s = argv[2];
+        p = s = argv[3];
         while(p) {
             p = strchr(s,',');
             if (p) *p = '\0';
@@ -264,7 +266,7 @@ int clusterLoadConfig(char *filename) {
 
         /* Get master if any. Set the master and populate master's
          * slave list. */
-        if (argv[3][0] != '-') {
+        if (argv[4][0] != '-') {
             master = clusterLookupNode(argv[3]);
             if (!master) {
                 master = createClusterNode(argv[3],0);
@@ -275,14 +277,14 @@ int clusterLoadConfig(char *filename) {
         }
 
         /* Set ping sent / pong received timestamps */
-        if (atoi(argv[4])) n->ping_sent = mstime();
-        if (atoi(argv[5])) n->pong_received = mstime();
+        if (atoi(argv[5])) n->ping_sent = mstime();
+        if (atoi(argv[6])) n->pong_received = mstime();
 
         /* Set configEpoch for this node. */
         n->configEpoch = strtoull(argv[6],NULL,10);
 
         /* Populate hash slots served by this instance. */
-        for (j = 8; j < argc; j++) {
+        for (j = 9; j < argc; j++) {
             int start, stop;
 
             if (argv[j][0] == '[') {
