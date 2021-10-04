@@ -17,6 +17,7 @@ test "Different nodes have different IDs" {
         incr numnodes
         # Every node should just know itself.
         set nodeid [dict get [get_myself $id] id]
+        puts $nodeid
         assert {$nodeid ne {}}
         lappend ids $nodeid
     }

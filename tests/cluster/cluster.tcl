@@ -39,7 +39,10 @@ proc has_flag {node flag} {
 
 # Returns the parsed myself node entry as a dictionary.
 proc get_myself id {
+    puts "================= IN GET MYSELF ========================="
     set nodes [get_cluster_nodes $id]
+    puts $nodes
+    puts "========================================================="
     foreach n $nodes {
         if {[has_flag $n myself]} {return $n}
     }
