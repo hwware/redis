@@ -39,6 +39,7 @@ set ::redis_cluster::plain_commands {
 # parameter (1 or 0) is optional and defaults to the global $::tls.
 proc redis_cluster {nodes {tls -1}} {
     puts "==============redis_cluster================="
+    puts $nodes
     set id [incr ::redis_cluster::id]
     set ::redis_cluster::startup_nodes($id) $nodes
     puts "==============redis_cluster1================="
@@ -69,6 +70,7 @@ proc ::redis_cluster::__method__refresh_nodes_map {id} {
     # Contact the first responding startup node.
     set idx 0; # Index of the node that will respond.
     set errmsg {}
+    puts $id
     foreach start_node $::redis_cluster::startup_nodes($id) {
         puts $start_node
         set ip_port [lindex [split $start_node @] 0]
