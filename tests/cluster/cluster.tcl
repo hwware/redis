@@ -10,7 +10,7 @@ set ::cluster_replica_nodes 0
 
 # Returns a parsed CLUSTER NODES output as a list of dictionaries.
 proc get_cluster_nodes id {
-    puts "============================ In get cluster nodes ================================"
+    # puts "============================ In get cluster nodes ================================"
     set lines [split [R $id cluster nodes] "\r\n"]
     puts $lines
     set nodes {}
@@ -33,7 +33,7 @@ proc get_cluster_nodes id {
         ]
         lappend nodes $node
     }
-    puts "================================Exiting=========================================="
+    # puts "================================Exiting=========================================="
     return $nodes
 }
 
@@ -44,11 +44,11 @@ proc has_flag {node flag} {
 
 # Returns the parsed myself node entry as a dictionary.
 proc get_myself id {
-    puts "================= IN GET MYSELF ========================="
+    # puts "================= IN GET MYSELF ========================="
     set nodes [get_cluster_nodes $id]
-    puts "=================getting node id========================="
-    puts $nodes
-    puts "========================================================="
+    # puts "=================getting node id========================="
+    # puts $nodes
+    # puts "========================================================="
     foreach n $nodes {
         if {[has_flag $n myself]} {return $n}
     }
