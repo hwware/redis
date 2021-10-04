@@ -151,6 +151,12 @@ proc cluster_write_test {id} {
     set prefix [randstring 20 20 alpha]
     set port [get_instance_attrib redis $id port]
     set cluster [redis_cluster 127.0.0.1:$port]
+    puts "==============in CLUSTER WRITE TEST================="
+    puts $id
+    puts $prefix
+    puts $port
+    puts $cluster
+    puts "====================================================="
     for {set j 0} {$j < 100} {incr j} {
         $cluster set key.$j $prefix.$j
     }
