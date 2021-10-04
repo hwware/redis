@@ -207,12 +207,14 @@ int clusterLoadConfig(char *filename) {
             n = createClusterNode(argv[0],0);
             clusterAddNode(n);
         }
+        serverLog(LL_WARNING, "===========================ID  %s", argv[0]);
         int offset = 0;
         if (strrchr(argv[1],'_') != NULL){
             n->hname = argv[1];
             offset = 1;
         }
         /* Address and port */
+        serverLog(LL_WARNING, "=========================== address port %s", argv[offset + 1]);
         if ((p = strrchr(argv[offset + 1],':')) == NULL) {
             sdsfreesplitres(argv,argc);
             goto fmterr;
