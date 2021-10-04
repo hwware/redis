@@ -65,6 +65,7 @@ proc redis_cluster {nodes {tls -1}} {
 # This function is called when a new Redis Cluster client is initialized
 # and every time we get a -MOVED redirection error.
 proc ::redis_cluster::__method__refresh_nodes_map {id} {
+    puts "==============refresh_nodes_map================="
     # Contact the first responding startup node.
     set idx 0; # Index of the node that will respond.
     set errmsg {}
