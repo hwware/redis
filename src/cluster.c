@@ -290,17 +290,17 @@ int clusterLoadConfig(char *filename) {
         for (j = 8 + offset; j < argc; j++) {
             int start, stop;
 
-            if (argv[offset + j][0] == '[') {
+            if (argv[j][0] == '[') {
                 /* Here we handle migrating / importing slots */
                 int slot;
                 char direction;
                 clusterNode *cn;
 
-                p = strchr(argv[offset + j],'-');
+                p = strchr(argv[j],'-');
                 serverAssert(p != NULL);
                 *p = '\0';
                 direction = p[1]; /* Either '>' or '<' */
-                slot = atoi(argv[offset + j]+1);
+                slot = atoi(argv[j]+1);
                 if (slot < 0 || slot >= CLUSTER_SLOTS) {
                     sdsfreesplitres(argv,argc);
                     goto fmterr;
@@ -317,12 +317,12 @@ int clusterLoadConfig(char *filename) {
                     server.cluster->importing_slots_from[slot] = cn;
                 }
                 continue;
-            } else if ((p = strchr(argv[offset + j],'-')) != NULL) {
+            } else if ((p = strchr(argv[j],'-')) != NULL) {
                 *p = '\0';
-                start = atoi(argv[offset + j]);
+                start = atoi(argv[j]);
                 stop = atoi(p+1);
             } else {
-                start = stop = atoi(argv[offset + j]);
+                start = stop = atoi(argv[j]);
             }
             if (start < 0 || start >= CLUSTER_SLOTS ||
                 stop < 0 || stop >= CLUSTER_SLOTS)
