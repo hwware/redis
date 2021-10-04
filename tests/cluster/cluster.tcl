@@ -10,15 +10,12 @@ set ::cluster_replica_nodes 0
 
 # Returns a parsed CLUSTER NODES output as a list of dictionaries.
 proc get_cluster_nodes id {
-    # puts "============================ In get cluster nodes ================================"
     set lines [split [R $id cluster nodes] "\r\n"]
-    # puts $lines
     set nodes {}
     foreach l $lines {
         set l [string trim $l]
         if {$l eq {}} continue
         set args [split $l]
-        # puts [lindex $args 2]
         set node [dict create \
             id [lindex $args 0] \
             name [lindex $args 1] \
@@ -33,7 +30,6 @@ proc get_cluster_nodes id {
         ]
         lappend nodes $node
     }
-    # puts "================================Exiting=========================================="
     return $nodes
 }
 
@@ -44,11 +40,7 @@ proc has_flag {node flag} {
 
 # Returns the parsed myself node entry as a dictionary.
 proc get_myself id {
-    # puts "================= IN GET MYSELF ========================="
     set nodes [get_cluster_nodes $id]
-    # puts "=================getting node id========================="
-    # puts $nodes
-    # puts "========================================================="
     foreach n $nodes {
         if {[has_flag $n myself]} {return $n}
     }
@@ -148,15 +140,9 @@ proc set_cluster_node_timeout {to} {
 # Check if the cluster is writable and readable. Use node "id"
 # as a starting point to talk with the cluster.
 proc cluster_write_test {id} {
-    puts $id
-    puts "==============in CLUSTER WRITE TEST================="
     set prefix [randstring 20 20 alpha]
-    puts $prefix
     set port [get_instance_attrib redis $id port]
-    puts $port
     set cluster [redis_cluster 127.0.0.1:$port]
-    puts $cluster
-    puts "====================================================="
     for {set j 0} {$j < 100} {incr j} {
         $cluster set key.$j $prefix.$j
     }

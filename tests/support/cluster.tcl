@@ -38,21 +38,13 @@ set ::redis_cluster::plain_commands {
 # Create a cluster client. The nodes are given as a list of host:port. The TLS
 # parameter (1 or 0) is optional and defaults to the global $::tls.
 proc redis_cluster {nodes {tls -1}} {
-    puts "==============redis_cluster================="
-    puts $nodes
     set id [incr ::redis_cluster::id]
     set ::redis_cluster::startup_nodes($id) $nodes
-    puts "==============redis_cluster1================="
     set ::redis_cluster::nodes($id) {}
-    puts "==============redis_cluster2================="
     set ::redis_cluster::slots($id) {}
-    puts "==============redis_cluster3================="
     set ::redis_cluster::tls($id) [expr $tls == -1 ? $::tls : $tls]
-    puts "==============redis_cluster4================="
     set handle [interp alias {} ::redis_cluster::instance$id {} ::redis_cluster::__dispatch__ $id]
-    puts "==============redis_cluster5================="
     $handle refresh_nodes_map
-    puts "==============ENDED ***redis_cluster================="
     return $handle
 }
 
@@ -66,13 +58,10 @@ proc redis_cluster {nodes {tls -1}} {
 # This function is called when a new Redis Cluster client is initialized
 # and every time we get a -MOVED redirection error.
 proc ::redis_cluster::__method__refresh_nodes_map {id} {
-    puts "==============refresh_nodes_map================="
     # Contact the first responding startup node.
     set idx 0; # Index of the node that will respond.
     set errmsg {}
-    puts $id
     foreach start_node $::redis_cluster::startup_nodes($id) {
-        puts $start_node
         set ip_port [lindex [split $start_node @] 0]
         lassign [split $ip_port :] start_host start_port
         set tls $::redis_cluster::tls($id)
