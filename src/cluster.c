@@ -207,15 +207,18 @@ int clusterLoadConfig(char *filename) {
             n = createClusterNode(argv[0],0);
             clusterAddNode(n);
         }
-        if (strrchr(argv[1],'_') != NULL)
+        int offset = 0;
+        if (strrchr(argv[1],'_') != NULL){
             n->hname = argv[1];
+            offset = 1;
+        }
         /* Address and port */
-        if ((p = strrchr(argv[2],':')) == NULL) {
+        if ((p = strrchr(argv[offset + 1],':')) == NULL) {
             sdsfreesplitres(argv,argc);
             goto fmterr;
         }
         *p = '\0';
-        memcpy(n->ip,argv[2],strlen(argv[2])+1);
+        memcpy(n->ip,argv[offset + 1],strlen(argv[offset + 1])+1);
         char *port = p+1;
         char *busp = strchr(port,'@');
         if (busp) {
@@ -233,7 +236,7 @@ int clusterLoadConfig(char *filename) {
          * stored in nodes.conf. It is received later over the bus protocol. */
 
         /* Parse flags */
-        p = s = argv[3];
+        p = s = argv[offset + 2];
         while(p) {
             p = strchr(s,',');
             if (p) *p = '\0';
@@ -266,10 +269,10 @@ int clusterLoadConfig(char *filename) {
 
         /* Get master if any. Set the master and populate master's
          * slave list. */
-        if (argv[4][0] != '-') {
-            master = clusterLookupNode(argv[3]);
+        if (argv[offset + 3][0] != '-') {
+            master = clusterLookupNode(argv[offset + 3]);
             if (!master) {
-                master = createClusterNode(argv[3],0);
+                master = createClusterNode(argv[offset + 3],0);
                 clusterAddNode(master);
             }
             n->slaveof = master;
@@ -277,27 +280,27 @@ int clusterLoadConfig(char *filename) {
         }
 
         /* Set ping sent / pong received timestamps */
-        if (atoi(argv[5])) n->ping_sent = mstime();
-        if (atoi(argv[6])) n->pong_received = mstime();
+        if (atoi(argv[offset + 4])) n->ping_sent = mstime();
+        if (atoi(argv[offset + 5])) n->pong_received = mstime();
 
         /* Set configEpoch for this node. */
-        n->configEpoch = strtoull(argv[6],NULL,10);
+        n->configEpoch = strtoull(argv[offset + 6],NULL,10);
 
         /* Populate hash slots served by this instance. */
-        for (j = 9; j < argc; j++) {
+        for (j = 8; j < argc; j++) {
             int start, stop;
 
-            if (argv[j][0] == '[') {
+            if (argv[offset + j][0] == '[') {
                 /* Here we handle migrating / importing slots */
                 int slot;
                 char direction;
                 clusterNode *cn;
 
-                p = strchr(argv[j],'-');
+                p = strchr(argv[offset + j],'-');
                 serverAssert(p != NULL);
                 *p = '\0';
                 direction = p[1]; /* Either '>' or '<' */
-                slot = atoi(argv[j]+1);
+                slot = atoi(argv[offset + j]+1);
                 if (slot < 0 || slot >= CLUSTER_SLOTS) {
                     sdsfreesplitres(argv,argc);
                     goto fmterr;
@@ -314,12 +317,12 @@ int clusterLoadConfig(char *filename) {
                     server.cluster->importing_slots_from[slot] = cn;
                 }
                 continue;
-            } else if ((p = strchr(argv[j],'-')) != NULL) {
+            } else if ((p = strchr(argv[offset + j],'-')) != NULL) {
                 *p = '\0';
-                start = atoi(argv[j]);
+                start = atoi(argv[offset + j]);
                 stop = atoi(p+1);
             } else {
-                start = stop = atoi(argv[j]);
+                start = stop = atoi(argv[offset + j]);
             }
             if (start < 0 || start >= CLUSTER_SLOTS ||
                 stop < 0 || stop >= CLUSTER_SLOTS)
