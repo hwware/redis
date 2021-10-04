@@ -4259,7 +4259,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
 
     if (node->hname)
-        ci = sdscatfmt(ci," %s ",node->hname);
+        ci = sdscatlen(ci,node->hname,strlen(node->hname));
 
     ci = sdscatfmt(ci," %s:%i@%i ",
         node->ip,
