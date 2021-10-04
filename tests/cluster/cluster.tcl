@@ -148,10 +148,10 @@ proc set_cluster_node_timeout {to} {
 # Check if the cluster is writable and readable. Use node "id"
 # as a starting point to talk with the cluster.
 proc cluster_write_test {id} {
+    puts "==============in CLUSTER WRITE TEST================="
     set prefix [randstring 20 20 alpha]
     set port [get_instance_attrib redis $id port]
     set cluster [redis_cluster 127.0.0.1:$port]
-    puts "==============in CLUSTER WRITE TEST================="
     puts $id
     puts $prefix
     puts $port
