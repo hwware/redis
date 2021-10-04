@@ -70,6 +70,7 @@ proc ::redis_cluster::__method__refresh_nodes_map {id} {
     set idx 0; # Index of the node that will respond.
     set errmsg {}
     foreach start_node $::redis_cluster::startup_nodes($id) {
+        puts $start_node
         set ip_port [lindex [split $start_node @] 0]
         lassign [split $ip_port :] start_host start_port
         set tls $::redis_cluster::tls($id)
