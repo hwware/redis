@@ -623,15 +623,19 @@ proc instance_is_killed {type id} {
 
 # Restart an instance previously killed by kill_instance
 proc restart_instance {type id} {
+    puts "==================restart_instance 1 ========================"
     set dirname "${type}_${id}"
     set cfgfile [file join $dirname $type.conf]
     set port [get_instance_attrib $type $id port]
+    puts "==================restart_instance 1 ========================"
 
     # Execute the instance with its old setup and append the new pid
     # file for cleanup.
     set pid [exec_instance $type $dirname $cfgfile]
+    puts "==================restart_instance 1 ========================"
     set_instance_attrib $type $id pid $pid
     lappend ::pids $pid
+    puts "==================restart_instance 1 ========================"
 
     # Check that the instance is running
     if {[server_is_up 127.0.0.1 $port 100] == 0} {
