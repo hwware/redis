@@ -79,6 +79,7 @@ void moduleCallClusterReceivers(const char *sender_id, uint64_t module_id, uint8
 const char *clusterGetMessageTypeString(int type);
 unsigned int countKeysInSlot(unsigned int hashslot);
 unsigned int delKeysInSlot(unsigned int hashslot);
+void setClusterNodeName(clusterNode *node);
 
 /* Links to the next and previous entries for keys in the same slot are stored
  * in the dict entry metadata. See Slot to Key API below. */
