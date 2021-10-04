@@ -207,14 +207,12 @@ int clusterLoadConfig(char *filename) {
             n = createClusterNode(argv[0],0);
             clusterAddNode(n);
         }
-        serverLog(LL_WARNING, "===========================ID  %s", argv[0]);
         int offset = 0;
         if (strrchr(argv[1],'_') != NULL){
             n->hname = argv[1];
             offset = 1;
         }
         /* Address and port */
-        serverLog(LL_WARNING, "=========================== address port %s", argv[offset + 1]);
         if ((p = strrchr(argv[offset + 1],':')) == NULL) {
             sdsfreesplitres(argv,argc);
             goto fmterr;
@@ -238,7 +236,6 @@ int clusterLoadConfig(char *filename) {
          * stored in nodes.conf. It is received later over the bus protocol. */
 
         /* Parse flags */
-        serverLog(LL_WARNING, "=========================== flag %s", argv[offset + 2]);
         p = s = argv[offset + 2];
         while(p) {
             p = strchr(s,',');
@@ -269,7 +266,6 @@ int clusterLoadConfig(char *filename) {
             }
             if (p) s = p+1;
         }
-        serverLog(LL_WARNING, "=========================== flag 3 %s", argv[offset + 3]);
 
         /* Get master if any. Set the master and populate master's
          * slave list. */
@@ -282,8 +278,6 @@ int clusterLoadConfig(char *filename) {
             n->slaveof = master;
             clusterNodeAddSlave(master,n);
         }
-        serverLog(LL_WARNING, "=========================== ping %s", argv[offset + 4]);
-        serverLog(LL_WARNING, "=========================== pong 3 %s", argv[offset + 5]);
 
         /* Set ping sent / pong received timestamps */
         if (atoi(argv[offset + 4])) n->ping_sent = mstime();
