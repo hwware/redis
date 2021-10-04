@@ -41,6 +41,7 @@ proc has_flag {node flag} {
 proc get_myself id {
     puts "================= IN GET MYSELF ========================="
     set nodes [get_cluster_nodes $id]
+    puts "=================getting node id========================="
     puts $nodes
     puts "========================================================="
     foreach n $nodes {
