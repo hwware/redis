@@ -4004,6 +4004,7 @@ static int clusterManagerNodeLoadInfo(clusterManagerNode *node, int opts,
              *ping_sent = NULL, *ping_recv = NULL, *config_epoch = NULL,
              *link_status = NULL, *hname = NULL;
         UNUSED(link_status);
+        UNUSED(hname);
         int i = 0;
         while ((p = strchr(line, ' ')) != NULL) {
             *p = '\0';
