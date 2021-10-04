@@ -623,20 +623,15 @@ proc instance_is_killed {type id} {
 
 # Restart an instance previously killed by kill_instance
 proc restart_instance {type id} {
-    puts "==================restart_instance 1 ========================"
     set dirname "${type}_${id}"
     set cfgfile [file join $dirname $type.conf]
     set port [get_instance_attrib $type $id port]
-    puts "==================restart_instance 2 ========================"
 
     # Execute the instance with its old setup and append the new pid
     # file for cleanup.
     set pid [exec_instance $type $dirname $cfgfile]
-    puts $pid
-    puts "==================restart_instance 3 ========================"
     set_instance_attrib $type $id pid $pid
     lappend ::pids $pid
-    puts "==================restart_instance 4 ========================"
 
     # Check that the instance is running
     if {[server_is_up 127.0.0.1 $port 100] == 0} {
@@ -644,14 +639,12 @@ proc restart_instance {type id} {
         puts [exec tail $logfile]
         abort_sentinel_test "Problems starting $type #$id: ping timeout, maybe server start failed, check $logfile"
     }
-    puts "==================restart_instance 5 ========================"
 
 
     # Connect with it with a fresh link
     set link [redis 127.0.0.1 $port 0 $::tls]
     $link reconnect 1
     set_instance_attrib $type $id link $link
-    puts "==================restart_instance 6 ========================"
 
     # Make sure the instance is not loading the dataset when this
     # function returns.
@@ -664,7 +657,6 @@ proc restart_instance {type id} {
             break
         }
     }
-    puts "==================restart_instance END ========================"
 }
 
 proc redis_deferring_client {type id} {
