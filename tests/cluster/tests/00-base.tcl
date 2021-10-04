@@ -13,7 +13,7 @@ test "Different nodes have different IDs" {
     set numnodes 0
     foreach_redis_id id {
         puts " Entered for loop"
-        puts id
+        puts $id
         incr numnodes
         # Every node should just know itself.
         set nodeid [dict get [get_myself $id] id]
