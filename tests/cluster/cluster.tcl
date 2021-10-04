@@ -18,6 +18,7 @@ proc get_cluster_nodes id {
         set l [string trim $l]
         if {$l eq {}} continue
         set args [split $l]
+        puts lindex $args 0
         set node [dict create \
             id [lindex $args 0] \
             addr [lindex $args 1] \
