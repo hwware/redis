@@ -41,10 +41,15 @@ proc redis_cluster {nodes {tls -1}} {
     puts "==============redis_cluster================="
     set id [incr ::redis_cluster::id]
     set ::redis_cluster::startup_nodes($id) $nodes
+    puts "==============redis_cluster1================="
     set ::redis_cluster::nodes($id) {}
+    puts "==============redis_cluster2================="
     set ::redis_cluster::slots($id) {}
+    puts "==============redis_cluster3================="
     set ::redis_cluster::tls($id) [expr $tls == -1 ? $::tls : $tls]
+    puts "==============redis_cluster4================="
     set handle [interp alias {} ::redis_cluster::instance$id {} ::redis_cluster::__dispatch__ $id]
+    puts "==============redis_cluster5================="
     $handle refresh_nodes_map
     puts "==============ENDED ***redis_cluster================="
     return $handle
