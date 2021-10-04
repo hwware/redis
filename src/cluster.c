@@ -238,6 +238,7 @@ int clusterLoadConfig(char *filename) {
          * stored in nodes.conf. It is received later over the bus protocol. */
 
         /* Parse flags */
+        serverLog(LL_WARNING, "=========================== address port %s", argv[offset + 2]);
         p = s = argv[offset + 2];
         while(p) {
             p = strchr(s,',');
