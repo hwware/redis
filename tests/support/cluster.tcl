@@ -38,6 +38,7 @@ set ::redis_cluster::plain_commands {
 # Create a cluster client. The nodes are given as a list of host:port. The TLS
 # parameter (1 or 0) is optional and defaults to the global $::tls.
 proc redis_cluster {nodes {tls -1}} {
+    puts "==============redis_cluster================="
     set id [incr ::redis_cluster::id]
     set ::redis_cluster::startup_nodes($id) $nodes
     set ::redis_cluster::nodes($id) {}
@@ -45,6 +46,7 @@ proc redis_cluster {nodes {tls -1}} {
     set ::redis_cluster::tls($id) [expr $tls == -1 ? $::tls : $tls]
     set handle [interp alias {} ::redis_cluster::instance$id {} ::redis_cluster::__dispatch__ $id]
     $handle refresh_nodes_map
+    puts "==============ENDED ***redis_cluster================="
     return $handle
 }
 
