@@ -12,7 +12,7 @@ set ::cluster_replica_nodes 0
 proc get_cluster_nodes id {
     puts "============================ In get cluster nodes ================================"
     set lines [split [R $id cluster nodes] "\r\n"]
-    puts lines
+    puts $lines
     set nodes {}
     foreach l $lines {
         set l [string trim $l]
