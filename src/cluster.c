@@ -244,12 +244,12 @@ int clusterLoadConfig(char *filename) {
         }
 
         /* Address and port */
-        if ((p = strrchr(argv[1],':')) == NULL) {
+        if ((p = strrchr(argv[offset + 1],':')) == NULL) {
             sdsfreesplitres(argv,argc);
             goto fmterr;
         }
         *p = '\0';
-        memcpy(n->ip,argv[1],strlen(argv[1])+1);
+        memcpy(n->ip,argv[offset + 1],strlen(argv[offset + 1])+1);
         char *port = p+1;
         char *busp = strchr(port,'@');
         if (busp) {
@@ -266,7 +266,7 @@ int clusterLoadConfig(char *filename) {
          * stored in nodes.conf. It is received later over the bus protocol. */
 
         /* Parse flags */
-        p = s = argv[2];
+        p = s = argv[offset + 2];
         while(p) {
             p = strchr(s,',');
             if (p) *p = '\0';
