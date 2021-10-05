@@ -220,12 +220,12 @@ int clusterLoadConfig(char *filename) {
          * ip:port[@cport][,hostname] */
 
         /* Address and port */
-        if ((p = strrchr(argv[1],':')) == NULL) {
+        if ((p = strrchr(argv[offset + 1],':')) == NULL) {
             sdsfreesplitres(argv,argc);
             goto fmterr;
         }
         *p = '\0';
-        memcpy(n->ip,argv[1],strlen(argv[1])+1);
+        memcpy(n->ip,argv[offset + 1],strlen(argv[offset + 1])+1);
         char *port = p+1;
         char *busp = strchr(port,'@');
         if (busp) {
@@ -254,7 +254,7 @@ int clusterLoadConfig(char *filename) {
          * stored in nodes.conf. It is received later over the bus protocol. */
 
         /* Parse flags */
-        p = s = argv[2];
+        p = s = argv[offset + 2];
         while(p) {
             p = strchr(s,',');
             if (p) *p = '\0';
@@ -287,10 +287,10 @@ int clusterLoadConfig(char *filename) {
 
         /* Get master if any. Set the master and populate master's
          * slave list. */
-        if (argv[3][0] != '-') {
-            master = clusterLookupNode(argv[3]);
+        if (argv[offset + 3][0] != '-') {
+            master = clusterLookupNode(argv[offset + 3]);
             if (!master) {
-                master = createClusterNode(argv[3],0);
+                master = createClusterNode(argv[offset + 3],0);
                 clusterAddNode(master);
             }
             n->slaveof = master;
@@ -298,14 +298,14 @@ int clusterLoadConfig(char *filename) {
         }
 
         /* Set ping sent / pong received timestamps */
-        if (atoi(argv[4])) n->ping_sent = mstime();
-        if (atoi(argv[5])) n->pong_received = mstime();
+        if (atoi(argv[offset + 4])) n->ping_sent = mstime();
+        if (atoi(argv[offset + 5])) n->pong_received = mstime();
 
         /* Set configEpoch for this node. */
-        n->configEpoch = strtoull(argv[6],NULL,10);
+        n->configEpoch = strtoull(argv[offset + 6],NULL,10);
 
         /* Populate hash slots served by this instance. */
-        for (j = 8; j < argc; j++) {
+        for (j = offset + 8; j < argc; j++) {
             int start, stop;
 
             if (argv[j][0] == '[') {
