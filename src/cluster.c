@@ -277,7 +277,7 @@ int clusterLoadConfig(char *filename) {
          * stored in nodes.conf. It is received later over the bus protocol. */
 
         /* Parse flags */
-        p = s = argv[2];
+        p = s = argv[offset + 2];
         while(p) {
             p = strchr(s,',');
             if (p) *p = '\0';
