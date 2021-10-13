@@ -6884,6 +6884,7 @@ void infoCommand(client *c) {
     }
 
     if (c->argc == 1) {
+
         sds info = genRedisInfoString("default");
         addReplyVerbatim(c,info,sdslen(info),"txt");
         sdsfree(info);
@@ -6893,11 +6894,13 @@ void infoCommand(client *c) {
     int defsections = 0, allsections = 0;
     // first time find all/default flag
     for (int i = 1; i < c->argc; i++) {
+
         defsections = !strcasecmp(c->argv[i]->ptr,"default");
         allsections = !strcasecmp(c->argv[i]->ptr,"all");
     }
 
     if (defsections || allsections) {
+
         sds info = allsections ? genRedisInfoString("all") : genRedisInfoString("default");
         addReplyVerbatim(c,info,sdslen(info),"txt");
         sdsfree(info);
@@ -6908,6 +6911,7 @@ void infoCommand(client *c) {
     int lastValid = 0; 
     // second time parse specific section flag
     for (int i = 1; i < c->argc; i++) {
+
         if (lastValid) {
             info = sdscat(info,"\r\n");
         }
