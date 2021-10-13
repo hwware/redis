@@ -205,6 +205,7 @@ jobs:
       run: |
         ./runtest-cluster --tls ${{github.event.inputs.cluster_test_args}}
         ./runtest-cluster ${{github.event.inputs.cluster_test_args}}
+
   test-ubuntu-io-threads:
     runs-on: ubuntu-latest
     if: github.repository == 'redis/redis' && !contains(github.event.inputs.skipjobs, 'iothreads')
@@ -261,6 +262,7 @@ jobs:
       run: |
         valgrind --track-origins=yes --suppressions=./src/valgrind.sup --show-reachable=no --show-possibly-lost=no --leak-check=full --log-file=err.txt ./src/redis-server test all
         if grep -q 0x err.txt; then cat err.txt; exit 1; fi
+
   test-valgrind-no-malloc-usable-size:
     runs-on: ubuntu-latest
     if: github.repository == 'redis/redis' && !contains(github.event.inputs.skipjobs, 'valgrind')
@@ -366,6 +368,7 @@ jobs:
       run: |
         ./runtest-cluster --tls ${{github.event.inputs.cluster_test_args}}
         ./runtest-cluster ${{github.event.inputs.cluster_test_args}}
+
   test-macos-latest:
     runs-on: macos-latest
     if: github.repository == 'redis/redis' && !contains(github.event.inputs.skipjobs, 'macos')
@@ -421,6 +424,7 @@ jobs:
           if echo "${{github.event.inputs.skiptests}}" | grep -vq modules ; then MAKE=gmake ./runtest-moduleapi --verbose ${{github.event.inputs.test_args}} || exit 1 ; fi ;
           if echo "${{github.event.inputs.skiptests}}" | grep -vq sentinel ; then ./runtest-sentinel ${{github.event.inputs.cluster_test_args}} || exit 1 ; fi ;
           if echo "${{github.event.inputs.skiptests}}" | grep -vq cluster ; then ./runtest-cluster ${{github.event.inputs.cluster_test_args}} || exit 1 ; fi ;
+
   test-alpine-jemalloc:
     runs-on: ubuntu-latest
     if: github.repository == 'redis/redis' && !contains(github.event.inputs.skipjobs, 'alpine')
