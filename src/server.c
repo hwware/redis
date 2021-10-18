@@ -6121,8 +6121,8 @@ sds genRedisInfoString(const char *section) {
 }
 
 void infoCommand(client *c) {
-    char ** defCommands[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
-    char ** addCommands[12][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace", "commandstats"};
+    char defCommands[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
+    char addCommands[12][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace", "commandstats"};
     robj * final = createSetObject();
 
     if (c->argc == 1) {
