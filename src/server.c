@@ -6121,6 +6121,10 @@ sds genRedisInfoString(const char *section) {
 }
 
 void infoCommand(client *c) {
+    char * defCommands[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"}
+    char * allCommands[12][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace", "commandstats"}
+    robj * final = setTypeCreate();
+
     if (c->argc == 1) {
 
         sds info = genRedisInfoString("default");
@@ -6128,26 +6132,28 @@ void infoCommand(client *c) {
         sdsfree(info);
         return;
     }
+    sds info = sdsempty();
 
-    int defsections = 0, allsections = 0;
-    // first time find all/default flag
+    int defsections = 0;
+    int allsections = 0;
+    int everythingsections = 0;
+
     for (int i = 1; i < c->argc; i++) {
-
-        defsections = !strcasecmp(c->argv[i]->ptr,"default");
-        allsections = !strcasecmp(c->argv[i]->ptr,"all");
+        defsections |= !strcasecmp(c->argv[i]->ptr,"default");
+        allsections |= !strcasecmp(c->argv[i]->ptr,"all");
+        everythingsections |= !strcasecmp(c->argv[i]->ptr,"everything");
     }
 
-    if (defsections || allsections) {
-
+    if (defsections || allsections || everythingsections) {
         sds info = allsections ? genRedisInfoString("all") : genRedisInfoString("default");
         addReplyVerbatim(c,info,sdslen(info),"txt");
         sdsfree(info);
         return;
     }
 
-    sds info = sdsempty();
+
+
     int lastValid = 0; 
-    // second time parse specific section flag
     for (int i = 1; i < c->argc; i++) {
 
         if (lastValid) {
