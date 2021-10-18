@@ -6136,34 +6136,38 @@ void infoCommand(client *c) {
 
     int defsections = 0;
     int allsections = 0;
-    int everythingsections = 0;
+    // int everythingsections = 0;
 
     for (int i = 1; i < c->argc; i++) {
-        defsections |= !strcasecmp(c->argv[i]->ptr,"default");
-        allsections |= !strcasecmp(c->argv[i]->ptr,"all");
-        everythingsections |= !strcasecmp(c->argv[i]->ptr,"everything");
+        if (!strcasecmp(c->argv[i]->ptr,"default")){
+          for (int j = 0; j < strlen(defCommands); j++){
+            setTypeAdd(final, defCommands[j]);
+          }
+        }
+
+        if (!strcasecmp(c->argv[i]->ptr,"all")){
+          for (int j = 0; j < strlen(addCommands); j++){
+            setTypeAdd(final, addCommands[j]);
+          }
+        }
+
+        // everythingsections |= !strcasecmp(c->argv[i]->ptr,"everything");
     }
 
-    if (defsections || allsections || everythingsections) {
-        sds info = allsections ? genRedisInfoString("all") : genRedisInfoString("default");
-        addReplyVerbatim(c,info,sdslen(info),"txt");
-        sdsfree(info);
-        return;
-    }
-
-
-
+    setTypeIterator *si = setTypeInitIterator(final);
+    dictEntry *de;
     int lastValid = 0; 
-    for (int i = 1; i < c->argc; i++) {
-
+    while((de = dictNext(si->di)) != NULL) {
+        char * subcommand = dictGetVal(de);
         if (lastValid) {
             info = sdscat(info,"\r\n");
         }
-        sds sectionInfo = genRedisInfoString(c->argv[i]->ptr);
+        sds sectionInfo = genRedisInfoString(subcommand);
         info = sdscatlen(info,sectionInfo,sdslen(sectionInfo));
         lastValid = sdslen(sectionInfo) > 0 ? 1 : 0;
         sdsfree(sectionInfo); 
     }
+    dictReleaseIterator(di);
 
     addReplyVerbatim(c,info,sdslen(info),"txt");
     sdsfree(info);
