@@ -6126,7 +6126,7 @@ void infoCommand(client *c) {
     robj * final = createSetObject();
 
     if (c->argc == 1) {
-
+        serverLog(LL_WARNING, "============================First");
         sds info = genRedisInfoString("default");
         addReplyVerbatim(c,info,sdslen(info),"txt");
         sdsfree(info);
@@ -6136,16 +6136,19 @@ void infoCommand(client *c) {
 
     for (int i = 1; i < c->argc; i++) {
         if (!strcasecmp(c->argv[i]->ptr,"default")){
+        serverLog(LL_WARNING, "============================default");
           for (int j = 0; j < strlen(defCommands); j++){
             setTypeAdd(final, defCommands[j]);
           }
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all")){
+        serverLog(LL_WARNING, "============================all");
           for (int j = 0; j < strlen(addCommands); j++){
             setTypeAdd(final, addCommands[j]);
           }
         }
         else{
+        serverLog(LL_WARNING, "============================ adding : %s", c->argv[i]->ptr);
           setTypeAdd(final, c->argv[i]->ptr);
         }
     }
