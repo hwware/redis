@@ -6158,6 +6158,8 @@ void infoCommand(client *c) {
     int lastValid = 0; 
     while((de = dictNext(si->di)) != NULL) {
         char * subcommand = dictGetVal(de);
+        serverLog(LL_WARNING, "============================ Printing  : %s", subcommand);
+
         if (lastValid) {
             info = sdscat(info,"\r\n");
         }
