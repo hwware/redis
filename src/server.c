@@ -6123,7 +6123,7 @@ sds genRedisInfoString(const char *section) {
 void infoCommand(client *c) {
     char defCommands[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
     char addCommands[12][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace", "commandstats"};
-    robj * final = createSetObject();
+    dict * final = dictCreate(&setDictType);
 
     if (c->argc == 1) {
         serverLog(LL_WARNING, "============================First");
@@ -6138,37 +6138,38 @@ void infoCommand(client *c) {
         if (!strcasecmp(c->argv[i]->ptr,"default")){
         serverLog(LL_WARNING, "============================default");
           for (int j = 0; j < strlen(defCommands); j++){
-            setTypeAdd(final, defCommands[j]);
+            dictAdd(server.commands, sdsnew(c->name), c);
+            setTypeAdd(final, defCommands[j], NULL);
           }
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all")){
         serverLog(LL_WARNING, "============================all");
           for (int j = 0; j < strlen(addCommands); j++){
-            setTypeAdd(final, addCommands[j]);
+            setTypeAdd(final, addCommands[j], NULL);
           }
         }
         else{
         serverLog(LL_WARNING, "============================ adding : %s", c->argv[i]->ptr);
-          setTypeAdd(final, c->argv[i]->ptr);
+          setTypeAdd(final, c->argv[i]->ptr, NULL);
         }
     }
 
-    setTypeIterator *si = setTypeInitIterator(final);
     dictEntry *de;
+    dictIterator *di;
     int lastValid = 0; 
-    while((de = dictNext(si->di)) != NULL) {
+    while((de = dictNext(di)) != NULL) {
         char * subcommand = dictGetVal(de);
         serverLog(LL_WARNING, "============================ Printing  : %s", subcommand);
 
         if (lastValid) {
             info = sdscat(info,"\r\n");
         }
-        sds sectionInfo = genRedisInfoString("memory");
+        sds sectionInfo = genRedisInfoString(subcommand);
         info = sdscatlen(info,sectionInfo,sdslen(sectionInfo));
         lastValid = sdslen(sectionInfo) > 0 ? 1 : 0;
         sdsfree(sectionInfo); 
     }
-    setTypeReleaseIterator(si);
+    dictReleaseIterator(di);
 
     addReplyVerbatim(c,info,sdslen(info),"txt");
     sdsfree(info);
