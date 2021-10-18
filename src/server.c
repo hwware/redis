@@ -6122,7 +6122,7 @@ sds genRedisInfoString(const char *section) {
 
 void infoCommand(client *c) {
     char ** defCommands[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
-    char ** allCommands[12][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace", "commandstats"};
+    char ** addCommands[12][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace", "commandstats"};
     robj * final = setTypeCreate(NULL);
 
     if (c->argc == 1) {
@@ -6167,7 +6167,7 @@ void infoCommand(client *c) {
         lastValid = sdslen(sectionInfo) > 0 ? 1 : 0;
         sdsfree(sectionInfo); 
     }
-    dictReleaseIterator(di);
+    setTypeReleaseIterator(si);
 
     addReplyVerbatim(c,info,sdslen(info),"txt");
     sdsfree(info);
