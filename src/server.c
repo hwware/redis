@@ -6163,7 +6163,7 @@ void infoCommand(client *c) {
         if (lastValid) {
             info = sdscat(info,"\r\n");
         }
-        sds sectionInfo = genRedisInfoString(subcommand);
+        sds sectionInfo = genRedisInfoString("memory");
         info = sdscatlen(info,sectionInfo,sdslen(sectionInfo));
         lastValid = sdslen(sectionInfo) > 0 ? 1 : 0;
         sdsfree(sectionInfo); 
