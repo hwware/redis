@@ -6140,14 +6140,14 @@ void infoCommand(client *c) {
             setTypeAdd(final, defCommands[j]);
           }
         }
-
-        if (!strcasecmp(c->argv[i]->ptr,"all")){
+        else if (!strcasecmp(c->argv[i]->ptr,"all")){
           for (int j = 0; j < strlen(addCommands); j++){
             setTypeAdd(final, addCommands[j]);
           }
         }
-
-        // everythingsections |= !strcasecmp(c->argv[i]->ptr,"everything");
+        else{
+          setTypeAdd(final, c->argv[i]->ptr);
+        }
     }
 
     setTypeIterator *si = setTypeInitIterator(final);
