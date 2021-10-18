@@ -6123,7 +6123,7 @@ sds genRedisInfoString(const char *section) {
 void infoCommand(client *c) {
     char ** defCommands[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
     char ** addCommands[12][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace", "commandstats"};
-    robj * final = setTypeCreate(NULL);
+    robj * final = createSetObject();
 
     if (c->argc == 1) {
 
@@ -6133,10 +6133,6 @@ void infoCommand(client *c) {
         return;
     }
     sds info = sdsempty();
-
-    int defsections = 0;
-    int allsections = 0;
-    // int everythingsections = 0;
 
     for (int i = 1; i < c->argc; i++) {
         if (!strcasecmp(c->argv[i]->ptr,"default")){
