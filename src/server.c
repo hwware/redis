@@ -6153,6 +6153,7 @@ void infoCommand(client *c) {
           dictAdd(final, c->argv[i]->ptr, NULL);
         }
     }
+    serverLog(LL_WARNING, "============================ Size of dict  : %d", dictSize(final));
 
     dictEntry *de;
     dictIterator *di = dictGetSafeIterator(final);
