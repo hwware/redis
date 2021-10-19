@@ -6136,18 +6136,18 @@ void infoCommand(client *c) {
     for (int i = 1; i < c->argc; i++) {
         if (!strcasecmp(c->argv[i]->ptr,"default")){
           for (int j = 0; j < 11; j++){
-            if (dictFind(final,sdsnew(defCommands[j])) != NULL )
+            if (dictFind(final,sdsnew(defCommands[j])) == NULL )
               dictAdd(final, sdsnew(defCommands[j]), NULL);
           }
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all")){
           for (int j = 0; j < 12; j++){
-            if (dictFind(final,sdsnew(addCommands[j])) != NULL )
+            if (dictFind(final,sdsnew(addCommands[j])) == NULL )
             dictAdd(final, sdsnew(addCommands[j]), NULL);
           }
         }
         else{
-            if (dictFind(final,sdsnew(c->argv[i]->ptr)) != NULL )
+            if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL )
               dictAdd(final,sdsnewlen(c->argv[i]->ptr, 15),NULL);
         }
     }
