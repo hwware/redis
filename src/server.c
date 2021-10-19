@@ -6123,7 +6123,7 @@ sds genRedisInfoString(const char *section) {
 void infoCommand(client *c) {
     char defCommands[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
     char addCommands[12][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace", "commandstats"};
-    robj * final = dictCreate(&setDictType);
+    dict * final = dictCreate(&setDictType);
 
     if (c->argc == 1) {
         serverLog(LL_WARNING, "============================First");
