@@ -6146,7 +6146,7 @@ void infoCommand(client *c) {
         serverLog(LL_WARNING, "============================all");
           for (int j = 0; j < 12; j++){
             dictAdd(final, sdsnew(addCommands[j]), NULL);
-            char * subcommand = dictGetKey(dictFind(final,sdsnew(addCommands[j])));
+            char * subcommand = dictGetKey(dictFind(final,sdsnew("check")));
             serverLog(LL_WARNING, "============================ GOT BACK %s", subcommand);
 
           }
