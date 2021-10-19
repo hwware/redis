@@ -6155,7 +6155,7 @@ void infoCommand(client *c) {
     }
 
     dictEntry *de;
-    dictIterator *di;
+    dictIterator *di = dictGetSafeIterator(final);
     int lastValid = 0; 
     while((de = dictNext(di)) != NULL) {
         char * subcommand = dictGetVal(de);
