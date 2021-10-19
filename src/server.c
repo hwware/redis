@@ -6121,30 +6121,34 @@ sds genRedisInfoString(const char *section) {
 }
 
 void infoCommand(client *c) {
-    char defCommands[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
-    char addCommands[12][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace", "commandstats"};
-    dict * final = dictCreate(&setDictType);
 
+    serverLog(LL_WARNING, " The REDIS VERSION IS : %s", REDIS_VERSION);
+
+    char defSections[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
+    dict * final = dictCreate(&setDictType); /* Set to add the subsections to print*/
+    
+    /* When info is called with no other arguments*/
     if (c->argc == 1) {
         sds info = genRedisInfoString("default");
         addReplyVerbatim(c,info,sdslen(info),"txt");
         sdsfree(info);
         return;
     }
-    sds info = sdsempty();
 
+    /* Populating the set with subsections */
     for (int i = 1; i < c->argc; i++) {
         if (!strcasecmp(c->argv[i]->ptr,"default")){
           for (int j = 0; j < 11; j++){
-            if (dictFind(final,sdsnew(defCommands[j])) == NULL )
-              dictAdd(final, sdsnew(defCommands[j]), NULL);
+            if (dictFind(final,sdsnew(defSections[j])) == NULL ) /* Skip if subsection already present */
+              dictAdd(final, sdsnew(defSections[j]), NULL);
           }
         }
-        else if (!strcasecmp(c->argv[i]->ptr,"all")){
-          for (int j = 0; j < 12; j++){
-            if (dictFind(final,sdsnew(addCommands[j])) == NULL )
-            dictAdd(final, sdsnew(addCommands[j]), NULL);
+        else if (!strcasecmp(c->argv[i]->ptr,"all") || !strcasecmp(c->argv[i]->ptr,"everything")){
+          for (int j = 0; j < 11; j++){
+            if (dictFind(final,sdsnew(defSections[j])) == NULL )
+            dictAdd(final, sdsnew(defSections[j]), NULL);
           }
+          dictAdd(final, sdsnew("commandstats"), NULL);
         }
         else{
             if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL )
@@ -6152,10 +6156,11 @@ void infoCommand(client *c) {
         }
     }
 
+    sds info = sdsempty();
     dictEntry *de;
     dictIterator *di = dictGetSafeIterator(final);
     int lastValid = 0; 
-    while((de = dictNext(di)) != NULL) {
+    while((de = dictNext(di)) != NULL) { /* Adding info of subsections to info */
         char * subcommand = dictGetKey(de);
 
         if (lastValid) {
