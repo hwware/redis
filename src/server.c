@@ -6137,14 +6137,14 @@ void infoCommand(client *c) {
     for (int i = 1; i < c->argc; i++) {
         if (!strcasecmp(c->argv[i]->ptr,"default")){
         serverLog(LL_WARNING, "============================default");
-          for (int j = 0; j < strlen(defCommands); j++){
+          for (int j = 0; j < 11; j++){
             serverLog(LL_WARNING, "============================ Adding: %s", defCommands[j]);
-            dictAdd(final, defCommands[j], c);
+            dictAdd(final, defCommands[j], NULL);
           }
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all")){
         serverLog(LL_WARNING, "============================all");
-          for (int j = 0; j < strlen(addCommands); j++){
+          for (int j = 0; j < 12; j++){
             dictAdd(final, addCommands[j], NULL);
           }
         }
