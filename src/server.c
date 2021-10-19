@@ -6126,7 +6126,6 @@ void infoCommand(client *c) {
     dict * final = dictCreate(&setDictType);
 
     if (c->argc == 1) {
-        serverLog(LL_WARNING, "============================First");
         sds info = genRedisInfoString("default");
         addReplyVerbatim(c,info,sdslen(info),"txt");
         sdsfree(info);
@@ -6136,34 +6135,28 @@ void infoCommand(client *c) {
 
     for (int i = 1; i < c->argc; i++) {
         if (!strcasecmp(c->argv[i]->ptr,"default")){
-        serverLog(LL_WARNING, "============================default");
           for (int j = 0; j < 11; j++){
-            serverLog(LL_WARNING, "============================ Adding: %s", defCommands[j]);
-            dictAdd(final, sdsnew(defCommands[j]), NULL);
+            if (dictFind(final,sdsnew(defCommands[j])) != NULL )
+              dictAdd(final, sdsnew(defCommands[j]), NULL);
           }
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all")){
-        serverLog(LL_WARNING, "============================all");
           for (int j = 0; j < 12; j++){
+            if (dictFind(final,sdsnew(addCommands[j])) != NULL )
             dictAdd(final, sdsnew(addCommands[j]), NULL);
-            char * subcommand = dictGetKey(dictFind(final,sdsnew("check")));
-            serverLog(LL_WARNING, "============================ GOT BACK %s", subcommand);
-
           }
         }
         else{
-        serverLog(LL_WARNING, "============================ adding : %s", c->argv[i]->ptr);
-          serverAssert(dictAdd(final,sdsnewlen(c->argv[i]->ptr, 15),NULL) == DICT_OK);
+            if (dictFind(final,sdsnew(c->argv[i]->ptr)) != NULL )
+              dictAdd(final,sdsnewlen(c->argv[i]->ptr, 15),NULL);
         }
     }
-    serverLog(LL_WARNING, "============================ Size of dict  : %d", dictSize(final));
 
     dictEntry *de;
     dictIterator *di = dictGetSafeIterator(final);
     int lastValid = 0; 
     while((de = dictNext(di)) != NULL) {
         char * subcommand = dictGetKey(de);
-        serverLog(LL_WARNING, "============================ Printing  : %s", subcommand);
 
         if (lastValid) {
             info = sdscat(info,"\r\n");
