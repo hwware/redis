@@ -6140,25 +6140,25 @@ void infoCommand(client *c) {
         return;
     }
 
-    int allsections = 0;
-    int defSections = 0;
+    int all = 0;
+    int def = 0;
     /* Populating the set with subsections */
     for (int i = 1; i < c->argc; i++) {
         if (!strcasecmp(c->argv[i]->ptr,"default")){
             if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL ) /* Skip if subsection already present */
                 dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
-            defSections = 1;
+            def = 1;
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all") || !strcasecmp(c->argv[i]->ptr,"everything")){
             if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL )
                 dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
-            allSections = 1;
+            all = 1;
         }
         else{
             if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL ){
-                if (allSections && (dictFind(allSet,sdsnew(c->argv[i]->ptr)) == NULL) && (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL))
+                if (all && (dictFind(allSet,sdsnew(c->argv[i]->ptr)) == NULL) && (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL))
                     dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
-                else if (defSections && (dictFind(defSet,sdsnew(c->argv[i]->ptr)) == NULL) && (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL))
+                else if (def && (dictFind(defSet,sdsnew(c->argv[i]->ptr)) == NULL) && (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL))
                     dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
                 else if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL){
                     dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
