@@ -6123,7 +6123,15 @@ sds genRedisInfoString(const char *section) {
 void infoCommand(client *c) {
     char defSections[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
     dict * final = dictCreate(&setDictType); /* Set to add the subsections to print*/
-    
+    dict * defaultSet = dictCreate(&setDictType); /* Set Containing all subsections of default */
+    dict * allSet = dictCreate(&setDictType); /* Set Containing all subsections of all/everything */
+
+    for (int j = 0; j < 11; j++){
+        dictAdd(defaultSet, sdsnew(defSections[j]), NULL);
+        dictAdd(allSet, sdsnew(defSections[j]), NULL);
+    }
+    dictAdd(allSet, sdsnew("commandstats"), NULL);
+
     /* When info is called with no other arguments*/
     if (c->argc == 1) {
         sds info = genRedisInfoString("default");
@@ -6132,24 +6140,30 @@ void infoCommand(client *c) {
         return;
     }
 
+    int allsections = 0;
+    int defSections = 0;
     /* Populating the set with subsections */
     for (int i = 1; i < c->argc; i++) {
         if (!strcasecmp(c->argv[i]->ptr,"default")){
-          for (int j = 0; j < 11; j++){
-            if (dictFind(final,sdsnew(defSections[j])) == NULL ) /* Skip if subsection already present */
-              dictAdd(final, sdsnew(defSections[j]), NULL);
-          }
+            if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL ) /* Skip if subsection already present */
+                dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
+            defSections = 1;
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all") || !strcasecmp(c->argv[i]->ptr,"everything")){
-          for (int j = 0; j < 11; j++){
-            if (dictFind(final,sdsnew(defSections[j])) == NULL )
-            dictAdd(final, sdsnew(defSections[j]), NULL);
-          }
-          dictAdd(final, sdsnew("commandstats"), NULL);
+            if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL )
+                dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
+            allSections = 1;
         }
         else{
-            if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL )
-              dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
+            if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL ){
+                if (allSections && (dictFind(allSet,sdsnew(c->argv[i]->ptr)) == NULL) && (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL))
+                    dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
+                else if (defSections && (dictFind(defSet,sdsnew(c->argv[i]->ptr)) == NULL) && (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL))
+                    dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
+                else if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL){
+                    dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
+                }
+            }
         }
     }
 
