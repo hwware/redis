@@ -6121,9 +6121,6 @@ sds genRedisInfoString(const char *section) {
 }
 
 void infoCommand(client *c) {
-
-    serverLog(LL_WARNING, " The REDIS VERSION IS : %s", REDIS_VERSION);
-
     char defSections[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
     dict * final = dictCreate(&setDictType); /* Set to add the subsections to print*/
     
