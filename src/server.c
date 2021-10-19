@@ -6138,6 +6138,7 @@ void infoCommand(client *c) {
         if (!strcasecmp(c->argv[i]->ptr,"default")){
         serverLog(LL_WARNING, "============================default");
           for (int j = 0; j < strlen(defCommands); j++){
+            serverLog(LL_WARNING, "============================ Adding: %s", defCommands[j]);
             dictAdd(server.commands, defCommands[j], c);
           }
         }
