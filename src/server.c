@@ -6139,18 +6139,18 @@ void infoCommand(client *c) {
         serverLog(LL_WARNING, "============================default");
           for (int j = 0; j < 11; j++){
             serverLog(LL_WARNING, "============================ Adding: %s", defCommands[j]);
-            dictAdd(final, defCommands[j], NULL);
+            dictAdd(final, sdsnew(defCommands[j]), NULL);
           }
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all")){
         serverLog(LL_WARNING, "============================all");
           for (int j = 0; j < 12; j++){
-            dictAdd(final, addCommands[j], NULL);
+            dictAdd(final, sdsnew(addCommands[j]), NULL);
           }
         }
         else{
         serverLog(LL_WARNING, "============================ adding : %s", c->argv[i]->ptr);
-          dictAdd(final, c->argv[i]->ptr, NULL);
+          dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
         }
     }
     serverLog(LL_WARNING, "============================ Size of dict  : %d", dictSize(final));
