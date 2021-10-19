@@ -6147,7 +6147,9 @@ void infoCommand(client *c) {
           }
         }
         else{
-            char * subcommand = dictGetKey(dictFind(final,sdsnew(c->argv[i]->ptr)));
+            dictEntry *de = dictFind(final,sdsnew(c->argv[i]->ptr));
+            if (de)
+              char * subcommand = dictGetKey(de);
             if (strcmp(subcommand, c->argv[i]->ptr))
               dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
         }
