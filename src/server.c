@@ -6146,6 +6146,11 @@ void infoCommand(client *c) {
         serverLog(LL_WARNING, "============================all");
           for (int j = 0; j < 12; j++){
             dictAdd(final, sdsnew(addCommands[j]), NULL);
+            de = dictFind(final,sdsnew(addCommands[j]));
+            char * subcommand = dictGetVal(de);
+            if (de == NULL)
+              serverLog(LL_WARNING, "============================ ADDED AS NULL OR NOT FOUND");
+
           }
         }
         else{
