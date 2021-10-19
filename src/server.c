@@ -6146,7 +6146,7 @@ void infoCommand(client *c) {
         serverLog(LL_WARNING, "============================all");
           for (int j = 0; j < 12; j++){
             dictAdd(final, sdsnew(addCommands[j]), NULL);
-            char * subcommand = dictGetVal(dictFind(final,sdsnew(addCommands[j])));
+            char * subcommand = dictGetKey(dictFind(final,sdsnew(addCommands[j])));
             serverLog(LL_WARNING, "============================ GOT BACK %s", subcommand);
 
           }
@@ -6162,7 +6162,7 @@ void infoCommand(client *c) {
     dictIterator *di = dictGetSafeIterator(final);
     int lastValid = 0; 
     while((de = dictNext(di)) != NULL) {
-        char * subcommand = dictGetVal(de);
+        char * subcommand = dictGetKey(de);
         serverLog(LL_WARNING, "============================ Printing  : %s", subcommand);
 
         if (lastValid) {
