@@ -6123,7 +6123,7 @@ sds genRedisInfoString(const char *section) {
 void infoCommand(client *c) {
     char defCommands[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
     char addCommands[12][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace", "commandstats"};
-    dict * final = dictCreate(&setDictType);
+    robj * final = createSetObject();
 
     if (c->argc == 1) {
         serverLog(LL_WARNING, "============================First");
@@ -6138,18 +6138,18 @@ void infoCommand(client *c) {
         if (!strcasecmp(c->argv[i]->ptr,"default")){
         serverLog(LL_WARNING, "============================default");
           for (int j = 0; j < strlen(defCommands); j++){
-            dictAdd(server.commands, sdsnew(defCommands[j]), c);
+            dictAdd(server.commands, defCommands[j], c);
           }
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all")){
         serverLog(LL_WARNING, "============================all");
           for (int j = 0; j < strlen(addCommands); j++){
-            dictAdd(final, sdsnew(addCommands[j]), NULL);
+            dictAdd(final, addCommands[j], NULL);
           }
         }
         else{
         serverLog(LL_WARNING, "============================ adding : %s", c->argv[i]->ptr);
-          dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
+          dictAdd(final, c->argv[i]->ptr, NULL);
         }
     }
 
