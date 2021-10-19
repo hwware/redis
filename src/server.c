@@ -6150,7 +6150,7 @@ void infoCommand(client *c) {
         }
         else{
         serverLog(LL_WARNING, "============================ adding : %s", c->argv[i]->ptr);
-          serverAssert(dictAdd(final,sdsnew(c->argv[i]->ptr),NULL) == DICT_OK);
+          serverAssert(dictAdd(final,sdsnewlen(c->argv[i]->ptr, 15),NULL) == DICT_OK);
         }
     }
     serverLog(LL_WARNING, "============================ Size of dict  : %d", dictSize(final));
