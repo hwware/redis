@@ -6158,7 +6158,7 @@ void infoCommand(client *c) {
             if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL ){
                 if (all && (dictFind(allSet,sdsnew(c->argv[i]->ptr)) == NULL) && (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL))
                     dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
-                else if (def && (dictFind(defSet,sdsnew(c->argv[i]->ptr)) == NULL) && (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL))
+                else if (def && (dictFind(defaultSet,sdsnew(c->argv[i]->ptr)) == NULL) && (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL))
                     dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
                 else if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL){
                     dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
