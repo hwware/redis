@@ -6126,7 +6126,7 @@ void infoCommand(client *c) {
     dict * defaultSet = dictCreate(&setDictType); /* Set Containing all subsections of default */
     dict * allSet = dictCreate(&setDictType); /* Set Containing all subsections of all/everything */
 
-    for (int i = 0; i < 11; i++){
+    for (int i = 0; i < 11; i++) {
         dictAdd(defaultSet, sdsnew(defSections[i]), NULL);
         dictAdd(allSet, sdsnew(defSections[i]), NULL);
     }
@@ -6145,29 +6145,28 @@ void infoCommand(client *c) {
 
     /* Checking for default all and eveything */
     for (int i = 1; i < c->argc; i++) {
-        if (!strcasecmp(c->argv[i]->ptr,"default")){
+        if (!strcasecmp(c->argv[i]->ptr,"default")) {
             def = 1;
             if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL ) /* Skip if subsection already present */
                 dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
         }
-        else if (!strcasecmp(c->argv[i]->ptr,"all") || !strcasecmp(c->argv[i]->ptr,"everything")){
+        else if (!strcasecmp(c->argv[i]->ptr,"all") || !strcasecmp(c->argv[i]->ptr,"everything")) {
             all = 1;
             if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL )
                 dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
         }
     }
 
-
     /* Populating the set with other subsections */
     for (int i = 1; i < c->argc; i++) {
         char * subcommand = c->argv[i]->ptr;
-        if (dictFind(final,sdsnew(subcommand)) == NULL ){
+        if (dictFind(final,sdsnew(subcommand)) == NULL ) {
             if (all && (dictFind(allSet,sdsnew(subcommand)) == NULL))
                 dictAdd(final,sdsnew(subcommand),NULL);
-            else if (def && (dictFind(defaultSet,sdsnew(subcommand)) == NULL)){
+            else if (def && (dictFind(defaultSet,sdsnew(subcommand)) == NULL)) {
                 dictAdd(final,sdsnew(subcommand),NULL);
             }
-            else if (def == 0 && all == 0){
+            else if (def == 0 && all == 0) {
                 dictAdd(final,sdsnew(subcommand),NULL);
             }
         }
