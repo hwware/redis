@@ -6157,8 +6157,13 @@ void infoCommand(client *c) {
         }
     }
 
-    if (dictFind(final,"default") == NULL)
-              serverLog(LL_WARNING, "SOMETHING WRONG WITH DEFSET");
+    dictEntry *de2;
+    dictIterator *di2 = dictGetSafeIterator(defaultSet);
+    while((de = dictNext(di)) != NULL) { /* Adding info of subsections to info */
+        char * subcommand = dictGetKey(de2);
+        serverLog(LL_WARNING, "=========SUBCOMMAND IN DEFSET %s", subcommand);
+    }
+    dictReleaseIterator(di);
 
 
     /* Populating the set with other subsections */
