@@ -6167,10 +6167,9 @@ void infoCommand(client *c) {
             if (all && (dictFind(allSet,sdsnew(subcommand)) == NULL))
                 dictAdd(final,sdsnew(subcommand),NULL);
             else if (def && (dictFind(defaultSet,sdsnew(subcommand)) == NULL)){
-              serverLog(LL_WARNING, "=========in default if adding: %s", subcommand);
                             dictAdd(final,sdsnew(subcommand),NULL);
                           }
-            else {
+            else if (def == 0 && all == 0){
                 dictAdd(final,sdsnew(subcommand),NULL);
             }
         }
