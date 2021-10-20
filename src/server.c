@@ -6157,26 +6157,21 @@ void infoCommand(client *c) {
         }
     }
 
-    dictEntry *de2;
-    dictIterator *di2 = dictGetSafeIterator(defaultSet);
-    while((de2 = dictNext(di2)) != NULL) { /* Adding info of subsections to info */
-        char * subcommand = dictGetKey(de2);
-        serverLog(LL_WARNING, "=========SUBCOMMAND IN DEFSET %s", subcommand);
-    }
-    dictReleaseIterator(di2);
-
 
     /* Populating the set with other subsections */
     for (int i = 1; i < c->argc; i++) {
-        if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL ){
-            if (all && (dictFind(allSet,sdsnew(c->argv[i]->ptr)) == NULL))
-                dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
-            else if (def && (dictFind(defaultSet,sdsnew(c->argv[i]->ptr)) == NULL)){
-              serverLog(LL_WARNING, "=========in default if adding: %s", c->argv[i]->ptr);
-                            dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
+        char * subcommand = c->argv[i]->ptr;
+        serverLog(LL_WARNING, "=========CURRENT subcommand %s", subcommand);
+
+        if (dictFind(final,sdsnew(subcommand)) == NULL ){
+            if (all && (dictFind(allSet,sdsnew(subcommand)) == NULL))
+                dictAdd(final,sdsnew(subcommand),NULL);
+            else if (def && (dictFind(defaultSet,sdsnew(subcommand)) == NULL)){
+              serverLog(LL_WARNING, "=========in default if adding: %s", subcommand);
+                            dictAdd(final,sdsnew(subcommand),NULL);
                           }
             else {
-                dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
+                dictAdd(final,sdsnew(subcommand),NULL);
             }
         }
     }
