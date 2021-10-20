@@ -6145,21 +6145,21 @@ void infoCommand(client *c) {
 
     /* Checking for default all and eveything */
     for (int i = 1; i < c->argc; i++) {
-              serverLog(LL_WARNING, "=========adding default and all: %s", c->argv[i]->ptr);
-
         if (!strcasecmp(c->argv[i]->ptr,"default")){
-              serverLog(LL_WARNING, "=========def set to 1");
             def = 1;
-
             if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL ) /* Skip if subsection already present */
                 dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all") || !strcasecmp(c->argv[i]->ptr,"everything")){
+            all = 1;
             if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL )
                 dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
-            all = 1;
         }
     }
+
+    if (dictFind(defaultSet,"cpu") == NULL)
+              serverLog(LL_WARNING, "SOMETHING WRONG WITH DEFSET");
+
 
     /* Populating the set with other subsections */
     for (int i = 1; i < c->argc; i++) {
