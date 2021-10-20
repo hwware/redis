@@ -6148,9 +6148,11 @@ void infoCommand(client *c) {
               serverLog(LL_WARNING, "=========adding default and all: %s", c->argv[i]->ptr);
 
         if (!strcasecmp(c->argv[i]->ptr,"default")){
+              serverLog(LL_WARNING, "=========def set to 1");
+            def = 1;
+
             if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL ) /* Skip if subsection already present */
                 dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
-            def = 1;
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all") || !strcasecmp(c->argv[i]->ptr,"everything")){
             if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL )
