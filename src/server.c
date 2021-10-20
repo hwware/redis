@@ -6164,7 +6164,7 @@ void infoCommand(client *c) {
                 dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
             else if (def && (dictFind(defaultSet,sdsnew(c->argv[i]->ptr)) == NULL))
                 dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
-            else if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL){
+            else {
                 dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
             }
         }
