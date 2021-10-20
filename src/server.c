@@ -6146,29 +6146,42 @@ void infoCommand(client *c) {
     /* Checking for default all and eveything */
     for (int i = 1; i < c->argc; i++) {
         if (!strcasecmp(c->argv[i]->ptr,"default")) {
+            sds subcommandsds = sdsnew(c->argv[i]->ptr);
             def = 1;
-            if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL ) /* Skip if subsection already present */
-                dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
+            if (dictFind(final,subcommandsds) == NULL ) /* Skip if subsection already present */
+                dictAdd(final, subcommandsds, NULL);
+            else
+                sdsfree(subcommandsds);
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all") || !strcasecmp(c->argv[i]->ptr,"everything")) {
             all = 1;
-            if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL )
-                dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
+            sds subcommandsds = sdsnew(c->argv[i]->ptr);
+            if (dictFind(final,subcommandsds) == NULL )
+                dictAdd(final, subcommandsds, NULL);
+            else
+                sdsfree(subcommandsds);
         }
     }
 
     /* Populating the set with other subsections */
     for (int i = 1; i < c->argc; i++) {
         char * subcommand = c->argv[i]->ptr;
-        if (dictFind(final,sdsnew(subcommand)) == NULL ) {
-            if (all && (dictFind(allSet,sdsnew(subcommand)) == NULL))
-                dictAdd(final,sdsnew(subcommand),NULL);
-            else if (def && (dictFind(defaultSet,sdsnew(subcommand)) == NULL)) {
-                dictAdd(final,sdsnew(subcommand),NULL);
+        sds subcommandsds = sdsnew(c->argv[i]->ptr);
+        if (dictFind(final,subcommandsds) == NULL ) {
+            if (all && (dictFind(allSet,subcommandsds) == NULL))
+                dictAdd(final,subcommandsds,NULL);
+            else if (def && (dictFind(defaultSet,subcommandsds) == NULL)) {
+                dictAdd(final,subcommandsds,NULL);
             }
             else if (def == 0 && all == 0) {
-                dictAdd(final,sdsnew(subcommand),NULL);
+                dictAdd(final,subcommandsds,NULL);
             }
+            else {
+                sdsfree(subcommandsds);
+            }
+        }
+        else {
+            sdsfree(subcommandsds);
         }
     }
 
