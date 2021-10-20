@@ -6159,7 +6159,7 @@ void infoCommand(client *c) {
 
     dictEntry *de2;
     dictIterator *di2 = dictGetSafeIterator(defaultSet);
-    while((de2 = dictNext(di)) != NULL) { /* Adding info of subsections to info */
+    while((de2 = dictNext(di2)) != NULL) { /* Adding info of subsections to info */
         char * subcommand = dictGetKey(de2);
         serverLog(LL_WARNING, "=========SUBCOMMAND IN DEFSET %s", subcommand);
     }
