@@ -6145,6 +6145,8 @@ void infoCommand(client *c) {
 
     /* Checking for default all and eveything */
     for (int i = 1; i < c->argc; i++) {
+              serverLog(LL_WARNING, "=========adding default and all: %s", c->argv[i]->ptr);
+
         if (!strcasecmp(c->argv[i]->ptr,"default")){
             if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL ) /* Skip if subsection already present */
                 dictAdd(final, sdsnew(c->argv[i]->ptr), NULL);
