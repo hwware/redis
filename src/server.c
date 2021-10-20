@@ -6165,7 +6165,6 @@ void infoCommand(client *c) {
 
     /* Populating the set with other subsections */
     for (int i = 1; i < c->argc; i++) {
-        char * subcommand = c->argv[i]->ptr;
         sds subcommandsds = sdsnew(c->argv[i]->ptr);
         if (dictFind(final,subcommandsds) == NULL ) {
             if (all && (dictFind(allSet,subcommandsds) == NULL))
