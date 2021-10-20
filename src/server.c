@@ -6161,14 +6161,12 @@ void infoCommand(client *c) {
     /* Populating the set with other subsections */
     for (int i = 1; i < c->argc; i++) {
         char * subcommand = c->argv[i]->ptr;
-        serverLog(LL_WARNING, "=========CURRENT subcommand %s", subcommand);
-
         if (dictFind(final,sdsnew(subcommand)) == NULL ){
             if (all && (dictFind(allSet,sdsnew(subcommand)) == NULL))
                 dictAdd(final,sdsnew(subcommand),NULL);
             else if (def && (dictFind(defaultSet,sdsnew(subcommand)) == NULL)){
-                            dictAdd(final,sdsnew(subcommand),NULL);
-                          }
+                dictAdd(final,sdsnew(subcommand),NULL);
+            }
             else if (def == 0 && all == 0){
                 dictAdd(final,sdsnew(subcommand),NULL);
             }
