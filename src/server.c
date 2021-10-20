@@ -6191,6 +6191,9 @@ void infoCommand(client *c) {
 
     addReplyVerbatim(c,info,sdslen(info),"txt");
     sdsfree(info);
+    dictRelease(final);
+    dictRelease(defaultSet);
+    dictRelease(allSet);
     return;
 }
 
