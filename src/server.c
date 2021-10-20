@@ -6157,7 +6157,7 @@ void infoCommand(client *c) {
         }
     }
 
-    if (dictFind(defaultSet,"cpu") == NULL)
+    if (dictFind(final,"default") == NULL)
               serverLog(LL_WARNING, "SOMETHING WRONG WITH DEFSET");
 
 
