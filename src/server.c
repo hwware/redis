@@ -6126,9 +6126,9 @@ void infoCommand(client *c) {
     dict * defaultSet = dictCreate(&setDictType); /* Set Containing all subsections of default */
     dict * allSet = dictCreate(&setDictType); /* Set Containing all subsections of all/everything */
 
-    for (int j = 0; j < 11; j++){
-        dictAdd(defaultSet, sdsnew(defSections[j]), NULL);
-        dictAdd(allSet, sdsnew(defSections[j]), NULL);
+    for (int i = 0; i < 11; i++){
+        dictAdd(defaultSet, sdsnew(defSections[i]), NULL);
+        dictAdd(allSet, sdsnew(defSections[i]), NULL);
     }
     dictAdd(allSet, sdsnew("commandstats"), NULL);
 
@@ -6162,8 +6162,10 @@ void infoCommand(client *c) {
         if (dictFind(final,sdsnew(c->argv[i]->ptr)) == NULL ){
             if (all && (dictFind(allSet,sdsnew(c->argv[i]->ptr)) == NULL))
                 dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
-            else if (def && (dictFind(defaultSet,sdsnew(c->argv[i]->ptr)) == NULL))
-                dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
+            else if (def && (dictFind(defaultSet,sdsnew(c->argv[i]->ptr)) == NULL)){
+              serverLog(LL_WARNING, "=========in default if adding: %s", c->argv[i]->ptr);
+                            dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
+                          }
             else {
                 dictAdd(final,sdsnew(c->argv[i]->ptr),NULL);
             }
