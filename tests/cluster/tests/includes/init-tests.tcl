@@ -57,7 +57,9 @@ test "Cluster Join and auto-discovery test" {
     }
 
     foreach_redis_id id {
+        puts "ID is"
         puts $id
+        puts "IDS is"
         puts $ids
         wait_for_condition 1000 50 {
             [llength [get_cluster_nodes $id]] == [llength $ids]
