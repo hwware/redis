@@ -2615,7 +2615,7 @@ void clusterSetGossipEntry(clusterMsg *hdr, int i, clusterNode *n) {
     gossip->pong_received = htonl(n->pong_received/1000);
     memcpy(gossip->ip,n->ip,sizeof(n->ip));
     if (n->hname)
-        memcpy(gossip->hname,n->hanme,sizeof(n->hname));
+        memcpy(gossip->hname,n->hname,strlen(n->hname));
     gossip->port = htons(n->port);
     gossip->cport = htons(n->cport);
     gossip->flags = htons(n->flags);
@@ -3014,7 +3014,7 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     if (server.cluster->lastVoteEpoch == server.cluster->currentEpoch) {
         serverLog(LL_WARNING,
                 "Failover auth denied to %.40s %s: already voted for epoch %llu",
-                node->name, node->hname
+                node->name, node->hname,
                 (unsigned long long) server.cluster->currentEpoch);
         return;
     }
