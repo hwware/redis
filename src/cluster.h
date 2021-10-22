@@ -207,7 +207,8 @@ typedef struct {
     char nodename[CLUSTER_NAMELEN];
     uint32_t ping_sent;
     uint32_t pong_received;
-    char ip[NET_IP_STR_LEN];  /* IP address last time it was seen */
+    char ip[NET_IP_STR_LEN];    /* IP address last time it was seen */
+    char * hname;               /* Human readable name for node */
     uint16_t port;              /* base port last time it was seen */
     uint16_t cport;             /* cluster port last time it was seen */
     uint16_t flags;             /* node->flags copy */
