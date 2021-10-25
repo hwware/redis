@@ -206,9 +206,7 @@ jobs:
 
   test-ubuntu-tls-no-tls:
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event_name != 'workflow_dispatch' && github.repository == 'redis/redis')) && !contains(github.event.inputs.skipjobs, 'tls')
+    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'iothreads')
     timeout-minutes: 14400
     steps:
     - name: prep
@@ -246,7 +244,7 @@ jobs:
 
   test-ubuntu-io-threads:
     runs-on: ubuntu-latest
-    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'iothreads')
+    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'valgrind')
     timeout-minutes: 14400
     steps:
     - name: prep
@@ -347,9 +345,7 @@ jobs:
 
   test-centos7-tls-no-tls:
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event_name != 'workflow_dispatch' && github.repository == 'redis/redis')) && !contains(github.event.inputs.skipjobs, 'tls')
+    if: github.repository == 'hwware/redis' && !contains(github.event.inputs.skipjobs, 'tls')
     container: centos:7
     timeout-minutes: 14400
     steps:
@@ -432,28 +428,6 @@ jobs:
     - name: sentinel tests
       if: true && !contains(github.event.inputs.skiptests, 'sentinel')
       run: ./runtest-sentinel ${{github.event.inputs.cluster_test_args}}
-
-  test-macos-latest-cluster:
-    runs-on: macos-latest
-    if: |
-      (github.event_name == 'workflow_dispatch' ||
-      (github.event_name != 'workflow_dispatch' && github.repository == 'redis/redis')) && !contains(github.event.inputs.skipjobs, 'macos')
-    timeout-minutes: 14400
-    steps:
-    - name: prep
-      if: github.event_name == 'workflow_dispatch'
-      run: |
-        echo "GITHUB_REPOSITORY=${{github.event.inputs.use_repo}}" >> $GITHUB_ENV
-        echo "GITHUB_HEAD_REF=${{github.event.inputs.use_git_ref}}" >> $GITHUB_ENV
-    - uses: actions/checkout@v2
-      with:
-        repository: ${{ env.GITHUB_REPOSITORY }}
-        ref: ${{ env.GITHUB_HEAD_REF }}
-    - name: make
-      run: make REDIS_CFLAGS='-Werror'
-    - name: cluster tests
-      if: true && !contains(github.event.inputs.skiptests, 'cluster')
-      run: ./runtest-cluster ${{github.event.inputs.cluster_test_args}}
 
   test-alpine-jemalloc:
     runs-on: ubuntu-latest
