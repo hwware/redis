@@ -1535,15 +1535,15 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 if (flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_PFAIL)) {
                     if (clusterNodeAddFailureReport(node,sender)) {
                         serverLog(LL_VERBOSE,
-                            "Node %.40s reported node %.40s as not reachable.",
-                            sender->name, node->name);
+                            "Node %.40s %s reported node %.40s %s as not reachable.",
+                            sender->name, senter->hname, node->name, node->hname);
                     }
                     markNodeAsFailingIfNeeded(node);
                 } else {
                     if (clusterNodeDelFailureReport(node,sender)) {
                         serverLog(LL_VERBOSE,
-                            "Node %.40s reported node %.40s is back online.",
-                            sender->name, node->name);
+                            "Node %.40s %s reported node %.40s %s is back online.",
+                            sender->name, sender->hname, node->name, node->hname);
                     }
                 }
             }
@@ -1672,8 +1672,8 @@ int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
     setClusterNodeName(node);
     if (node->link) freeClusterLink(node->link);
     node->flags &= ~CLUSTER_NODE_NOADDR;
-    serverLog(LL_WARNING,"Address updated for node %.40s, now %s:%d",
-        node->name, node->ip, node->port);
+    serverLog(LL_WARNING,"Address updated for node %.40s %s, now %s:%d",
+        node->name, node->hname, node->ip, node->port);
 
     /* Check if this is our master and we have to change the
      * replication target as well. */
@@ -1802,7 +1802,7 @@ void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoc
              sender_slots == migrated_our_slots)) {
         serverLog(LL_WARNING,
             "Configuration change detected. Reconfiguring myself "
-            "as a replica of %.40s", sender->name);
+            "as a replica of %.40s %s", sender->name, sender->hname);
         clusterSetMaster(sender);
         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|
                              CLUSTER_TODO_UPDATE_STATE|
@@ -2007,8 +2007,8 @@ int clusterProcessPacket(clusterLink *link) {
                  * IP/port of the node with the new one. */
                 if (sender) {
                     serverLog(LL_VERBOSE,
-                        "Handshake: we already know node %.40s, "
-                        "updating the address if needed.", sender->name);
+                        "Handshake: we already know node %.40s %s, "
+                        "updating the address if needed.", sender->name, sender->hname);
                     if (nodeUpdateAddressIfNeeded(sender,link,hdr))
                     {
                         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|
@@ -2023,8 +2023,8 @@ int clusterProcessPacket(clusterLink *link) {
                 /* First thing to do is replacing the random name with the
                  * right node name if this was a handshake stage. */
                 clusterRenameNode(link->node, hdr->sender);
-                serverLog(LL_DEBUG,"Handshake with node %.40s completed.",
-                    link->node->name);
+                serverLog(LL_DEBUG,"Handshake with node %.40s %s completed.",
+                    link->node->name, link->node->hname);
                 link->node->flags &= ~CLUSTER_NODE_HANDSHAKE;
                 link->node->flags |= flags&(CLUSTER_NODE_MASTER|CLUSTER_NODE_SLAVE);
                 clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
@@ -2034,8 +2034,8 @@ int clusterProcessPacket(clusterLink *link) {
                 /* If the reply has a non matching node ID we
                  * disconnect this node and set it as not having an associated
                  * address. */
-                serverLog(LL_DEBUG,"PONG contains mismatching sender ID. About node %.40s added %d ms ago, having flags %d",
-                    link->node->name,
+                serverLog(LL_DEBUG,"PONG contains mismatching sender ID. About node %.40s %s added %d ms ago, having flags %d",
+                    link->node->name, link->node->hname,
                     (int)(now-(link->node->ctime)),
                     link->node->flags);
                 link->node->flags |= CLUSTER_NODE_NOADDR;
@@ -2181,9 +2181,10 @@ int clusterProcessPacket(clusterLink *link) {
                         senderConfigEpoch)
                     {
                         serverLog(LL_VERBOSE,
-                            "Node %.40s has old slots configuration, sending "
-                            "an UPDATE message about %.40s",
-                                sender->name, server.cluster->slots[j]->name);
+                            "Node %.40s %s has old slots configuration, sending "
+                            "an UPDATE message about %.40s %s",
+                                sender->name, sender->hname,
+                                server.cluster->slots[j]->name, server.cluster->slots[j]->hname);
                         clusterSendUpdate(sender->link,
                             server.cluster->slots[j]);
 
@@ -2216,8 +2217,8 @@ int clusterProcessPacket(clusterLink *link) {
                 !(failing->flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_MYSELF)))
             {
                 serverLog(LL_NOTICE,
-                    "FAIL message received from %.40s about %.40s",
-                    hdr->sender, hdr->data.fail.about.nodename);
+                    "FAIL message received from %.40s %s about %.40s",
+                    hdr->sender, hdr->sender->hname, hdr->data.fail.about.nodename);
                 failing->flags |= CLUSTER_NODE_FAIL;
                 failing->fail_time = now;
                 failing->flags &= ~CLUSTER_NODE_PFAIL;
@@ -2226,8 +2227,8 @@ int clusterProcessPacket(clusterLink *link) {
             }
         } else {
             serverLog(LL_NOTICE,
-                "Ignoring FAIL message from unknown node %.40s about %.40s",
-                hdr->sender, hdr->data.fail.about.nodename);
+                "Ignoring FAIL message from unknown node %.40s %s about %.40s",
+                hdr->sender, hdr->sender->hname, hdr->data.fail.about.nodename);
         }
     } else if (type == CLUSTERMSG_TYPE_PUBLISH) {
         if (!sender) return 1;  /* We don't know that node. */
@@ -2277,8 +2278,8 @@ int clusterProcessPacket(clusterLink *link) {
         server.cluster->mf_end = now + CLUSTER_MF_TIMEOUT;
         server.cluster->mf_slave = sender;
         pauseClients(now+(CLUSTER_MF_TIMEOUT*CLUSTER_MF_PAUSE_MULT),CLIENT_PAUSE_WRITE);
-        serverLog(LL_WARNING,"Manual failover requested by replica %.40s.",
-            sender->name);
+        serverLog(LL_WARNING,"Manual failover requested by replica %.40s %s.",
+            sender->name, sennder->hname);
         /* We need to send a ping message to the replica, as it would carry
          * `server.cluster->mf_master_offset`, which means the master paused clients
          * at offset `server.cluster->mf_master_offset`, so that the replica would
@@ -2360,8 +2361,8 @@ void clusterLinkConnectHandler(connection *conn) {
 
     /* Check if connection succeeded */
     if (connGetState(conn) != CONN_STATE_CONNECTED) {
-        serverLog(LL_VERBOSE, "Connection with Node %.40s at %s:%d failed: %s",
-                node->name, node->ip, node->cport,
+        serverLog(LL_VERBOSE, "Connection with Node %.40s %s at %s:%d failed: %s",
+                node->name, node->hname, node->ip, node->cport,
                 connGetLastError(conn));
         freeClusterLink(link);
         return;
@@ -2392,8 +2393,8 @@ void clusterLinkConnectHandler(connection *conn) {
      * normal PING packets. */
     node->flags &= ~CLUSTER_NODE_MEET;
 
-    serverLog(LL_DEBUG,"Connecting with Node %.40s at %s:%d",
-            node->name, node->ip, node->cport);
+    serverLog(LL_DEBUG,"Connecting with Node %.40s %s at %s:%d",
+            node->name, node->hname node->ip, node->cport);
 }
 
 /* Read data. Try to read the first field of the header first to check the
