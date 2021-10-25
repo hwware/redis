@@ -2632,6 +2632,7 @@ void clusterSetGossipEntry(clusterMsg *hdr, int i, clusterNode *n) {
     gossip->cport = htons(n->cport);
     gossip->flags = htons(n->flags);
     gossip->pport = htons(n->pport);
+    gossip->custom_name = n->custom_name;
     gossip->notused1 = 0;
 }
 
