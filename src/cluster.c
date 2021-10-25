@@ -838,7 +838,8 @@ void setClusterNodeName(clusterNode *node) {
 int setManualClusterNodeName(clusterNode *node, char * newname) {
     if (newname == NULL)
         return 0;
-    memcpy(node->hname, newname, strlen(newname));
+    node->hname = NULL;
+    strncpy(node->hname, newname, strlen(newname));
     node->custom_name = 1;
     return 1;
 }
