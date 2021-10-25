@@ -838,9 +838,16 @@ void setClusterNodeName(clusterNode *node) {
 int setManualClusterNodeName(clusterNode *node, char * newname) {
     if (newname == NULL)
         return 0;
+    int retval;
+    sds s = sdsnewlen(node->name, CLUSTER_NAMELEN);
+    retval = dictDelete(server.cluster->nodes, s);
+    sdsfree(s);
+    serverAssert(retval == DICT_OK);
+
     node->hname = zmalloc(sizeof(newname));
     strncpy(node->hname, newname, strlen(newname));
     node->custom_name = 1;
+    clusterAddNode(node);
     return 1;
 }
 
