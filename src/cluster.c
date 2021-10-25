@@ -558,8 +558,8 @@ void clusterInit(void) {
          * by the createClusterNode() function. */
         myself = server.cluster->myself =
             createClusterNode(NULL,CLUSTER_NODE_MYSELF|CLUSTER_NODE_MASTER);
-        serverLog(LL_NOTICE,"No cluster configuration found, I'm %.40s",
-            myself->name);
+        serverLog(LL_NOTICE,"No cluster configuration found, I'm %.40s %s",
+            myself->name, myself->hname);
         clusterAddNode(myself);
         saveconf = 1;
     }
@@ -656,7 +656,7 @@ void clusterReset(int hard) {
         sdsfree(oldname);
         getRandomHexChars(myself->name, CLUSTER_NAMELEN);
         clusterAddNode(myself);
-        serverLog(LL_NOTICE,"Node hard reset, now I'm %.40s", myself->name);
+        serverLog(LL_NOTICE,"Node hard reset, now I'm %.40s %s", myself->name, myself->hname);
     }
 
     /* Make sure to persist the new config and update the state. */
