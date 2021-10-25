@@ -49,11 +49,14 @@ proc 02_crash_and_failover {} {
 02_test_slaves_replication
 02_crash_and_failover
 
-<<<<<<< HEAD
-=======
+foreach_sentinel_id id {
+    S $id sentinel debug info-period 100
+    S $id sentinel debug default-down-after 1000
+    S $id sentinel debug publish-period 100
+}
 
->>>>>>> ed2d9b0321c429d1c1355a563c5ab1886425d38b
 02_test_slaves_replication
+
 
 test "Kill a slave instance" {
     foreach_redis_id id {
