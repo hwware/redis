@@ -16,23 +16,21 @@ proc get_cluster_nodes id {
         set l [string trim $l]
         if {$l eq {}} continue
         set args [split $l]
-        # puts "ARGS ARE"
-        # puts $args
         set node [dict create \
             id [lindex $args 0] \
             name [lindex $args 1] \
-            name [lindex $args 2] \
-            addr [lindex $args 3] \
-            flags [split [lindex $args 4] ,] \
-            slaveof [lindex $args 5] \
-            ping_sent [lindex $args 6] \
-            pong_recv [lindex $args 7] \
-            config_epoch [lindex $args 8] \
-            linkstate [lindex $args 9] \
-            slots [lrange $args 10 end] \
+            addr [lindex $args 2] \
+            flags [split [lindex $args 3] ,] \
+            slaveof [lindex $args 4] \
+            ping_sent [lindex $args 5] \
+            pong_recv [lindex $args 6] \
+            config_epoch [lindex $args 7] \
+            linkstate [lindex $args 8] \
+            slots [lrange $args 9 end] \
         ]
         lappend nodes $node
     }
+    puts $nodes
     return $nodes
 }
 
