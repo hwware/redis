@@ -61,8 +61,8 @@ test "Cluster Join and auto-discovery test" {
         puts $id
         puts "IDS is"
         puts $ids
-        puts "get_cluster_nodes"
-        puts [get_cluster_nodes $id]
+        # puts "get_cluster_nodes"
+        # puts [get_cluster_nodes $id]
         wait_for_condition 1000 50 {
             [llength [get_cluster_nodes $id]] == [llength $ids]
         } else {
