@@ -21,14 +21,15 @@ proc get_cluster_nodes id {
         set node [dict create \
             id [lindex $args 0] \
             name [lindex $args 1] \
-            addr [lindex $args 2] \
-            flags [split [lindex $args 3] ,] \
-            slaveof [lindex $args 4] \
-            ping_sent [lindex $args 5] \
-            pong_recv [lindex $args 6] \
-            config_epoch [lindex $args 7] \
-            linkstate [lindex $args 8] \
-            slots [lrange $args 9 end] \
+            name [lindex $args 2] \
+            addr [lindex $args 3] \
+            flags [split [lindex $args 4] ,] \
+            slaveof [lindex $args 5] \
+            ping_sent [lindex $args 6] \
+            pong_recv [lindex $args 7] \
+            config_epoch [lindex $args 8] \
+            linkstate [lindex $args 9] \
+            slots [lrange $args 10 end] \
         ]
         lappend nodes $node
     }
