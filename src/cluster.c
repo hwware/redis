@@ -343,7 +343,7 @@ int clusterLoadConfig(char *filename) {
     zfree(line);
     fclose(fp);
 
-    serverLog(LL_NOTICE,"Node configuration loaded, I'm %.40s %s", myself->name, myself->hname);
+    serverLog(LL_NOTICE,"Node configuration loaded, I'm %.40s", myself->name);
 
     /* Something that should never happen: currentEpoch smaller than
      * the max epoch found in the nodes configuration. However we handle this
@@ -656,7 +656,7 @@ void clusterReset(int hard) {
         sdsfree(oldname);
         getRandomHexChars(myself->name, CLUSTER_NAMELEN);
         clusterAddNode(myself);
-        serverLog(LL_NOTICE,"Node hard reset, now I'm %.40s %s", myself->name, myself->hname);
+        serverLog(LL_NOTICE,"Node hard reset, now I'm %.40s", myself->name);
     }
 
     /* Make sure to persist the new config and update the state. */
@@ -1251,9 +1251,9 @@ void clusterHandleConfigEpochCollision(clusterNode *sender) {
     myself->configEpoch = server.cluster->currentEpoch;
     clusterSaveConfigOrDie(1);
     serverLog(LL_VERBOSE,
-        "WARNING: configEpoch collision with node %.40s %s."
+        "WARNING: configEpoch collision with node %.40s."
         " configEpoch set to %llu",
-        sender->name, sender->hname,
+        sender->name,
         (unsigned long long) myself->configEpoch);
 }
 
@@ -1369,7 +1369,7 @@ void markNodeAsFailingIfNeeded(clusterNode *node) {
     if (failures < needed_quorum) return; /* No weak agreement from masters. */
 
     serverLog(LL_NOTICE,
-        "Marking node %.40s %s as failing (quorum reached).", node->name, node->hname);
+        "Marking node %.40s as failing (quorum reached).", node->name);
 
     /* Mark the node as failing. */
     node->flags &= ~CLUSTER_NODE_PFAIL;
@@ -1397,9 +1397,8 @@ void clearNodeFailureIfNeeded(clusterNode *node) {
      * node again. */
     if (nodeIsSlave(node) || node->numslots == 0) {
         serverLog(LL_NOTICE,
-            "Clear FAIL state for node %.40s %s: %s is reachable again.",
+            "Clear FAIL state for node %.40s: %s is reachable again.",
                 node->name,
-                node->hname,
                 nodeIsSlave(node) ? "replica" : "master without slots");
         node->flags &= ~CLUSTER_NODE_FAIL;
         clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|CLUSTER_TODO_SAVE_CONFIG);
@@ -1414,8 +1413,8 @@ void clearNodeFailureIfNeeded(clusterNode *node) {
         (server.cluster_node_timeout * CLUSTER_FAIL_UNDO_TIME_MULT))
     {
         serverLog(LL_NOTICE,
-        "Clear FAIL state for node %.40s %s: is reachable again and nobody is serving its slots after some time.",
-            node->name, node->hname);
+            "Clear FAIL state for node %.40s: is reachable again and nobody is serving its slots after some time.",
+                node->name);
         node->flags &= ~CLUSTER_NODE_FAIL;
         clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|CLUSTER_TODO_SAVE_CONFIG);
     }
@@ -1518,12 +1517,11 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
 
         if (server.verbosity == LL_DEBUG) {
             ci = representClusterNodeFlags(sdsempty(), flags);
-            serverLog(LL_DEBUG,"GOSSIP %.40s %s %s:%d@%d %s %s",
+            serverLog(LL_DEBUG,"GOSSIP %.40s %s:%d@%d %s",
                 g->nodename,
                 g->ip,
                 ntohs(g->port),
                 ntohs(g->cport),
-                g->hname,
                 ci);
             sdsfree(ci);
         }
@@ -1537,15 +1535,15 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 if (flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_PFAIL)) {
                     if (clusterNodeAddFailureReport(node,sender)) {
                         serverLog(LL_VERBOSE,
-                            "Node %.40s %s reported node %.40s %s as not reachable.",
-                            sender->name, sender->hname, node->name, node->hname);
+                            "Node %.40s reported node %.40s as not reachable.",
+                            sender->name, node->name);
                     }
                     markNodeAsFailingIfNeeded(node);
                 } else {
                     if (clusterNodeDelFailureReport(node,sender)) {
                         serverLog(LL_VERBOSE,
-                            "Node %.40s %s reported node %.40s %s is back online.",
-                            sender->name, sender->hname, node->name, node->hname);
+                            "Node %.40s reported node %.40s is back online.",
+                            sender->name, node->name);
                     }
                 }
             }
@@ -1674,8 +1672,8 @@ int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
     setClusterNodeName(node);
     if (node->link) freeClusterLink(node->link);
     node->flags &= ~CLUSTER_NODE_NOADDR;
-    serverLog(LL_WARNING,"Address updated for node %.40s %s, now %s:%d",
-        node->name, node->hname, node->ip, node->port);
+    serverLog(LL_WARNING,"Address updated for node %.40s, now %s:%d",
+        node->name, node->ip, node->port);
 
     /* Check if this is our master and we have to change the
      * replication target as well. */
@@ -1803,9 +1801,8 @@ void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoc
             (server.cluster_allow_replica_migration ||
              sender_slots == migrated_our_slots)) {
         serverLog(LL_WARNING,
-        "Configuration change detected. Reconfiguring myself "
-        "as a replica of %.40s %s", sender->name,sender->hname);
-        
+            "Configuration change detected. Reconfiguring myself "
+            "as a replica of %.40s", sender->name);
         clusterSetMaster(sender);
         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|
                              CLUSTER_TODO_UPDATE_STATE|
@@ -2010,9 +2007,8 @@ int clusterProcessPacket(clusterLink *link) {
                  * IP/port of the node with the new one. */
                 if (sender) {
                     serverLog(LL_VERBOSE,
-                        "Handshake: we already know node %.40s %s, "
-                        "updating the address if needed.", sender->name, sender->hname);
-
+                        "Handshake: we already know node %.40s, "
+                        "updating the address if needed.", sender->name);
                     if (nodeUpdateAddressIfNeeded(sender,link,hdr))
                     {
                         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|
@@ -2027,9 +2023,8 @@ int clusterProcessPacket(clusterLink *link) {
                 /* First thing to do is replacing the random name with the
                  * right node name if this was a handshake stage. */
                 clusterRenameNode(link->node, hdr->sender);
-                    serverLog(LL_DEBUG,"Handshake with node %.40s %s completed.",
-                        link->node->name, link->node->hname);
-                
+                serverLog(LL_DEBUG,"Handshake with node %.40s completed.",
+                    link->node->name);
                 link->node->flags &= ~CLUSTER_NODE_HANDSHAKE;
                 link->node->flags |= flags&(CLUSTER_NODE_MASTER|CLUSTER_NODE_SLAVE);
                 clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
@@ -2186,9 +2181,9 @@ int clusterProcessPacket(clusterLink *link) {
                         senderConfigEpoch)
                     {
                         serverLog(LL_VERBOSE,
-                            "Node %.40s %s has old slots configuration, sending "
-                            "an UPDATE message about %.40s %s",
-                                sender->name, sender->hname, server.cluster->slots[j]->name, server.cluster->slots[j]->hname);
+                            "Node %.40s has old slots configuration, sending "
+                            "an UPDATE message about %.40s",
+                                sender->name, server.cluster->slots[j]->name);
                         clusterSendUpdate(sender->link,
                             server.cluster->slots[j]);
 
@@ -2282,9 +2277,8 @@ int clusterProcessPacket(clusterLink *link) {
         server.cluster->mf_end = now + CLUSTER_MF_TIMEOUT;
         server.cluster->mf_slave = sender;
         pauseClients(now+(CLUSTER_MF_TIMEOUT*CLUSTER_MF_PAUSE_MULT),CLIENT_PAUSE_WRITE);
-        
-        serverLog(LL_WARNING,"Manual failover requested by replica %.40s %s.",
-            sender->name, sender->hname);
+        serverLog(LL_WARNING,"Manual failover requested by replica %.40s.",
+            sender->name);
         /* We need to send a ping message to the replica, as it would carry
          * `server.cluster->mf_master_offset`, which means the master paused clients
          * at offset `server.cluster->mf_master_offset`, so that the replica would
@@ -2366,10 +2360,9 @@ void clusterLinkConnectHandler(connection *conn) {
 
     /* Check if connection succeeded */
     if (connGetState(conn) != CONN_STATE_CONNECTED) {
-        serverLog(LL_VERBOSE, "Connection with Node %.40s %s at %s:%d failed: %s",
-                        node->name, node->hname, node->ip, node->cport,
-                        connGetLastError(conn));
-        
+        serverLog(LL_VERBOSE, "Connection with Node %.40s at %s:%d failed: %s",
+                node->name, node->ip, node->cport,
+                connGetLastError(conn));
         freeClusterLink(link);
         return;
     }
@@ -2399,8 +2392,8 @@ void clusterLinkConnectHandler(connection *conn) {
      * normal PING packets. */
     node->flags &= ~CLUSTER_NODE_MEET;
 
-    serverLog(LL_DEBUG,"Connecting with Node %.40s %s at %s:%d",
-        node->name, node->hname, node->ip, node->cport);
+    serverLog(LL_DEBUG,"Connecting with Node %.40s at %s:%d",
+            node->name, node->ip, node->cport);
 }
 
 /* Read data. Try to read the first field of the header first to check the
@@ -2614,8 +2607,6 @@ void clusterSetGossipEntry(clusterMsg *hdr, int i, clusterNode *n) {
     gossip->ping_sent = htonl(n->ping_sent/1000);
     gossip->pong_received = htonl(n->pong_received/1000);
     memcpy(gossip->ip,n->ip,sizeof(n->ip));
-    if (n->hname)
-        memcpy(gossip->hname,n->hname,strlen(n->hname));
     gossip->port = htons(n->port);
     gossip->cport = htons(n->cport);
     gossip->flags = htons(n->flags);
@@ -3013,8 +3004,8 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     /* I already voted for this epoch? Return ASAP. */
     if (server.cluster->lastVoteEpoch == server.cluster->currentEpoch) {
         serverLog(LL_WARNING,
-                "Failover auth denied to %.40s %s: already voted for epoch %llu",
-                node->name, node->hname,
+                "Failover auth denied to %.40s: already voted for epoch %llu",
+                node->name,
                 (unsigned long long) server.cluster->currentEpoch);
         return;
     }
@@ -3027,16 +3018,16 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     {
         if (nodeIsMaster(node)) {
             serverLog(LL_WARNING,
-                "Failover auth denied to %.40s %s: it is a master node",
-                node->name, node->hname);
+                    "Failover auth denied to %.40s: it is a master node",
+                    node->name);
         } else if (master == NULL) {
             serverLog(LL_WARNING,
-                "Failover auth denied to %.40s %s: I don't know its master",
-                node->name, node->hname);
+                    "Failover auth denied to %.40s: I don't know its master",
+                    node->name);
         } else if (!nodeFailed(master)) {
             serverLog(LL_WARNING,
-                "Failover auth denied to %.40s %s: its master is up",
-                node->name, node->hname);
+                    "Failover auth denied to %.40s: its master is up",
+                    node->name);
         }
         return;
     }
@@ -3047,12 +3038,11 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     if (mstime() - node->slaveof->voted_time < server.cluster_node_timeout * 2)
     {
         serverLog(LL_WARNING,
-            "Failover auth denied to %.40s %s: "
-            "can't vote about this master before %lld milliseconds",
-            node->name, node->hname,
-            (long long) ((server.cluster_node_timeout*2)-
-                         (mstime() - node->slaveof->voted_time)));
-        
+                "Failover auth denied to %.40s: "
+                "can't vote about this master before %lld milliseconds",
+                node->name,
+                (long long) ((server.cluster_node_timeout*2)-
+                             (mstime() - node->slaveof->voted_time)));
         return;
     }
 
@@ -3070,11 +3060,11 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
          * is served by a master with a greater configEpoch than the one claimed
          * by the slave requesting our vote. Refuse to vote for this slave. */
         serverLog(LL_WARNING,
-            "Failover auth denied to %.40s %s: "
-            "slot %d epoch (%llu) > reqEpoch (%llu)",
-            node->name, node->hname, j,
-            (unsigned long long) server.cluster->slots[j]->configEpoch,
-            (unsigned long long) requestConfigEpoch);
+                "Failover auth denied to %.40s: "
+                "slot %d epoch (%llu) > reqEpoch (%llu)",
+                node->name, j,
+                (unsigned long long) server.cluster->slots[j]->configEpoch,
+                (unsigned long long) requestConfigEpoch);
         return;
     }
 
@@ -3083,9 +3073,8 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     node->slaveof->voted_time = mstime();
     clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|CLUSTER_TODO_FSYNC_CONFIG);
     clusterSendFailoverAuth(node);
-    serverLog(LL_WARNING, "Failover auth granted to %.40s %s for epoch %llu",
-        node->name, node->hname, (unsigned long long) server.cluster->currentEpoch);
-    
+    serverLog(LL_WARNING, "Failover auth granted to %.40s for epoch %llu",
+        node->name, (unsigned long long) server.cluster->currentEpoch);
 }
 
 /* This function returns the "rank" of this instance, a slave, in the context
@@ -3313,7 +3302,7 @@ void clusterHandleSlaveFailover(void) {
         if (server.cluster->mf_end) {
             server.cluster->failover_auth_time = mstime();
             server.cluster->failover_auth_rank = 0;
-	    clusterDoBeforeSleep(CLUSTER_TODO_HANDLE_FAILOVER);
+        clusterDoBeforeSleep(CLUSTER_TODO_HANDLE_FAILOVER);
         }
         serverLog(LL_WARNING,
             "Start of election delayed for %lld milliseconds "
@@ -3502,8 +3491,8 @@ void clusterHandleSlaveMigration(int max_slaves) {
         (mstime()-target->orphaned_time) > CLUSTER_SLAVE_MIGRATION_DELAY &&
        !(server.cluster_module_flags & CLUSTER_MODULE_FLAG_NO_FAILOVER))
     {
-        serverLog(LL_WARNING,"Migrating to orphaned master %.40s %s",
-            target->name, target->hname);
+        serverLog(LL_WARNING,"Migrating to orphaned master %.40s",
+            target->name);
         clusterSetMaster(target);
     }
 }
@@ -3730,7 +3719,7 @@ void clusterCron(void) {
             }
         }
         if (min_pong_node) {
-            serverLog(LL_DEBUG,"Pinging node %.40s %s", min_pong_node->name, min_pong_node->hname); 
+            serverLog(LL_DEBUG,"Pinging node %.40s", min_pong_node->name);
             clusterSendPing(min_pong_node->link, CLUSTERMSG_TYPE_PING);
         }
     }
@@ -3830,8 +3819,8 @@ void clusterCron(void) {
             /* Timeout reached. Set the node as possibly failing if it is
              * not already in this state. */
             if (!(node->flags & (CLUSTER_NODE_PFAIL|CLUSTER_NODE_FAIL))) {
-                serverLog(LL_DEBUG,"*** NODE %.40s %s possibly failing",
-                    node->name, node->hname);
+                serverLog(LL_DEBUG,"*** NODE %.40s possibly failing",
+                    node->name);
                 node->flags |= CLUSTER_NODE_PFAIL;
                 update_state = 1;
             }
@@ -3863,7 +3852,7 @@ void clusterCron(void) {
          * a migration if there is no master with at least *two* working
          * slaves. */
         if (orphaned_masters && max_slaves >= 2 && this_slaves == max_slaves &&
-		server.cluster_allow_replica_migration)
+        server.cluster_allow_replica_migration)
             clusterHandleSlaveMigration(max_slaves);
     }
 
