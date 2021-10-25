@@ -1601,6 +1601,10 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
                 node->flags &= ~CLUSTER_NODE_NOADDR;
+                if (g->custom_name)
+                    setManualClusterNodeName(node->hname,g->hname);
+                else
+                    setClusterNodeName(node);
                 setClusterNodeName(node);
             }
         } else {
@@ -1623,7 +1627,10 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->port = ntohs(g->port);
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
-                setClusterNodeName(node);
+                if (g->custom_name)
+                    setManualClusterNodeName(node->hname,g->hname);
+                else
+                    setClusterNodeName(node);
                 clusterAddNode(node);
             }
         }
