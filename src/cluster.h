@@ -215,6 +215,7 @@ typedef struct {
     uint16_t flags;             /* node->flags copy */
     uint16_t pport;             /* plaintext-port, when base port is TLS */
     uint16_t notused1;
+    int custom_name;
 } clusterMsgDataGossip;
 
 typedef struct {
