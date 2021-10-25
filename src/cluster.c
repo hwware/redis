@@ -2995,8 +2995,8 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
      * request, if the request epoch was greater. */
     if (requestCurrentEpoch < server.cluster->currentEpoch) {
         serverLog(LL_WARNING,
-            "Failover auth denied to %.40s: reqEpoch (%llu) < curEpoch(%llu)",
-            node->name,
+            "Failover auth denied to %.40s %s: reqEpoch (%llu) < curEpoch(%llu)",
+            node->name, node->hname,
             (unsigned long long) requestCurrentEpoch,
             (unsigned long long) server.cluster->currentEpoch);
         return;
@@ -3005,8 +3005,8 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     /* I already voted for this epoch? Return ASAP. */
     if (server.cluster->lastVoteEpoch == server.cluster->currentEpoch) {
         serverLog(LL_WARNING,
-                "Failover auth denied to %.40s: already voted for epoch %llu",
-                node->name,
+                "Failover auth denied to %.40s %s: already voted for epoch %llu",
+                node->name, node->hname,
                 (unsigned long long) server.cluster->currentEpoch);
         return;
     }
@@ -3019,16 +3019,16 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     {
         if (nodeIsMaster(node)) {
             serverLog(LL_WARNING,
-                    "Failover auth denied to %.40s: it is a master node",
-                    node->name);
+                    "Failover auth denied to %.40s %s: it is a master node",
+                    node->name, node->hname);
         } else if (master == NULL) {
             serverLog(LL_WARNING,
-                    "Failover auth denied to %.40s: I don't know its master",
-                    node->name);
+                    "Failover auth denied to %.40s %s: I don't know its master",
+                    node->name, node->hname);
         } else if (!nodeFailed(master)) {
             serverLog(LL_WARNING,
-                    "Failover auth denied to %.40s: its master is up",
-                    node->name);
+                    "Failover auth denied to %.40s %s: its master is up",
+                    node->name, node->hname);
         }
         return;
     }
@@ -3039,9 +3039,9 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     if (mstime() - node->slaveof->voted_time < server.cluster_node_timeout * 2)
     {
         serverLog(LL_WARNING,
-                "Failover auth denied to %.40s: "
+                "Failover auth denied to %.40s %s: "
                 "can't vote about this master before %lld milliseconds",
-                node->name,
+                node->name, node->hname,
                 (long long) ((server.cluster_node_timeout*2)-
                              (mstime() - node->slaveof->voted_time)));
         return;
@@ -3061,9 +3061,9 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
          * is served by a master with a greater configEpoch than the one claimed
          * by the slave requesting our vote. Refuse to vote for this slave. */
         serverLog(LL_WARNING,
-                "Failover auth denied to %.40s: "
+                "Failover auth denied to %.40s %s: "
                 "slot %d epoch (%llu) > reqEpoch (%llu)",
-                node->name, j,
+                node->name, node->hname, j,
                 (unsigned long long) server.cluster->slots[j]->configEpoch,
                 (unsigned long long) requestConfigEpoch);
         return;
@@ -3074,8 +3074,8 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     node->slaveof->voted_time = mstime();
     clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|CLUSTER_TODO_FSYNC_CONFIG);
     clusterSendFailoverAuth(node);
-    serverLog(LL_WARNING, "Failover auth granted to %.40s for epoch %llu",
-        node->name, (unsigned long long) server.cluster->currentEpoch);
+    serverLog(LL_WARNING, "Failover auth granted to %.40s %s for epoch %llu",
+        node->name, node->hname, (unsigned long long) server.cluster->currentEpoch);
 }
 
 /* This function returns the "rank" of this instance, a slave, in the context
@@ -3492,8 +3492,8 @@ void clusterHandleSlaveMigration(int max_slaves) {
         (mstime()-target->orphaned_time) > CLUSTER_SLAVE_MIGRATION_DELAY &&
        !(server.cluster_module_flags & CLUSTER_MODULE_FLAG_NO_FAILOVER))
     {
-        serverLog(LL_WARNING,"Migrating to orphaned master %.40s",
-            target->name);
+        serverLog(LL_WARNING,"Migrating to orphaned master %.40s %s",
+            target->name, target->hname);
         clusterSetMaster(target);
     }
 }
@@ -3720,7 +3720,7 @@ void clusterCron(void) {
             }
         }
         if (min_pong_node) {
-            serverLog(LL_DEBUG,"Pinging node %.40s", min_pong_node->name);
+            serverLog(LL_DEBUG,"Pinging node %.40s %s", min_pong_node->name, min_pong_node->hname);
             clusterSendPing(min_pong_node->link, CLUSTERMSG_TYPE_PING);
         }
     }
@@ -3820,8 +3820,8 @@ void clusterCron(void) {
             /* Timeout reached. Set the node as possibly failing if it is
              * not already in this state. */
             if (!(node->flags & (CLUSTER_NODE_PFAIL|CLUSTER_NODE_FAIL))) {
-                serverLog(LL_DEBUG,"*** NODE %.40s possibly failing",
-                    node->name);
+                serverLog(LL_DEBUG,"*** NODE %.40s %s possibly failing",
+                    node->name, node->hname);
                 node->flags |= CLUSTER_NODE_PFAIL;
                 update_state = 1;
             }
