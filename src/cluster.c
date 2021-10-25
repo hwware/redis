@@ -1536,7 +1536,7 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                     if (clusterNodeAddFailureReport(node,sender)) {
                         serverLog(LL_VERBOSE,
                             "Node %.40s %s reported node %.40s %s as not reachable.",
-                            sender->name, senter->hname, node->name, node->hname);
+                            sender->name, sender->hname, node->name, node->hname);
                     }
                     markNodeAsFailingIfNeeded(node);
                 } else {
@@ -2217,8 +2217,8 @@ int clusterProcessPacket(clusterLink *link) {
                 !(failing->flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_MYSELF)))
             {
                 serverLog(LL_NOTICE,
-                    "FAIL message received from %.40s %s about %.40s",
-                    hdr->sender, hdr->sender->hname, hdr->data.fail.about.nodename);
+                    "FAIL message received from %.40s about %.40s",
+                    hdr->sender, hdr->data.fail.about.nodename);
                 failing->flags |= CLUSTER_NODE_FAIL;
                 failing->fail_time = now;
                 failing->flags &= ~CLUSTER_NODE_PFAIL;
@@ -2227,8 +2227,8 @@ int clusterProcessPacket(clusterLink *link) {
             }
         } else {
             serverLog(LL_NOTICE,
-                "Ignoring FAIL message from unknown node %.40s %s about %.40s",
-                hdr->sender, hdr->sender->hname, hdr->data.fail.about.nodename);
+                "Ignoring FAIL message from unknown node %.40s about %.40s",
+                hdr->sender, hdr->data.fail.about.nodename);
         }
     } else if (type == CLUSTERMSG_TYPE_PUBLISH) {
         if (!sender) return 1;  /* We don't know that node. */
@@ -2279,7 +2279,7 @@ int clusterProcessPacket(clusterLink *link) {
         server.cluster->mf_slave = sender;
         pauseClients(now+(CLUSTER_MF_TIMEOUT*CLUSTER_MF_PAUSE_MULT),CLIENT_PAUSE_WRITE);
         serverLog(LL_WARNING,"Manual failover requested by replica %.40s %s.",
-            sender->name, sennder->hname);
+            sender->name, sender->hname);
         /* We need to send a ping message to the replica, as it would carry
          * `server.cluster->mf_master_offset`, which means the master paused clients
          * at offset `server.cluster->mf_master_offset`, so that the replica would
@@ -2394,7 +2394,7 @@ void clusterLinkConnectHandler(connection *conn) {
     node->flags &= ~CLUSTER_NODE_MEET;
 
     serverLog(LL_DEBUG,"Connecting with Node %.40s %s at %s:%d",
-            node->name, node->hname node->ip, node->cport);
+            node->name, node->hname, node->ip, node->cport);
 }
 
 /* Read data. Try to read the first field of the header first to check the
