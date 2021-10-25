@@ -140,6 +140,7 @@ typedef struct clusterNode {
     int cport;                  /* Latest known cluster port of this node. */
     clusterLink *link;          /* TCP/IP link with this node */
     list *fail_reports;         /* List of nodes signaling this as failing */
+    int custom_name;
 } clusterNode;
 
 /* State for the Slot to Key API, for a single slot. The keys in the same slot

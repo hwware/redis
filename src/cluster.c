@@ -832,6 +832,15 @@ void setClusterNodeName(clusterNode *node) {
     node->hname = name;
 }
 
+/* Manually assign a human readable name to nodes for clusters*/
+int setManualClusterNodeName(clusterNode *node, char * newname) {
+    if (newname == NULL)
+        return 0;
+    memcpy(node->hname, newname, strlen(newname));
+    node->custom_name = 1;
+    return 1;
+}
+
 /* Create a new cluster node, with the specified flags.
  * If "nodename" is NULL this is considered a first handshake and a random
  * node name is assigned to this node (it will be fixed later when we'll
@@ -852,6 +861,7 @@ clusterNode *createClusterNode(char *nodename, int flags) {
     memset(node->slots,0,sizeof(node->slots));
     node->slots_info = NULL;
     node->numslots = 0;
+    node->custom_name = 0;
     node->numslaves = 0;
     node->slaves = NULL;
     node->slaveof = NULL;
@@ -4626,12 +4636,22 @@ NULL
         /* CLUSTER MYID */
         addReplyBulkCBuffer(c,myself->name, CLUSTER_NAMELEN);
     } else if (!strcasecmp(c->argv[1]->ptr,"myname") && c->argc == 2) {
-        /* CLUSTER MYID */
+        /* CLUSTER MYNAME */
         if (myself->hname)
             addReplyBulkCBuffer(c,myself->hname, strlen(myself->hname));
         else
             addReplyError(c,"Node is not assigned name yet.");
-    } else if (!strcasecmp(c->argv[1]->ptr,"slots") && c->argc == 2) {
+    }
+
+    else if (!strcasecmp(c->argv[1]->ptr,"setname") && c->argc == 3) {
+        /* CLUSTER SETNAME */
+        if (setManualClusterNodeName(myself,c->argv[2]->ptr))
+            addReply(c,shared.ok);
+        else
+            addReplyError(c,"Error setting the name of the node.");
+    }
+
+     else if (!strcasecmp(c->argv[1]->ptr,"slots") && c->argc == 2) {
         /* CLUSTER SLOTS */
         clusterReplyMultiBulkSlots(c);
     } else if (!strcasecmp(c->argv[1]->ptr,"flushslots") && c->argc == 2) {
