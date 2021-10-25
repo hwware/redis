@@ -818,6 +818,8 @@ unsigned int keyHashSlot(char *key, int keylen) {
 
 /* Assign a human readable name to nodes for clusters*/
 void setClusterNodeName(clusterNode *node) {
+    if (node->custom_name == 1)
+        return;
     char *name;
     int post_digits;
     if (node->port == 0){
