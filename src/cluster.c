@@ -845,7 +845,7 @@ int setManualClusterNodeName(clusterNode *node, char * newname) {
     sdsfree(s);
     serverAssert(retval == DICT_OK);
 
-    node->hname = zmalloc(sizeof(newname));
+    node->hname = malloc(sizeof(newname));
     strncpy(node->hname, newname, strlen(newname));
     node->custom_name = 1;
     clusterAddNode(node);
@@ -2594,8 +2594,8 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     memcpy(hdr->sender,myself->name,CLUSTER_NAMELEN);
     if (myself->hname) {
         serverLog(LL_WARNING, "GENERATING HDR ADDING %s TO HDR->HNAME", myself->hname);
-        // hdr->hname = zmalloc(strlen(myself->hname) + 1);
-        // strncpy(hdr->hname,myself->hname,strlen(myself->hname));
+        hdr->hname = malloc(strlen(myself->hname) + 1);
+        strcpy(hdr->hname,myself->hname);
     }
 
     /* If cluster-announce-ip option is enabled, force the receivers of our
