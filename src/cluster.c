@@ -2008,11 +2008,6 @@ int clusterProcessPacket(clusterLink *link) {
             node->port = ntohs(hdr->port);
             node->pport = ntohs(hdr->pport);
             node->cport = ntohs(hdr->cport);
-            serverLog(LL_WARNING, " UPDATING NODENAME 1 =====================");
-            if (sender->custom_name)
-                    setManualClusterNodeName(node, sender->hname);
-            else
-                setClusterNodeName(node);
             clusterAddNode(node);
             clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
         }
