@@ -288,7 +288,8 @@ typedef struct {
     unsigned char myslots[CLUSTER_SLOTS/8];
     char slaveof[CLUSTER_NAMELEN];
     char myip[NET_IP_STR_LEN];    /* Sender IP, if not all zeroed. */
-    char notused1[32];  /* 32 bytes reserved for future usage. */
+    char * hname;        /* Human readable name assigned to the sender */
+    char notused1[32];   /* 32 bytes reserved for future usage. */
     uint16_t pport;      /* Sender TCP plaintext port, if base port is TLS */
     uint16_t cport;      /* Sender TCP cluster bus port */
     uint16_t flags;      /* Sender node flags */

@@ -2006,7 +2006,10 @@ int clusterProcessPacket(clusterLink *link) {
             node->port = ntohs(hdr->port);
             node->pport = ntohs(hdr->pport);
             node->cport = ntohs(hdr->cport);
-            setClusterNodeName(node);
+            if (sender->custom_name)
+                    setManualClusterNodeName(node, sender->hname);
+            else
+                setClusterNodeName(node);
             clusterAddNode(node);
             clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
         }
@@ -2050,6 +2053,10 @@ int clusterProcessPacket(clusterLink *link) {
                 /* First thing to do is replacing the random name with the
                  * right node name if this was a handshake stage. */
                 clusterRenameNode(link->node, hdr->sender);
+                if (sender->custom_name)
+                    setManualClusterNodeName(link->node, sender->hname);
+                else
+                    setClusterNodeName(link->node);
                 serverLog(LL_DEBUG,"Handshake with node %.40s %s completed.",
                     link->node->name, link->node->hname);
                 link->node->flags &= ~CLUSTER_NODE_HANDSHAKE;
