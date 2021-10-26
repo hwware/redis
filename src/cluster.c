@@ -2046,10 +2046,11 @@ int clusterProcessPacket(clusterLink *link) {
                         "Handshake: we already know node %.40s %s, "
                         "updating the address if needed.", sender->name, sender->hname);
 
-                    if (sender->custom_name)
-                        setManualClusterNodeName(link->node, sender->hname);
+                    if (hdr->custom_name){
+                        setManualClusterNodeName(sender->node, hdr->hname);
+                    }
                     else
-                        setClusterNodeName(link->node);
+                        setClusterNodeName(sender->node);
                     
                     if (nodeUpdateAddressIfNeeded(sender,link,hdr))
                     {
