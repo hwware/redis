@@ -1938,7 +1938,7 @@ int clusterProcessPacket(clusterLink *link) {
 
     if (sender){
         serverLog(LL_WARNING, "SENDER IS: %s", sender->name);
-        serverLog(LL_WARNING, "SENDER IS: %s", link->node->name);
+        serverLog(LL_WARNING, "SENDER IS: %s", link->node ? link->node->name : "NULL");
     }
 
     /* Update the last time we saw any data from this node. We
