@@ -1609,11 +1609,10 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
                 node->flags &= ~CLUSTER_NODE_NOADDR;
-                if (g->custom_name)
-                    setManualClusterNodeName(node, g->hname);
+                if (hdr->custom_name)
+                    setManualClusterNodeName(node, hdr->hname);
                 else
                     setClusterNodeName(node);
-                setClusterNodeName(node);
             }
         } else {
             /* If it's not in NOADDR state and we don't have it, we
@@ -1635,8 +1634,8 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->port = ntohs(g->port);
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
-                if (g->custom_name)
-                    setManualClusterNodeName(node, g->hname);
+                if (hdr->custom_name)
+                    setManualClusterNodeName(node, hdr->hname);
                 else
                     setClusterNodeName(node);
                 clusterAddNode(node);
@@ -1697,7 +1696,10 @@ int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
     node->port = port;
     node->pport = pport;
     node->cport = cport;
-    setClusterNodeName(node);
+    if (hdr->custom_name)
+        setManualClusterNodeName(node, hdr->hname);
+    else
+        setClusterNodeName(node);
     if (node->link) freeClusterLink(node->link);
     node->flags &= ~CLUSTER_NODE_NOADDR;
     serverLog(LL_WARNING,"Address updated for node %.40s %s, now %s:%d",
@@ -1927,14 +1929,6 @@ int clusterProcessPacket(clusterLink *link) {
      * we don't store link->node information, but resolve the node by the
      * ID in the header each time in the current implementation. */
     sender = clusterLookupNode(hdr->sender);
-
-    if (sender){
-        serverLog(LL_WARNING, "SENDER IS: %s", sender->name);
-        serverLog(LL_WARNING, "SENDER IS: %s", link->node ? link->node->name : "NULL");
-
-        serverLog(LL_WARNING, "SENDER IS: %s", sender->hname ? sender->hname : "NULL");
-        serverLog(LL_WARNING, "SENDER IS: %s", hdr->hname ? hdr->hname : "NULL");
-    }
 
     /* Update the last time we saw any data from this node. We
      * use this in order to avoid detecting a timeout from a node that
@@ -2582,6 +2576,7 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     memcpy(hdr->sender,myself->name,CLUSTER_NAMELEN);
     serverLog(LL_WARNING, "GENERATING HDR ADDING %s TO HDR->HNAME", myself->hname);
     strncpy(hdr->hname,myself->hname,CLUSTER_HUMANNAMELEN);
+    hdr->custom_name = myself->custom_name;
 
     /* If cluster-announce-ip option is enabled, force the receivers of our
      * packets to use the specified address for this node. Otherwise if the
@@ -2605,6 +2600,7 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     hdr->cport = htons(announced_cport);
     hdr->flags = htons(myself->flags);
     hdr->state = server.cluster->state;
+
 
     /* Set the currentEpoch and configEpochs. */
     hdr->currentEpoch = htonu64(server.cluster->currentEpoch);
