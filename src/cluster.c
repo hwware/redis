@@ -2006,6 +2006,7 @@ int clusterProcessPacket(clusterLink *link) {
             node->port = ntohs(hdr->port);
             node->pport = ntohs(hdr->pport);
             node->cport = ntohs(hdr->cport);
+            serverLog(LL_WARNING, " UPDATING NODENAME 1 =====================");
             if (sender->custom_name)
                     setManualClusterNodeName(node, sender->hname);
             else
@@ -2053,6 +2054,7 @@ int clusterProcessPacket(clusterLink *link) {
                 /* First thing to do is replacing the random name with the
                  * right node name if this was a handshake stage. */
                 clusterRenameNode(link->node, hdr->sender);
+                serverLog(LL_WARNING, " UPDATING NODENAME 2 =====================");
                 if (sender->custom_name)
                     setManualClusterNodeName(link->node, sender->hname);
                 else
