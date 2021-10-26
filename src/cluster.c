@@ -2592,7 +2592,7 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     hdr->sig[3] = 'b';
     hdr->type = htons(type);
     memcpy(hdr->sender,myself->name,CLUSTER_NAMELEN);
-    if (myself->hanme) {
+    if (myself->hname) {
         serverLog(LL_WARNING, "GENERATING HDR ADDING %s TO HDR->HNAME", myself->hname);
         strncpy(hdr->hname,myself->hname,strlen(myself->hname));
     }
