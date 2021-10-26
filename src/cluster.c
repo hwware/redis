@@ -210,8 +210,10 @@ int clusterLoadConfig(char *filename) {
 
         /*Check if human readable name is present*/
         int offset = 0;
-        strncpy(n->hname, argv[1], CLUSTER_HUMANNAMELEN);
-        offset = 1;
+        if (strrchr(argv[1],'_') != NULL){
+            strncpy(n->hname, argv[1], CLUSTER_HUMANNAMELEN);
+            offset = 1;
+        }
 
         /* Address and port */
         if ((p = strrchr(argv[offset + 1],':')) == NULL) {
