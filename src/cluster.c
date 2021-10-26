@@ -2595,6 +2595,7 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     hdr->sig[3] = 'b';
     hdr->type = htons(type);
     memcpy(hdr->sender,myself->name,CLUSTER_NAMELEN);
+    serverLog("GENERATING HDR ADDING %s TO HDR->HNAME", myself->hname);
     strncpy(hdr->hname,myself->hname,strlen(myself->hname));
 
     /* If cluster-announce-ip option is enabled, force the receivers of our
