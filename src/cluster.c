@@ -1936,6 +1936,11 @@ int clusterProcessPacket(clusterLink *link) {
      * ID in the header each time in the current implementation. */
     sender = clusterLookupNode(hdr->sender);
 
+    if (sender){
+        serverLog(LL_WARNING, "SENDER IS: %s", sender->name);
+        serverLog(LL_WARNING, "SENDER IS: %s", link->node->name);
+    }
+
     /* Update the last time we saw any data from this node. We
      * use this in order to avoid detecting a timeout from a node that
      * is just sending a lot of data in the cluster bus, for instance
