@@ -2042,6 +2042,11 @@ int clusterProcessPacket(clusterLink *link) {
                         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|
                                              CLUSTER_TODO_UPDATE_STATE);
                     }
+                    serverLog(LL_WARNING, " UPDATING NODENAME 2 =====================");
+                    if (sender->custom_name)
+                        setManualClusterNodeName(link->node, sender->hname);
+                    else
+                        setClusterNodeName(link->node);
                     /* Free this node as we already have it. This will
                      * cause the link to be freed as well. */
                     clusterDelNode(link->node);
@@ -2051,11 +2056,6 @@ int clusterProcessPacket(clusterLink *link) {
                 /* First thing to do is replacing the random name with the
                  * right node name if this was a handshake stage. */
                 clusterRenameNode(link->node, hdr->sender);
-                serverLog(LL_WARNING, " UPDATING NODENAME 2 =====================");
-                if (sender->custom_name)
-                    setManualClusterNodeName(link->node, sender->hname);
-                else
-                    setClusterNodeName(link->node);
                 serverLog(LL_DEBUG,"Handshake with node %.40s %s completed.",
                     link->node->name, link->node->hname);
                 link->node->flags &= ~CLUSTER_NODE_HANDSHAKE;
