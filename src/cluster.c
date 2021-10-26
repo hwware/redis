@@ -2593,7 +2593,7 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     hdr->type = htons(type);
     memcpy(hdr->sender,myself->name,CLUSTER_NAMELEN);
     // serverLog("GENERATING HDR ADDING %s TO HDR->HNAME", myself->hname);
-    // strncpy(hdr->hname,myself->hname,strlen(myself->hname));
+    strncpy(hdr->hname,myself->hname,strlen(myself->hname));
 
     /* If cluster-announce-ip option is enabled, force the receivers of our
      * packets to use the specified address for this node. Otherwise if the
