@@ -208,20 +208,16 @@ int clusterLoadConfig(char *filename) {
             clusterAddNode(n);
         }
 
-        /*Check if human readable name is present*/
-        int offset = 0;
-        // if (strrchr(argv[1],'_') != NULL){
-            strncpy(n->hname, argv[1], CLUSTER_HUMANNAMELEN);
-            offset = 1;
-        // }
+        /*Human readable name*/
+        strncpy(n->hname, argv[1], CLUSTER_HUMANNAMELEN);
 
         /* Address and port */
-        if ((p = strrchr(argv[offset + 1],':')) == NULL) {
+        if ((p = strrchr(argv[2],':')) == NULL) {
             sdsfreesplitres(argv,argc);
             goto fmterr;
         }
         *p = '\0';
-        memcpy(n->ip,argv[offset + 1],strlen(argv[offset + 1])+1);
+        memcpy(n->ip,argv[2],strlen(argv[2])+1);
         char *port = p+1;
         char *busp = strchr(port,'@');
         if (busp) {
@@ -238,7 +234,7 @@ int clusterLoadConfig(char *filename) {
          * stored in nodes.conf. It is received later over the bus protocol. */
 
         /* Parse flags */
-        p = s = argv[offset + 2];
+        p = s = argv[3];
         while(p) {
             p = strchr(s,',');
             if (p) *p = '\0';
@@ -271,7 +267,7 @@ int clusterLoadConfig(char *filename) {
 
         /* Get master if any. Set the master and populate master's
          * slave list. */
-        if (argv[offset + 3][0] != '-') {
+        if (argv[4][0] != '-') {
             master = clusterLookupNode(argv[offset + 3]);
             if (!master) {
                 master = createClusterNode(argv[offset + 3],0);
@@ -281,15 +277,18 @@ int clusterLoadConfig(char *filename) {
             clusterNodeAddSlave(master,n);
         }
 
+        /* Custom nodename */
+        node->custom_name = atoi(argv[5]);
+
         /* Set ping sent / pong received timestamps */
-        if (atoi(argv[offset + 4])) n->ping_sent = mstime();
-        if (atoi(argv[offset + 5])) n->pong_received = mstime();
+        if (atoi(argv[6])) n->ping_sent = mstime();
+        if (atoi(argv[7])) n->pong_received = mstime();
 
         /* Set configEpoch for this node. */
-        n->configEpoch = strtoull(argv[offset + 6],NULL,10);
+        n->configEpoch = strtoull(argv[8],NULL,10);
 
         /* Populate hash slots served by this instance. */
-        for (j = offset + 8; j < argc; j++) {
+        for (j = 10; j < argc; j++) {
             int start, stop;
 
             if (argv[j][0] == '[') {
@@ -4326,8 +4325,8 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     int port = use_pport && node->pport ? node->pport : node->port;
 
     /* Node coordinates */
-    ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
-
+    ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);  
+    
     if (node->hname[0] == '\0')
         ci = sdscatfmt(ci," _",node->hname);
     else
@@ -4347,6 +4346,9 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
         ci = sdscatlen(ci,node->slaveof->name,CLUSTER_NAMELEN);
     else
         ci = sdscatlen(ci,"-",1);
+
+    /* Adding custom name */
+    ci = sdscatfmt(ci," %d",node->custom_name);  
 
     unsigned long long nodeEpoch = node->configEpoch;
     if (nodeIsSlave(node) && node->slaveof) {
