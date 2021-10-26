@@ -1140,6 +1140,10 @@ void clusterRenameNode(clusterNode *node, char *newname) {
 
     serverLog(LL_DEBUG,"Renaming node %.40s into %.40s",
         node->name, newname);
+
+    serverLog(LL_WARNING,"Renaming node %.40s into %.40s",
+        node->name, newname);
+
     retval = dictDelete(server.cluster->nodes, s);
     sdsfree(s);
     serverAssert(retval == DICT_OK);
