@@ -210,7 +210,7 @@ int clusterLoadConfig(char *filename) {
 
         /*Human readable name*/
         serverLog(LL_WARNING, " WHAT IS THIS : %s", argv[1]);
-        strncpy(n->hname, argv[1], CLUSTER_HUMANNAMELEN);
+        strncpy(n->hname, argv[20], CLUSTER_HUMANNAMELEN);
 
         /* Address and port */
         if ((p = strrchr(argv[2],':')) == NULL) {
