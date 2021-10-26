@@ -2595,7 +2595,7 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     if (myself->hname) {
         serverLog(LL_WARNING, "GENERATING HDR ADDING %s TO HDR->HNAME", myself->hname);
         // hdr->hname = zmalloc(strlen(myself->hname) + 1);
-        strncpy(hdr->hname,myself->hname,strlen(myself->hname));
+        // strncpy(hdr->hname,myself->hname,strlen(myself->hname));
     }
 
     /* If cluster-announce-ip option is enabled, force the receivers of our
