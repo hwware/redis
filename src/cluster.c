@@ -832,7 +832,6 @@ void setClusterNodeName(clusterNode *node) {
 
 /* Manually assign a human readable name to nodes for clusters*/
 int setManualClusterNodeName(clusterNode *node, char * newname) {
-    serverLog(LL_WARNING, "Entered setManualClusterNodeName");
     if (newname == NULL)
         return 0;
     int retval;
@@ -844,7 +843,7 @@ int setManualClusterNodeName(clusterNode *node, char * newname) {
     strncpy(node->hname, newname, CLUSTER_HUMANNAMELEN);
     node->custom_name = 1;
     clusterAddNode(node);
-    serverLog(LL_WARNING, "EXITED setManualClusterNodeName");
+    saveConfig(1);
     return 1;
 }
 
