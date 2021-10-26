@@ -1873,9 +1873,6 @@ int clusterProcessPacket(clusterLink *link) {
     serverLog(LL_DEBUG,"--- Processing packet of type %s, %lu bytes",
         clusterGetMessageTypeString(type), (unsigned long) totlen);
 
-    serverLog(LL_WARNING,"--- Processing packet of type %s, %lu bytes",
-        clusterGetMessageTypeString(type), (unsigned long) totlen);
-
     /* Perform sanity checks */
     if (totlen < 16) return 1; /* At least signature, version, totlen, count. */
     if (totlen > link->rcvbuf_len) return 1;
@@ -2682,6 +2679,7 @@ void clusterSetGossipEntry(clusterMsg *hdr, int i, clusterNode *n) {
 /* Send a PING or PONG packet to the specified node, making sure to add enough
  * gossip information. */
 void clusterSendPing(clusterLink *link, int type) {
+    serverLog(LL_WARNING, "ENTERED SEND PING");
     unsigned char *buf;
     clusterMsg *hdr;
     int gossipcount = 0; /* Number of gossip sections added so far. */
@@ -2741,6 +2739,9 @@ void clusterSendPing(clusterLink *link, int type) {
     /* Populate the header. */
     if (link->node && type == CLUSTERMSG_TYPE_PING)
         link->node->ping_sent = mstime();
+
+    serverLog(LL_WARNING, "HEADER POPULATED =======================");
+
     clusterBuildMessageHdr(hdr,type);
 
     /* Populate the gossip fields */
