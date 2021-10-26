@@ -268,9 +268,9 @@ int clusterLoadConfig(char *filename) {
         /* Get master if any. Set the master and populate master's
          * slave list. */
         if (argv[4][0] != '-') {
-            master = clusterLookupNode(argv[offset + 3]);
+            master = clusterLookupNode(argv[4]);
             if (!master) {
-                master = createClusterNode(argv[offset + 3],0);
+                master = createClusterNode(argv[4],0);
                 clusterAddNode(master);
             }
             n->slaveof = master;
