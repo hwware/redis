@@ -210,10 +210,8 @@ int clusterLoadConfig(char *filename) {
 
         /*Check if human readable name is present*/
         int offset = 0;
-        if (strrchr(argv[1],'_') != NULL){
-            strncpy(n->hname, argv[1], CLUSTER_HUMANNAMELEN);
-            offset = 1;
-        }
+        strncpy(n->hname, argv[1], CLUSTER_HUMANNAMELEN);
+        offset = 1;
 
         /* Address and port */
         if ((p = strrchr(argv[offset + 1],':')) == NULL) {
@@ -4328,8 +4326,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
 
-    if (node->hname)
-        ci = sdscatfmt(ci," %s",node->hname);
+    ci = sdscatfmt(ci," %s",node->hname);
 
     ci = sdscatfmt(ci," %s:%i@%i ",
         node->ip,
