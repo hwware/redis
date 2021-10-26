@@ -336,6 +336,8 @@ int clusterLoadConfig(char *filename) {
         }
 
         sdsfreesplitres(argv,argc);
+        serverLog(LL_WARNING, " HNAME IS SET TO : %s", n->hname);
+        
     }
     /* Config sanity check */
     if (server.cluster->myself == NULL) goto fmterr;
@@ -351,7 +353,6 @@ int clusterLoadConfig(char *filename) {
     if (clusterGetMaxEpoch() > server.cluster->currentEpoch) {
         server.cluster->currentEpoch = clusterGetMaxEpoch();
     }
-        serverLog(LL_WARNING, " HNAME IS SET TO : %s", n->hname);
 
     return C_OK;
 
