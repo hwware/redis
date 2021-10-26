@@ -278,7 +278,7 @@ int clusterLoadConfig(char *filename) {
         }
 
         /* Custom nodename */
-        node->custom_name = atoi(argv[5]);
+        n->custom_name = atoi(argv[5]);
 
         /* Set ping sent / pong received timestamps */
         if (atoi(argv[6])) n->ping_sent = mstime();
