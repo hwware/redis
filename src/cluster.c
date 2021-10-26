@@ -1997,6 +1997,10 @@ int clusterProcessPacket(clusterLink *link) {
             }
         }
 
+        if (strcmp(sender->hname,hdr->hname) != 0) {
+            strncpy(sender->hname, hdr->hname, CLUSTER_HUMANNAMELEN);
+        }
+
         /* Add this node if it is new for us and the msg type is MEET.
          * In this stage we don't try to add the node with the right
          * flags, slaveof pointer, and so forth, as this details will be
@@ -2574,7 +2578,6 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     hdr->sig[3] = 'b';
     hdr->type = htons(type);
     memcpy(hdr->sender,myself->name,CLUSTER_NAMELEN);
-    serverLog(LL_WARNING, "GENERATING HDR ADDING %s TO HDR->HNAME", myself->hname);
     strncpy(hdr->hname,myself->hname,CLUSTER_HUMANNAMELEN);
     hdr->custom_name = myself->custom_name;
 
@@ -2663,7 +2666,6 @@ void clusterSetGossipEntry(clusterMsg *hdr, int i, clusterNode *n) {
 /* Send a PING or PONG packet to the specified node, making sure to add enough
  * gossip information. */
 void clusterSendPing(clusterLink *link, int type) {
-    serverLog(LL_WARNING, "ENTERED SEND PING");
     unsigned char *buf;
     clusterMsg *hdr;
     int gossipcount = 0; /* Number of gossip sections added so far. */
@@ -2723,8 +2725,6 @@ void clusterSendPing(clusterLink *link, int type) {
     /* Populate the header. */
     if (link->node && type == CLUSTERMSG_TYPE_PING)
         link->node->ping_sent = mstime();
-
-    serverLog(LL_WARNING, "HEADER POPULATED =======================");
 
     clusterBuildMessageHdr(hdr,type);
 
