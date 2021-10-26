@@ -1873,6 +1873,9 @@ int clusterProcessPacket(clusterLink *link) {
     serverLog(LL_DEBUG,"--- Processing packet of type %s, %lu bytes",
         clusterGetMessageTypeString(type), (unsigned long) totlen);
 
+    serverLog(LL_WARNING,"--- Processing packet of type %s, %lu bytes",
+        clusterGetMessageTypeString(type), (unsigned long) totlen);
+
     /* Perform sanity checks */
     if (totlen < 16) return 1; /* At least signature, version, totlen, count. */
     if (totlen > link->rcvbuf_len) return 1;
@@ -2041,6 +2044,11 @@ int clusterProcessPacket(clusterLink *link) {
                     serverLog(LL_VERBOSE,
                         "Handshake: we already know node %.40s %s, "
                         "updating the address if needed.", sender->name, sender->hname);
+
+                    serverLog(LL_WARNING,
+                        "Handshake: we already know node %.40s %s, "
+                        "updating the address if needed.", sender->name, sender->hname);
+
                     if (nodeUpdateAddressIfNeeded(sender,link,hdr))
                     {
                         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|
@@ -2062,6 +2070,8 @@ int clusterProcessPacket(clusterLink *link) {
                 clusterRenameNode(link->node, hdr->sender);
                 serverLog(LL_DEBUG,"Handshake with node %.40s %s completed.",
                     link->node->name, link->node->hname);
+                serverLog(LL_WARNING,"Handshake with node %.40s %s completed.",
+                    link->node->name, link->node->hname);
                 link->node->flags &= ~CLUSTER_NODE_HANDSHAKE;
                 link->node->flags |= flags&(CLUSTER_NODE_MASTER|CLUSTER_NODE_SLAVE);
                 clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
@@ -2075,6 +2085,12 @@ int clusterProcessPacket(clusterLink *link) {
                     link->node->name, link->node->hname,
                     (int)(now-(link->node->ctime)),
                     link->node->flags);
+
+                serverLog(LL_WARNING,"PONG contains mismatching sender ID. About node %.40s %s added %d ms ago, having flags %d",
+                    link->node->name, link->node->hname,
+                    (int)(now-(link->node->ctime)),
+                    link->node->flags);
+
                 link->node->flags |= CLUSTER_NODE_NOADDR;
                 link->node->ip[0] = '\0';
                 link->node->port = 0;
