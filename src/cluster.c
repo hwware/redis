@@ -382,6 +382,7 @@ int clusterSaveConfig(int do_fsync) {
 
     /* Get the nodes description and concatenate our "vars" directive to
      * save currentEpoch and lastVoteEpoch. */
+
     ci = clusterGenNodesDescription(CLUSTER_NODE_HANDSHAKE, 0);
     ci = sdscatprintf(ci,"vars currentEpoch %llu lastVoteEpoch %llu\n",
         (unsigned long long) server.cluster->currentEpoch,
@@ -2046,16 +2047,16 @@ int clusterProcessPacket(clusterLink *link) {
                         "Handshake: we already know node %.40s %s, "
                         "updating the address if needed.", sender->name, sender->hname);
 
+                    if (sender->custom_name)
+                        setManualClusterNodeName(link->node, sender->hname);
+                    else
+                        setClusterNodeName(link->node);
+                    
                     if (nodeUpdateAddressIfNeeded(sender,link,hdr))
                     {
                         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|
                                              CLUSTER_TODO_UPDATE_STATE);
                     }
-                    serverLog(LL_WARNING, " UPDATING NODENAME 2 =====================");
-                    if (sender->custom_name)
-                        setManualClusterNodeName(link->node, sender->hname);
-                    else
-                        setClusterNodeName(link->node);
                     /* Free this node as we already have it. This will
                      * cause the link to be freed as well. */
                     clusterDelNode(link->node);
