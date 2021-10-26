@@ -1997,7 +1997,7 @@ int clusterProcessPacket(clusterLink *link) {
             }
         }
 
-        if (strcmp(sender->hname,hdr->hname) != 0) {
+        if (sender && strcmp(sender->hname,hdr->hname) != 0) {
             strncpy(sender->hname, hdr->hname, CLUSTER_HUMANNAMELEN);
         }
 
