@@ -827,7 +827,6 @@ void setClusterNodeName(clusterNode *node) {
     else{
         post_digits = floor(log10(abs(node->port))) + 1;
     }
-    int allocate_len = sizeof(node->ip) + post_digits + 2;
     sprintf(node->hname, "%s%s%d", node->ip, "_", node->port);
 }
 
