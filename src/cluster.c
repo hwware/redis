@@ -210,7 +210,7 @@ int clusterLoadConfig(char *filename) {
 
         /*Human readable name*/
         serverLog(LL_WARNING, " WHAT IS THIS : %s", argv[1]);
-        strncpy(n->hname, argv[1], CLUSTER_HUMANNAMELEN);
+        strncpy(n->hname, argv[1], strlen(argv[1]));
 
         /* Address and port */
         if ((p = strrchr(argv[2],':')) == NULL) {
@@ -337,7 +337,7 @@ int clusterLoadConfig(char *filename) {
 
         sdsfreesplitres(argv,argc);
         serverLog(LL_WARNING, " HNAME IS SET TO : %s", n->hname);
-        
+
     }
     /* Config sanity check */
     if (server.cluster->myself == NULL) goto fmterr;
