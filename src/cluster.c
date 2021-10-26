@@ -211,7 +211,7 @@ int clusterLoadConfig(char *filename) {
         /*Check if human readable name is present*/
         int offset = 0;
         if (strrchr(argv[1],'_') != NULL){
-            n->hname = argv[1];
+            strncpy(n->hname, argv[1], CLUSTER_HUMANNAMELEN);
             offset = 1;
         }
 
@@ -820,7 +820,6 @@ unsigned int keyHashSlot(char *key, int keylen) {
 void setClusterNodeName(clusterNode *node) {
     if (node->custom_name == 1)
         return;
-    char *name;
     int post_digits;
     if (node->port == 0){
         post_digits = 0;
@@ -829,9 +828,7 @@ void setClusterNodeName(clusterNode *node) {
         post_digits = floor(log10(abs(node->port))) + 1;
     }
     int allocate_len = sizeof(node->ip) + post_digits + 2;
-    name = zmalloc(allocate_len);
-    sprintf(name, "%s%s%d", node->ip, "_", node->port);
-    node->hname = name;
+    sprintf(node->hname, "%s%s%d", node->ip, "_", node->port);
 }
 
 /* Manually assign a human readable name to nodes for clusters*/
@@ -845,8 +842,7 @@ int setManualClusterNodeName(clusterNode *node, char * newname) {
     sdsfree(s);
     serverAssert(retval == DICT_OK);
 
-    node->hname = malloc(sizeof(newname));
-    strncpy(node->hname, newname, strlen(newname));
+    strncpy(node->hname, newname, CLUSTER_HUMANNAMELEN);
     node->custom_name = 1;
     clusterAddNode(node);
     serverLog(LL_WARNING, "EXITED setManualClusterNodeName");
@@ -2075,8 +2071,6 @@ int clusterProcessPacket(clusterLink *link) {
                 clusterRenameNode(link->node, hdr->sender);
                 serverLog(LL_DEBUG,"Handshake with node %.40s %s completed.",
                     link->node->name, link->node->hname);
-                serverLog(LL_WARNING,"Handshake with node %.40s %s completed.",
-                    link->node->name, link->node->hname);
                 link->node->flags &= ~CLUSTER_NODE_HANDSHAKE;
                 link->node->flags |= flags&(CLUSTER_NODE_MASTER|CLUSTER_NODE_SLAVE);
                 clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
@@ -2087,11 +2081,6 @@ int clusterProcessPacket(clusterLink *link) {
                  * disconnect this node and set it as not having an associated
                  * address. */
                 serverLog(LL_DEBUG,"PONG contains mismatching sender ID. About node %.40s %s added %d ms ago, having flags %d",
-                    link->node->name, link->node->hname,
-                    (int)(now-(link->node->ctime)),
-                    link->node->flags);
-
-                serverLog(LL_WARNING,"PONG contains mismatching sender ID. About node %.40s %s added %d ms ago, having flags %d",
                     link->node->name, link->node->hname,
                     (int)(now-(link->node->ctime)),
                     link->node->flags);
@@ -2592,11 +2581,8 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     hdr->sig[3] = 'b';
     hdr->type = htons(type);
     memcpy(hdr->sender,myself->name,CLUSTER_NAMELEN);
-    if (myself->hname) {
-        serverLog(LL_WARNING, "GENERATING HDR ADDING %s TO HDR->HNAME", myself->hname);
-        hdr->hname = malloc(strlen(myself->hname) + 1);
-        strcpy(hdr->hname,myself->hname);
-    }
+    serverLog(LL_WARNING, "GENERATING HDR ADDING %s TO HDR->HNAME", myself->hname);
+    strncpy(hdr->hname,myself->hname,CLUSTER_HUMANNAMELEN);
 
     /* If cluster-announce-ip option is enabled, force the receivers of our
      * packets to use the specified address for this node. Otherwise if the

@@ -9,6 +9,7 @@
 #define CLUSTER_OK 0          /* Everything looks ok */
 #define CLUSTER_FAIL 1        /* The cluster can't work */
 #define CLUSTER_NAMELEN 40    /* sha1 hex length */
+#define CLUSTER_HUMANNAMELEN 32    /* Max length of human readable node name */
 #define CLUSTER_PORT_INCR 10000 /* Cluster port = baseport + PORT_INCR */
 
 /* The following defines are amount of time, sometimes expressed as
@@ -113,7 +114,7 @@ typedef struct clusterNodeFailReport {
 typedef struct clusterNode {
     mstime_t ctime; /* Node object creation time. */
     char name[CLUSTER_NAMELEN]; /* Node name, hex string, sha1-size */
-    char* hname; /* Human readable name for node */
+    char hname[CLUSTER_HUMANNAMELEN]; /* Human readable name for node */
     int flags;      /* CLUSTER_NODE_... */
     uint64_t configEpoch; /* Last configEpoch observed for this node */
     unsigned char slots[CLUSTER_SLOTS/8]; /* slots handled by this node */
