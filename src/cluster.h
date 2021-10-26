@@ -209,12 +209,12 @@ typedef struct {
     char nodename[CLUSTER_NAMELEN];
     uint32_t ping_sent;
     uint32_t pong_received;
-    char ip[NET_IP_STR_LEN];    /* IP address last time it was seen */
-    char * hname;               /* Human readable name for node */
-    uint16_t port;              /* base port last time it was seen */
-    uint16_t cport;             /* cluster port last time it was seen */
-    uint16_t flags;             /* node->flags copy */
-    uint16_t pport;             /* plaintext-port, when base port is TLS */
+    char ip[NET_IP_STR_LEN];            /* IP address last time it was seen */
+    char hname[CLUSTER_HUMANNAMELEN];   /* Human readable name for node */
+    uint16_t port;                      /* base port last time it was seen */
+    uint16_t cport;                     /* cluster port last time it was seen */
+    uint16_t flags;                     /* node->flags copy */
+    uint16_t pport;                     /* plaintext-port, when base port is TLS */
     uint16_t notused1;
     int custom_name;
 } clusterMsgDataGossip;
@@ -288,8 +288,8 @@ typedef struct {
     char sender[CLUSTER_NAMELEN]; /* Name of the sender node */
     unsigned char myslots[CLUSTER_SLOTS/8];
     char slaveof[CLUSTER_NAMELEN];
-    char myip[NET_IP_STR_LEN];    /* Sender IP, if not all zeroed. */
-    char * hname;        /* Human readable name assigned to the sender */
+    char myip[NET_IP_STR_LEN];          /* Sender IP, if not all zeroed. */
+    char hname[CLUSTER_HUMANNAMELEN];   /* Human readable name assigned to the sender */
     char notused1[32];   /* 32 bytes reserved for future usage. */
     uint16_t pport;      /* Sender TCP plaintext port, if base port is TLS */
     uint16_t cport;      /* Sender TCP cluster bus port */
