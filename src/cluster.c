@@ -210,8 +210,10 @@ int clusterLoadConfig(char *filename) {
 
         /*Human readable name*/
         serverLog(LL_WARNING, " WHAT IS THIS : %s", argv[1]);
-        strncpy(n->hname, argv[1], strlen(argv[1]));
-
+        strdup(n->hname, argv[1], strlen(argv[1]));
+        serverLog(LL_WARNING, " HNAME IS SET TO : %s", n->hname);
+        
+        
         /* Address and port */
         if ((p = strrchr(argv[2],':')) == NULL) {
             sdsfreesplitres(argv,argc);
