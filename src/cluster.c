@@ -1941,7 +1941,7 @@ int clusterProcessPacket(clusterLink *link) {
         serverLog(LL_WARNING, "SENDER IS: %s", link->node ? link->node->name : "NULL");
 
         serverLog(LL_WARNING, "SENDER IS: %s", sender->hname);
-        serverLog(LL_WARNING, "SENDER IS: %s", link->node ? link->node->hname : "NULL");
+        serverLog(LL_WARNING, "SENDER IS: %s", hdr->hname ? hdr->hname : "NULL");
     }
 
     /* Update the last time we saw any data from this node. We
@@ -2595,6 +2595,7 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     hdr->sig[3] = 'b';
     hdr->type = htons(type);
     memcpy(hdr->sender,myself->name,CLUSTER_NAMELEN);
+    strncpy(hdr->hname,myself->hname,strlen(myself->hname));
 
     /* If cluster-announce-ip option is enabled, force the receivers of our
      * packets to use the specified address for this node. Otherwise if the
