@@ -2047,10 +2047,10 @@ int clusterProcessPacket(clusterLink *link) {
                         "updating the address if needed.", sender->name, sender->hname);
 
                     if (hdr->custom_name){
-                        setManualClusterNodeName(sender->node, hdr->hname);
+                        setManualClusterNodeName(sender, hdr->hname);
                     }
                     else
-                        setClusterNodeName(sender->node);
+                        setClusterNodeName(sender);
                     
                     if (nodeUpdateAddressIfNeeded(sender,link,hdr))
                     {
