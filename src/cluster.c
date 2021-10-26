@@ -209,10 +209,7 @@ int clusterLoadConfig(char *filename) {
         }
 
         /*Human readable name*/
-        serverLog(LL_WARNING, " WHAT IS THIS : %s", argv[1]);
         strncpy(n->hname, argv[1], strlen(argv[1]));
-        serverLog(LL_WARNING, " HNAME IS SET TO : %s", n->hname);
-
 
         /* Address and port */
         if ((p = strrchr(argv[2],':')) == NULL) {
@@ -232,7 +229,6 @@ int clusterLoadConfig(char *filename) {
          * In this case we set it to the default offset of 10000 from the
          * base port. */
         n->cport = busp ? atoi(busp) : n->port + CLUSTER_PORT_INCR;
-        setClusterNodeName(n);
         /* The plaintext port for client in a TLS cluster (n->pport) is not
          * stored in nodes.conf. It is received later over the bus protocol. */
 
@@ -338,8 +334,6 @@ int clusterLoadConfig(char *filename) {
         }
 
         sdsfreesplitres(argv,argc);
-        serverLog(LL_WARNING, " HNAME IS SET TO : %s", n->hname);
-
     }
     /* Config sanity check */
     if (server.cluster->myself == NULL) goto fmterr;
