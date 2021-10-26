@@ -843,7 +843,7 @@ int setManualClusterNodeName(clusterNode *node, char * newname) {
     strncpy(node->hname, newname, CLUSTER_HUMANNAMELEN);
     node->custom_name = 1;
     clusterAddNode(node);
-    saveConfig(1);
+    ClusterSaveConfig(1);
     return 1;
 }
 
