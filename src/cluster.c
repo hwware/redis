@@ -4348,7 +4348,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
         ci = sdscatlen(ci,"-",1);
 
     /* Adding custom name */
-    ci = sdscatfmt(ci," %d",node->custom_name);  
+    ci = sdscatfmt(ci," %i",node->custom_name);  
 
     unsigned long long nodeEpoch = node->configEpoch;
     if (nodeIsSlave(node) && node->slaveof) {
