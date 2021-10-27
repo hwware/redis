@@ -822,7 +822,7 @@ void setClusterNodeName(clusterNode *node) {
         return;
     char ip[strlen(node->ip)];
     strcpy(ip,node->ip);
-    snprintf(node->hname, "%s_%s",ip, node->port);
+    snprintf(node->hname, "%s_%d",ip, node->port);
 }
 
 /* Manually assign a human readable name to nodes for clusters*/
