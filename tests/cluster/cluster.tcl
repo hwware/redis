@@ -13,6 +13,7 @@ proc get_cluster_nodes id {
     set lines [split [R $id cluster nodes] "\r\n"]
     set nodes {}
     foreach l $lines {
+        puts $l
         set l [string trim $l]
         if {$l eq {}} continue
         set args [split $l]
