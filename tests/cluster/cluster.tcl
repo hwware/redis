@@ -28,7 +28,6 @@ proc get_cluster_nodes id {
             linkstate [lindex $args 8] \
             slots [lrange $args 9 end] \
         ]
-        puts [lindex $args 7]
         lappend nodes $node
     }
     # puts $nodes
