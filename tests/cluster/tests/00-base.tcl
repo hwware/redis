@@ -34,6 +34,7 @@ test "After the join, every node gets a different config epoch" {
         foreach_redis_id id {
             set epochs {}
             foreach n [get_cluster_nodes $id] {
+                puts [dict get $n config_epoch]
                 lappend epochs [dict get $n config_epoch]
             }
             if {[lsort $epochs] != [lsort -unique $epochs]} {
