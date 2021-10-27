@@ -820,7 +820,9 @@ unsigned int keyHashSlot(char *key, int keylen) {
 void setClusterNodeName(clusterNode *node) {
     if (node->custom_name == 1)
         return;
-    sprintf(node->hname, "%s%s%d", node->ip, "_", node->port);
+    strcpy(node->hname,node->ip);
+    strcat(node->hname, "_");
+    strcat(node->hname, node->port);
 }
 
 /* Manually assign a human readable name to nodes for clusters*/
