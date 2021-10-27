@@ -820,13 +820,6 @@ unsigned int keyHashSlot(char *key, int keylen) {
 void setClusterNodeName(clusterNode *node) {
     if (node->custom_name == 1)
         return;
-    int post_digits;
-    if (node->port == 0){
-        post_digits = 0;
-    }
-    else{
-        post_digits = floor(log10(abs(node->port))) + 1;
-    }
     sprintf(node->hname, "%s%s%d", node->ip, "_", node->port);
 }
 
@@ -1133,9 +1126,6 @@ void clusterRenameNode(clusterNode *node, char *newname) {
     sds s = sdsnewlen(node->name, CLUSTER_NAMELEN);
 
     serverLog(LL_DEBUG,"Renaming node %.40s into %.40s",
-        node->name, newname);
-
-    serverLog(LL_WARNING,"Renaming node %.40s into %.40s",
         node->name, newname);
 
     retval = dictDelete(server.cluster->nodes, s);
