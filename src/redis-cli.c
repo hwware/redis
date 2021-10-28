@@ -4005,6 +4005,7 @@ static int clusterManagerNodeLoadInfo(clusterManagerNode *node, int opts,
              *link_status = NULL, *hname = NULL, *custom_name = NULL;
         UNUSED(link_status);
         UNUSED(hname);
+        UNUSED(custom_name);
         int i = 0;
         while ((p = strchr(line, ' ')) != NULL) {
             *p = '\0';
