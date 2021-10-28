@@ -1286,6 +1286,8 @@ static int cliSendCommand(int argc, char **argv, long repeat) {
                        !strcasecmp(argv[1],"htstats")) ||
         (argc >= 2 && !strcasecmp(command,"debug") &&
                        !strcasecmp(argv[1],"htstats-key")) ||
+        (argc >= 2 && !strcasecmp(command,"debug") &&
+                       !strcasecmp(argv[1],"client-eviction")) ||
         (argc >= 2 && !strcasecmp(command,"memory") &&
                       (!strcasecmp(argv[1],"malloc-stats") ||
                        !strcasecmp(argv[1],"doctor"))) ||
@@ -1796,6 +1798,8 @@ static void usage(int err) {
 "  -r <repeat>        Execute specified command N times.\n"
 "  -i <interval>      When -r is used, waits <interval> seconds per command.\n"
 "                     It is possible to specify sub-second times like -i 0.1.\n"
+"                     This interval is also used in --scan and --stat per cycle.\n"
+"                     and in --bigkeys, --memkeys, and --hotkeys per 100 cycles.\n"
 "  -n <db>            Database number.\n"
 "  -3                 Start session in RESP3 protocol mode.\n"
 "  -x                 Read last argument from STDIN.\n"
@@ -7564,7 +7568,7 @@ static void getKeySizes(redisReply *keys, typeinfo **types,
 }
 
 static void findBigKeys(int memkeys, unsigned memkeys_samples) {
-    unsigned long long sampled = 0, total_keys, totlen=0, *sizes=NULL, it=0;
+    unsigned long long sampled = 0, total_keys, totlen=0, *sizes=NULL, it=0, scan_loops = 0;
     redisReply *reply, *keys;
     unsigned int arrsize=0, i;
     dictIterator *di;
@@ -7595,6 +7599,7 @@ static void findBigKeys(int memkeys, unsigned memkeys_samples) {
 
         /* Grab some keys and point to the keys array */
         reply = sendScan(&it);
+        scan_loops++;
         keys  = reply->element[1];
 
         /* Reallocate our type and size array if we need to */
@@ -7652,7 +7657,7 @@ static void findBigKeys(int memkeys, unsigned memkeys_samples) {
         }
 
         /* Sleep if we've been directed to do so */
-        if(sampled && (sampled %100) == 0 && config.interval) {
+        if (config.interval && (scan_loops % 100) == 0) {
             usleep(config.interval);
         }
 
@@ -7739,7 +7744,7 @@ static void findHotKeys(void) {
     redisReply *keys, *reply;
     unsigned long long counters[HOTKEYS_SAMPLE] = {0};
     sds hotkeys[HOTKEYS_SAMPLE] = {NULL};
-    unsigned long long sampled = 0, total_keys, *freqs = NULL, it = 0;
+    unsigned long long sampled = 0, total_keys, *freqs = NULL, it = 0, scan_loops = 0;
     unsigned int arrsize = 0, i, k;
     double pct;
 
@@ -7758,6 +7763,7 @@ static void findHotKeys(void) {
 
         /* Grab some keys and point to the keys array */
         reply = sendScan(&it);
+        scan_loops++;
         keys  = reply->element[1];
 
         /* Reallocate our freqs array if we need to */
@@ -7802,7 +7808,7 @@ static void findHotKeys(void) {
         }
 
         /* Sleep if we've been directed to do so */
-        if(sampled && (sampled %100) == 0 && config.interval) {
+        if (config.interval && (scan_loops % 100) == 0) {
             usleep(config.interval);
         }
 
@@ -7995,6 +8001,7 @@ static void scanMode(void) {
             }
         }
         freeReplyObject(reply);
+        if (config.interval) usleep(config.interval);
     } while(cur != 0);
 
     exit(0);
