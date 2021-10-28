@@ -209,7 +209,7 @@ int clusterLoadConfig(char *filename) {
         }
 
         /*Human readable name*/
-        strncpy(n->hname, argv[1], strlen(argv[1]));
+        strncpy(n->hname, argv[1], CLUSTER_HUMANNAMELEN);
 
         /* Address and port */
         if ((p = strrchr(argv[2],':')) == NULL) {
@@ -1101,10 +1101,8 @@ clusterNode *clusterLookupNode(const char *name) {
         di = dictGetSafeIterator(server.cluster->nodes);
         while((de2 = dictNext(di)) != NULL) {
             clusterNode *node = dictGetVal(de2);
-            if (node->hname){
-                if (strcmp(node->hname,name ) == 0)
-                    return node;
-            }
+            if (strcmp(node->hname,name ) == 0)
+                return node;
         }
         dictReleaseIterator(di);
         return NULL;
@@ -4666,7 +4664,7 @@ NULL
         addReplyBulkCBuffer(c,myself->name, CLUSTER_NAMELEN);
     } else if (!strcasecmp(c->argv[1]->ptr,"myname") && c->argc == 2) {
         /* CLUSTER MYNAME */
-        if (myself->hname)
+        if (myself->hname[0] != '\0')
             addReplyBulkCBuffer(c,myself->hname, strlen(myself->hname));
         else
             addReplyError(c,"Node is not assigned name yet.");
