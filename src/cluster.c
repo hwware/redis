@@ -209,7 +209,8 @@ int clusterLoadConfig(char *filename) {
         }
 
         /*Human readable name*/
-        strncpy(n->hname, argv[1], CLUSTER_HUMANNAMELEN);
+        size_t len = strlen(argv[1]);
+        strncpy(n->hname, argv[1], len +1);
 
         /* Address and port */
         if ((p = strrchr(argv[2],':')) == NULL) {
@@ -829,7 +830,8 @@ void setClusterNodeName(clusterNode *node) {
 int setManualClusterNodeName(clusterNode *node, char * newname) {
     if (newname == NULL)
         return 0;
-    strncpy(node->hname, newname, CLUSTER_HUMANNAMELEN);
+    size_t len = strlen(newname);
+    strncpy(node->hname, newname, len + 1);
     node->custom_name = 1;
     clusterSaveConfig(1);
     return 1;
