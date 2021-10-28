@@ -211,7 +211,7 @@ int clusterLoadConfig(char *filename) {
         /*Check if human readable name is present*/
         int offset = 0;
         if (strrchr(argv[1],'_') != NULL){
-            n->hname = argv[1];
+            strncpy(n->hname, argv[1], strlen(argv[1]));
             offset = 1;
         }
 
