@@ -279,17 +279,17 @@ int clusterLoadConfig(char *filename) {
         }
 
         /* Custom nodename */
-        n->custom_name = atoi(argv[5]);
+        n->custom_name = atoi(argv[offset + 4]);
 
         /* Set ping sent / pong received timestamps */
-        if (atoi(argv[offset + 4])) n->ping_sent = mstime();
-        if (atoi(argv[offset + 5])) n->pong_received = mstime();
+        if (atoi(argv[offset + 5])) n->ping_sent = mstime();
+        if (atoi(argv[offset + 6])) n->pong_received = mstime();
 
         /* Set configEpoch for this node. */
-        n->configEpoch = strtoull(argv[offset + 6],NULL,10);
+        n->configEpoch = strtoull(argv[offset + 7],NULL,10);
 
         /* Populate hash slots served by this instance. */
-        for (j = offset + 8; j < argc; j++) {
+        for (j = offset + 9; j < argc; j++) {
             int start, stop;
 
             if (argv[j][0] == '[') {
