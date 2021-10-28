@@ -278,6 +278,9 @@ int clusterLoadConfig(char *filename) {
             clusterNodeAddSlave(master,n);
         }
 
+        /* Custom nodename */
+        n->custom_name = atoi(argv[5]);
+
         /* Set ping sent / pong received timestamps */
         if (atoi(argv[offset + 4])) n->ping_sent = mstime();
         if (atoi(argv[offset + 5])) n->pong_received = mstime();
@@ -4322,6 +4325,9 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
         ci = sdscatlen(ci,node->slaveof->name,CLUSTER_NAMELEN);
     else
         ci = sdscatlen(ci,"-",1);
+
+    /* Adding custom name */
+    ci = sdscatfmt(ci," %i",node->custom_name); 
 
     unsigned long long nodeEpoch = node->configEpoch;
     if (nodeIsSlave(node) && node->slaveof) {
