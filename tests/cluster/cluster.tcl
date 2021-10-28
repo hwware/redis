@@ -30,7 +30,6 @@ proc get_cluster_nodes id {
         ]
         lappend nodes $node
     }
-    # puts $nodes
     return $nodes
 }
 
