@@ -4023,7 +4023,7 @@ static int clusterManagerNodeLoadInfo(clusterManagerNode *node, int opts,
             case 8: config_epoch = token; break;
             case 9: link_status = token; break;
             }
-            if (i == 9) break; // Slots
+            if (i == 10) break; // Slots
         }
         if (!flags) {
             success = 0;
@@ -4035,7 +4035,7 @@ static int clusterManagerNodeLoadInfo(clusterManagerNode *node, int opts,
             node->flags |= CLUSTER_MANAGER_FLAG_MYSELF;
             currentNode = node;
             clusterManagerNodeResetSlots(node);
-            if (i == 9) {
+            if (i == 10) {
                 int remaining = strlen(line);
                 while (remaining > 0) {
                     p = strchr(line, ' ');
