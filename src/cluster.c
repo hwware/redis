@@ -218,7 +218,7 @@ int clusterLoadConfig(char *filename) {
             goto fmterr;
         }
         *p = '\0';
-        memcpy(n->ip,argv[2],strlen(argv[2])+1);
+        memcpy(n->ip,argv[2],strlen(*argv[2])+1);
         char *port = p+1;
         char *busp = strchr(port,'@');
         if (busp) {
@@ -830,7 +830,7 @@ void setClusterNodeName(clusterNode *node) {
 int setManualClusterNodeName(clusterNode *node, char * newname) {
     if (newname == NULL)
         return 0;
-    size_t len = strlen(newname);
+    size_t len = strlen(*newname);
     strncpy(node->hname, newname, len + 1);
     node->custom_name = 1;
     clusterSaveConfig(1);
