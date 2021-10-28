@@ -208,6 +208,7 @@ int clusterLoadConfig(char *filename) {
             clusterAddNode(n);
         }
 
+        int offset=0;
         /*Human readable name*/
         strncpy(n->hname, argv[1], strlen(argv[1]));
 
