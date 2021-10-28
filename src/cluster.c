@@ -818,18 +818,28 @@ unsigned int keyHashSlot(char *key, int keylen) {
 
 /* Assign a human readable name to nodes for clusters*/
 void setClusterNodeName(clusterNode *node) {
-    char *name;
-    int post_digits;
-    if (node->port == 0){
-        post_digits = 0;
-    }
-    else{
-        post_digits = floor(log10(abs(node->port))) + 1;
-    }
-    int allocate_len = sizeof(node->ip) + post_digits + 2;
-    name = zmalloc(allocate_len);
-    sprintf(name, "%s%s%d", node->ip, "_", node->port);
-    node->hname = name;
+    if (node->custom_name == 1)
+        return;
+    char ip[strlen(node->ip)];
+    strcpy(ip,node->ip);
+    sprintf(node->hname, "%s_%u", ip,(unsigned int)node->port);
+}
+
+/* Manually assign a human readable name to nodes for clusters*/
+int setManualClusterNodeName(clusterNode *node, char * newname) {
+    if (newname == NULL)
+        return 0;
+    int retval;
+    sds s = sdsnewlen(node->name, CLUSTER_NAMELEN);
+    retval = dictDelete(server.cluster->nodes, s);
+    sdsfree(s);
+    serverAssert(retval == DICT_OK);
+
+    strncpy(node->hname, newname, CLUSTER_HUMANNAMELEN);
+    node->custom_name = 1;
+    clusterAddNode(node);
+    clusterSaveConfig(1);
+    return 1;
 }
 
 /* Create a new cluster node, with the specified flags.
@@ -852,6 +862,7 @@ clusterNode *createClusterNode(char *nodename, int flags) {
     memset(node->slots,0,sizeof(node->slots));
     node->slots_info = NULL;
     node->numslots = 0;
+    node->custom_name = 0;
     node->numslaves = 0;
     node->slaves = NULL;
     node->slaveof = NULL;
@@ -1588,7 +1599,10 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
                 node->flags &= ~CLUSTER_NODE_NOADDR;
-                setClusterNodeName(node);
+                if (hdr->custom_name)
+                    setManualClusterNodeName(node, hdr->hname);
+                else
+                    setClusterNodeName(node);
             }
         } else {
             /* If it's not in NOADDR state and we don't have it, we
@@ -1610,7 +1624,10 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->port = ntohs(g->port);
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
-                setClusterNodeName(node);
+                if (hdr->custom_name)
+                    setManualClusterNodeName(node, hdr->hname);
+                else
+                    setClusterNodeName(node);
                 clusterAddNode(node);
             }
         }
@@ -1669,7 +1686,10 @@ int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
     node->port = port;
     node->pport = pport;
     node->cport = cport;
-    setClusterNodeName(node);
+    if (hdr->custom_name)
+        setManualClusterNodeName(node, hdr->hname);
+    else
+        setClusterNodeName(node);
     if (node->link) freeClusterLink(node->link);
     node->flags &= ~CLUSTER_NODE_NOADDR;
     serverLog(LL_WARNING,"Address updated for node %.40s, now %s:%d",
@@ -1967,6 +1987,10 @@ int clusterProcessPacket(clusterLink *link) {
             }
         }
 
+        if (sender && strcmp(sender->hname,hdr->hname) != 0) {
+            strncpy(sender->hname, hdr->hname, CLUSTER_HUMANNAMELEN);
+        }
+
         /* Add this node if it is new for us and the msg type is MEET.
          * In this stage we don't try to add the node with the right
          * flags, slaveof pointer, and so forth, as this details will be
@@ -2009,6 +2033,14 @@ int clusterProcessPacket(clusterLink *link) {
                     serverLog(LL_VERBOSE,
                         "Handshake: we already know node %.40s, "
                         "updating the address if needed.", sender->name);
+
+                    if (hdr->custom_name) {
+                        setManualClusterNodeName(sender, hdr->hname);
+                    }
+                    else {
+                        setClusterNodeName(sender);
+                    }
+
                     if (nodeUpdateAddressIfNeeded(sender,link,hdr))
                     {
                         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|
@@ -2533,6 +2565,8 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     hdr->sig[3] = 'b';
     hdr->type = htons(type);
     memcpy(hdr->sender,myself->name,CLUSTER_NAMELEN);
+    strncpy(hdr->hname,myself->hname,CLUSTER_HUMANNAMELEN);
+    hdr->custom_name = myself->custom_name;
 
     /* If cluster-announce-ip option is enabled, force the receivers of our
      * packets to use the specified address for this node. Otherwise if the
@@ -2611,6 +2645,7 @@ void clusterSetGossipEntry(clusterMsg *hdr, int i, clusterNode *n) {
     gossip->cport = htons(n->cport);
     gossip->flags = htons(n->flags);
     gossip->pport = htons(n->pport);
+    gossip->custom_name = n->custom_name;
     gossip->notused1 = 0;
 }
 
@@ -4625,11 +4660,17 @@ NULL
         /* CLUSTER MYID */
         addReplyBulkCBuffer(c,myself->name, CLUSTER_NAMELEN);
     } else if (!strcasecmp(c->argv[1]->ptr,"myname") && c->argc == 2) {
-        /* CLUSTER MYID */
+        /* CLUSTER MYNAME */
         if (myself->hname)
             addReplyBulkCBuffer(c,myself->hname, strlen(myself->hname));
         else
             addReplyError(c,"Node is not assigned name yet.");
+    } else if (!strcasecmp(c->argv[1]->ptr,"setname") && c->argc == 3) {
+        /* CLUSTER SETNAME */
+        if (setManualClusterNodeName(myself,c->argv[2]->ptr))
+            addReply(c,shared.ok);
+        else
+            addReplyError(c,"Error setting the name of the node.");
     } else if (!strcasecmp(c->argv[1]->ptr,"slots") && c->argc == 2) {
         /* CLUSTER SLOTS */
         clusterReplyMultiBulkSlots(c);
