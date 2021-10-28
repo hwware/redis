@@ -1094,7 +1094,7 @@ clusterNode *clusterLookupNode(const char *name) {
 
     de = dictFind(server.cluster->nodes,s);
     sdsfree(s);
-    if (de == NULL){
+    if (de == NULL) {
         /* Check if any node has the same human readable name*/
         dictIterator *di;
         dictEntry *de2;
@@ -2030,7 +2030,7 @@ int clusterProcessPacket(clusterLink *link) {
                         "Handshake: we already know node %.40s %s, "
                         "updating the address if needed.", sender->name, sender->hname);
 
-                    if (hdr->custom_name){
+                    if (hdr->custom_name) {
                         setManualClusterNodeName(sender, hdr->hname);
                     }
                     else
