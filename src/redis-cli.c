@@ -4017,11 +4017,11 @@ static int clusterManagerNodeLoadInfo(clusterManagerNode *node, int opts,
             case 2: addr = token; break;
             case 3: flags = token; break;
             case 4: master_id = token; break;
-            // case 5: custom_name = token; break;
-            case 5: ping_sent = token; break;
-            case 6: ping_recv = token; break;
-            case 7: config_epoch = token; break;
-            case 8: link_status = token; break;
+            case 5: custom_name = token; break;
+            case 6: ping_sent = token; break;
+            case 7: ping_recv = token; break;
+            case 8: config_epoch = token; break;
+            case 9: link_status = token; break;
             }
             if (i == 9) break; // Slots
         }
