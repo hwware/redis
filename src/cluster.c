@@ -2026,10 +2026,6 @@ int clusterProcessPacket(clusterLink *link) {
                         "Handshake: we already know node %.40s %s, "
                         "updating the address if needed.", sender->name, sender->hname);
 
-                    serverLog(LL_WARNING,
-                        "Handshake: we already know node %.40s %s, "
-                        "updating the address if needed.", sender->name, sender->hname);
-
                     if (hdr->custom_name) {
                         setManualClusterNodeName(sender, hdr->hname);
                     }
@@ -4312,6 +4308,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);  
     
+    /* Human readable name of node */
     if (node->hname[0] == '\0')
         ci = sdscatfmt(ci," _",node->hname);
     else
@@ -4669,17 +4666,13 @@ NULL
             addReplyBulkCBuffer(c,myself->hname, strlen(myself->hname));
         else
             addReplyError(c,"Node is not assigned name yet.");
-    }
-
-    else if (!strcasecmp(c->argv[1]->ptr,"setname") && c->argc == 3) {
+    } else if (!strcasecmp(c->argv[1]->ptr,"setname") && c->argc == 3) {
         /* CLUSTER SETNAME */
         if (setManualClusterNodeName(myself,c->argv[2]->ptr))
             addReply(c,shared.ok);
         else
             addReplyError(c,"Error setting the name of the node.");
-    }
-
-     else if (!strcasecmp(c->argv[1]->ptr,"slots") && c->argc == 2) {
+    } else if (!strcasecmp(c->argv[1]->ptr,"slots") && c->argc == 2) {
         /* CLUSTER SLOTS */
         clusterReplyMultiBulkSlots(c);
     } else if (!strcasecmp(c->argv[1]->ptr,"flushslots") && c->argc == 2) {

@@ -5269,8 +5269,8 @@ static int clusterManagerCheckCluster(int quiet) {
     } else {
         sds err = sdsempty();
         err = sdscatprintf(err, "[ERR] Not all %d slots are "
-                                "covered by nodes coverage is %d but should be %d.\n",
-                                CLUSTER_MANAGER_SLOTS,coverage, CLUSTER_MANAGER_SLOTS);
+                                "covered by nodes.\n",
+                                CLUSTER_MANAGER_SLOTS);
         clusterManagerOnError(err);
         result = 0;
         if (do_fix/* && result*/) {
