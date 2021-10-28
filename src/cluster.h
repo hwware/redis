@@ -114,7 +114,6 @@ typedef struct clusterNodeFailReport {
 typedef struct clusterNode {
     mstime_t ctime; /* Node object creation time. */
     char name[CLUSTER_NAMELEN]; /* Node name, hex string, sha1-size */
-    char* hname; /* Human readable name for node */
     char hname[CLUSTER_HUMANNAMELEN]; /* Human readable name for node */
     int flags;      /* CLUSTER_NODE_... */
     uint64_t configEpoch; /* Last configEpoch observed for this node */
