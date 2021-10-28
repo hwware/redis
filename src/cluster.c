@@ -208,12 +208,8 @@ int clusterLoadConfig(char *filename) {
             clusterAddNode(n);
         }
 
-        /*Check if human readable name is present*/
-        int offset = 0;
-        if (strrchr(argv[1],'_') != NULL){
-            strncpy(n->hname, argv[1], strlen(argv[1]));
-            offset = 1;
-        }
+        /*Human readable name*/
+        strncpy(n->hname, argv[1], strlen(argv[1]));
 
         /* Address and port */
         if ((p = strrchr(argv[offset + 1],':')) == NULL) {
@@ -4325,9 +4321,6 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
         ci = sdscatlen(ci,node->slaveof->name,CLUSTER_NAMELEN);
     else
         ci = sdscatlen(ci,"-",1);
-
-    /* Adding custom name */
-    ci = sdscatfmt(ci," %i",node->custom_name); 
 
     unsigned long long nodeEpoch = node->configEpoch;
     if (nodeIsSlave(node) && node->slaveof) {
