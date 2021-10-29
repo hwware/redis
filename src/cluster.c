@@ -4630,6 +4630,7 @@ void clusterReplyMultiBulkSlots(client * c) {
 }
 
 void clusterCommand(client *c) {
+    serverLog(LL_WARNING, "COMMAND IS %s", c->argv[1]->ptr);
     if (server.cluster_enabled == 0) {
         addReplyError(c,"This instance has cluster support disabled");
         return;
