@@ -597,6 +597,9 @@ struct redisCommand clusterSubcommands[] = {
     {"myid",clusterCommand,2,
      "ok-stale random"},
 
+     {"myname",clusterCommand,2,
+     "ok-stale random"},
+
     {"nodes",clusterCommand,2,
      "ok-stale random"},
 
