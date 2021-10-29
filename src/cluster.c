@@ -1993,7 +1993,7 @@ int clusterProcessPacket(clusterLink *link) {
         }
 
         if (sender && strcmp(sender->hname,hdr->hname) != 0) {
-            strncpy(sender->hname, hdr->hname, CLUSTER_HUMANNAMELEN);
+            strncpy(sender->hname, hdr->hname, CLUSTER_HUMAN_NAMELEN);
         }
 
         /* Add this node if it is new for us and the msg type is MEET.
@@ -2570,7 +2570,7 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     hdr->sig[3] = 'b';
     hdr->type = htons(type);
     memcpy(hdr->sender,myself->name,CLUSTER_NAMELEN);
-    strncpy(hdr->hname,myself->hname,CLUSTER_HUMANNAMELEN);
+    strncpy(hdr->hname,myself->hname,CLUSTER_HUMAN_NAMELEN);
     hdr->custom_name = myself->custom_name;
 
     /* If cluster-announce-ip option is enabled, force the receivers of our
@@ -4668,10 +4668,12 @@ void clusterCommand(client *c) {
 "MYID",
 "    Return the node id.",
 "MYNAME",
-"    Return the node name.",
+"    Return the human readable node name.",
+"SETNAME <human-readable-name>",
+"    Sets the human-readable node name.",
 "NODES",
 "    Return cluster configuration seen by node. Output format:",
-"    <id> <ip:port> <flags> <master> <pings> <pongs> <epoch> <link> <slot> ...",
+"    <id> <human-readable-name> <ip:port> <flags> <master> <pings> <pongs> <epoch> <link> <slot> ...",
 "REPLICATE <node-id>",
 "    Configure current node as replica to <node-id>.",
 "RESET [HARD|SOFT]",
