@@ -22,11 +22,12 @@ proc get_cluster_nodes id {
             addr [lindex $args 2] \
             flags [split [lindex $args 3] ,] \
             slaveof [lindex $args 4] \
-            ping_sent [lindex $args 5] \
-            pong_recv [lindex $args 6] \
-            config_epoch [lindex $args 7] \
-            linkstate [lindex $args 8] \
-            slots [lrange $args 9 end] \
+            customName [lindex $args 5] \
+            ping_sent [lindex $args 6] \
+            pong_recv [lindex $args 7] \
+            config_epoch [lindex $args 8] \
+            linkstate [lindex $args 9] \
+            slots [lrange $args 10 end] \
         ]
         lappend nodes $node
     }

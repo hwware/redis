@@ -277,7 +277,7 @@ int clusterLoadConfig(char *filename) {
          * stored in nodes.conf. It is received later over the bus protocol. */
 
         /* Parse flags */
-        p = s = argv[offset + 2];
+        p = s = argv[3];
         while(p) {
             p = strchr(s,',');
             if (p) *p = '\0';
@@ -395,7 +395,7 @@ int clusterLoadConfig(char *filename) {
     zfree(line);
     fclose(fp);
 
-    serverLog(LL_NOTICE,"Node configuration loaded, I'm %.40s", myself->name);
+    serverLog(LL_NOTICE,"Node configuration loaded, I'm %.40s %s", myself->name, myself->human_readable_name);
 
     /* Something that should never happen: currentEpoch smaller than
      * the max epoch found in the nodes configuration. However we handle this
@@ -702,8 +702,8 @@ void clusterInit(void) {
          * by the createClusterNode() function. */
         myself = server.cluster->myself =
             createClusterNode(NULL,CLUSTER_NODE_MYSELF|CLUSTER_NODE_MASTER);
-        serverLog(LL_NOTICE,"No cluster configuration found, I'm %.40s",
-            myself->name);
+        serverLog(LL_NOTICE,"No cluster configuration found, I'm %.40s %s",
+            myself->name, myself->human_readable_name);
         clusterAddNode(myself);
         saveconf = 1;
     }
@@ -819,7 +819,7 @@ void clusterReset(int hard) {
         sdsfree(oldname);
         getRandomHexChars(myself->name, CLUSTER_NAMELEN);
         clusterAddNode(myself);
-        serverLog(LL_NOTICE,"Node hard reset, now I'm %.40s", myself->name);
+        serverLog(LL_NOTICE,"Node hard reset, now I'm %.40s %s", myself->name, myself->human_readable_name);
     }
 
     /* Make sure to persist the new config and update the state. */
@@ -1005,23 +1005,6 @@ unsigned int keyHashSlot(char *key, int keylen) {
 /* -----------------------------------------------------------------------------
  * CLUSTER node API
  * -------------------------------------------------------------------------- */
-
-/* Assign a human readable name to nodes for clusters*/
-void setClusterNodeName(clusterNode *node) {
-    char *name;
-    int post_digits;
-    if (node->port == 0){
-        post_digits = 0;
-    }
-    else{
-        post_digits = floor(log10(abs(node->port))) + 1;
-    }
-    int allocate_len = sizeof(node->ip) + post_digits + 2;
-    name = zmalloc(allocate_len);
-    sprintf(name, "%s%s%d", node->ip, "_", node->port);
-    node->hname = name;
-}
-
 /* Create a new cluster node, with the specified flags.
  * If "nodename" is NULL this is considered a first handshake and a random
  * node name is assigned to this node (it will be fixed later when we'll
@@ -1801,7 +1784,10 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
                 node->flags &= ~CLUSTER_NODE_NOADDR;
-                setClusterNodeName(node);
+                if (hdr->has_human_readable_name)
+                    setManualClusterNodeName(node, hdr->human_readable_name);
+                else
+                    setClusterNodeName(node);
             }
         } else {
             /* If it's not in NOADDR state and we don't have it, we
@@ -1823,7 +1809,10 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->port = ntohs(g->port);
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
-                setClusterNodeName(node);
+                if (hdr->has_human_readable_name)
+                    setManualClusterNodeName(node, hdr->human_readable_name);
+                else
+                    setClusterNodeName(node);
                 clusterAddNode(node);
             }
         }
@@ -1892,11 +1881,10 @@ int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
     node->port = port;
     node->pport = pport;
     node->cport = cport;
-    setClusterNodeName(node);
     if (node->link) freeClusterLink(node->link);
     node->flags &= ~CLUSTER_NODE_NOADDR;
-    serverLog(LL_WARNING,"Address updated for node %.40s , now %s:%d",
-        node->name, node->ip, node->port);
+    serverLog(LL_WARNING,"Address updated for node %.40s (%s), now %s:%d",
+        node->name, node->nodename, node->ip, node->port);
 
     /* Check if this is our master and we have to change the
      * replication target as well. */
@@ -2025,7 +2013,7 @@ void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoc
              sender_slots == migrated_our_slots)) {
         serverLog(LL_WARNING,
             "Configuration change detected. Reconfiguring myself "
-            "as a replica of %.40s", sender->name);
+            "as a replica of %.40s %s", sender->name, sender->human_readable_name);
         clusterSetMaster(sender);
         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|
                              CLUSTER_TODO_UPDATE_STATE|
@@ -2414,6 +2402,10 @@ int clusterProcessPacket(clusterLink *link) {
             }
         }
 
+        if (sender && strcmp(sender->human_readable_name,hdr->human_readable_name) != 0) {
+            strncpy(sender->human_readable_name, hdr->human_readable_name, CLUSTER_HUMAN_NAMELEN);
+        }
+
         /* Add this node if it is new for us and the msg type is MEET.
          * In this stage we don't try to add the node with the right
          * flags, slaveof pointer, and so forth, as this details will be
@@ -2471,8 +2463,8 @@ int clusterProcessPacket(clusterLink *link) {
                 /* First thing to do is replacing the random name with the
                  * right node name if this was a handshake stage. */
                 clusterRenameNode(link->node, hdr->sender);
-                serverLog(LL_DEBUG,"Handshake with node %.40s completed.",
-                    link->node->name);
+                serverLog(LL_DEBUG,"Handshake with node %.40s %s completed.",
+                    link->node->name, link->node->human_readable_name);
                 link->node->flags &= ~CLUSTER_NODE_HANDSHAKE;
                 link->node->flags |= flags&(CLUSTER_NODE_MASTER|CLUSTER_NODE_SLAVE);
                 clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
@@ -2849,8 +2841,8 @@ void clusterLinkConnectHandler(connection *conn) {
      * normal PING packets. */
     node->flags &= ~CLUSTER_NODE_MEET;
 
-    serverLog(LL_DEBUG,"Connecting with Node %.40s at %s:%d",
-            node->name, node->ip, node->cport);
+    serverLog(LL_DEBUG,"Connecting with Node %.40s %s at %s:%d",
+            node->name, node->human_readable_name, node->ip, node->cport);
 }
 
 /* Read data. Try to read the first field of the header first to check the
@@ -3055,6 +3047,7 @@ void clusterSetGossipEntry(clusterMsg *hdr, int i, clusterNode *n) {
     gossip->cport = htons(n->cport);
     gossip->flags = htons(n->flags);
     gossip->pport = htons(n->pport);
+    gossip->has_human_readable_name = n->has_human_readable_name;
     gossip->notused1 = 0;
 }
 
@@ -3584,8 +3577,8 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     node->slaveof->voted_time = mstime();
     clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|CLUSTER_TODO_FSYNC_CONFIG);
     clusterSendFailoverAuth(node);
-    serverLog(LL_WARNING, "Failover auth granted to %.40s for epoch %llu",
-        node->name, (unsigned long long) server.cluster->currentEpoch);
+    serverLog(LL_WARNING, "Failover auth granted to %.40s %s for epoch %llu",
+        node->name, node->human_readable_name, (unsigned long long) server.cluster->currentEpoch);
 }
 
 /* This function returns the "rank" of this instance, a slave, in the context
@@ -3813,7 +3806,7 @@ void clusterHandleSlaveFailover(void) {
         if (server.cluster->mf_end) {
             server.cluster->failover_auth_time = mstime();
             server.cluster->failover_auth_rank = 0;
-	    clusterDoBeforeSleep(CLUSTER_TODO_HANDLE_FAILOVER);
+	        clusterDoBeforeSleep(CLUSTER_TODO_HANDLE_FAILOVER);
         }
         serverLog(LL_WARNING,
             "Start of election delayed for %lld milliseconds "
@@ -4002,8 +3995,8 @@ void clusterHandleSlaveMigration(int max_slaves) {
         (mstime()-target->orphaned_time) > CLUSTER_SLAVE_MIGRATION_DELAY &&
        !(server.cluster_module_flags & CLUSTER_MODULE_FLAG_NO_FAILOVER))
     {
-        serverLog(LL_WARNING,"Migrating to orphaned master %.40s",
-            target->name);
+        serverLog(LL_WARNING,"Migrating to orphaned master %.40s %s",
+            target->name, target->human_readable_name);
         clusterSetMaster(target);
     }
 }
@@ -4251,7 +4244,7 @@ void clusterCron(void) {
             }
         }
         if (min_pong_node) {
-            serverLog(LL_DEBUG,"Pinging node %.40s", min_pong_node->name);
+            serverLog(LL_DEBUG,"Pinging node %.40s %s", min_pong_node->name, min_pong_node->human_readable_name);
             clusterSendPing(min_pong_node->link, CLUSTERMSG_TYPE_PING);
         }
     }
@@ -4870,6 +4863,9 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     else
         ci = sdscatlen(ci,"-",1);
 
+    /* Adding has human readable name */
+    ci = sdscatfmt(ci," %i",node->has_human_readable_name);  
+
     unsigned long long nodeEpoch = node->configEpoch;
     if (nodeIsSlave(node) && node->slaveof) {
         nodeEpoch = node->slaveof->configEpoch;
@@ -5436,10 +5432,12 @@ void clusterCommand(client *c) {
 "MYID",
 "    Return the node id.",
 "MYNAME",
-"    Return the node name.",
+"    Return the human readable node name.",
+"SETNAME <human-readable-name>",
+"    Sets the human-readable node name.",
 "NODES",
 "    Return cluster configuration seen by node. Output format:",
-"    <id> <ip:port> <flags> <master> <pings> <pongs> <epoch> <link> <slot> ...",
+"    <id> <human-readable-name> <ip:port> <flags> <master> <has-human-readable-name> <pings> <pongs> <epoch> <link> <slot> ...",
 "REPLICATE <node-id>",
 "    Configure current node as replica to <node-id>.",
 "RESET [HARD|SOFT]",
@@ -5504,11 +5502,17 @@ NULL
         /* CLUSTER MYID */
         addReplyBulkCBuffer(c,myself->name, CLUSTER_NAMELEN);
     } else if (!strcasecmp(c->argv[1]->ptr,"myname") && c->argc == 2) {
-        /* CLUSTER MYID */
-        if (myself->hname)
-            addReplyBulkCBuffer(c,myself->hname, strlen(myself->hname));
+        /* CLUSTER MYNAME */
+        if (myself->human_readable_name[0] != '\0')
+            addReplyBulkCBuffer(c,myself->human_readable_name, strlen(myself->human_readable_name));
         else
             addReplyError(c,"Node is not assigned name yet.");
+    } else if (!strcasecmp(c->argv[1]->ptr,"setname") && c->argc == 3) {
+        /* CLUSTER SETNAME */
+        if (setManualClusterNodeName(myself,c->argv[2]->ptr))
+            addReply(c,shared.ok);
+        else
+            addReplyError(c,"Error setting the name of the node.");
     } else if (!strcasecmp(c->argv[1]->ptr,"slots") && c->argc == 2) {
         /* CLUSTER SLOTS */
         clusterReplyMultiBulkSlots(c);
