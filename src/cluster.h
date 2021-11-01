@@ -9,6 +9,7 @@
 #define CLUSTER_OK 0            /* Everything looks ok */
 #define CLUSTER_FAIL 1          /* The cluster can't work */
 #define CLUSTER_NAMELEN 40      /* sha1 hex length */
+#define CLUSTER_HUMAN_NAMELEN 64 /* Max length of human readable node name */
 #define CLUSTER_PORT_INCR 10000 /* Cluster port = baseport + PORT_INCR */
 
 /* The following defines are amount of time, sometimes expressed as
@@ -113,7 +114,7 @@ typedef struct clusterNodeFailReport {
 typedef struct clusterNode {
     mstime_t ctime; /* Node object creation time. */
     char name[CLUSTER_NAMELEN]; /* Node name, hex string, sha1-size */
-    char* hname; /* Human readable name for node */
+    char human_readable_name[CLUSTER_HUMAN_NAMELEN]; /* Human readable name for node */
     int flags;      /* CLUSTER_NODE_... */
     uint64_t configEpoch; /* Last configEpoch observed for this node */
     unsigned char slots[CLUSTER_SLOTS/8]; /* slots handled by this node */
@@ -140,6 +141,7 @@ typedef struct clusterNode {
     int cport;                  /* Latest known cluster port of this node. */
     clusterLink *link;          /* TCP/IP link with this node */
     list *fail_reports;         /* List of nodes signaling this as failing */
+    int has_human_readable_name; /* Indicates whether custom nodename is used */
 } clusterNode;
 
 /* Slot to keys for a single slot. The keys in the same slot are linked together
@@ -210,11 +212,13 @@ typedef struct {
     uint32_t ping_sent;
     uint32_t pong_received;
     char ip[NET_IP_STR_LEN];  /* IP address last time it was seen */
+    char human_readable_name[CLUSTER_HUMAN_NAMELEN]; /* Human readable name for node */
     uint16_t port;              /* base port last time it was seen */
     uint16_t cport;             /* cluster port last time it was seen */
     uint16_t flags;             /* node->flags copy */
     uint16_t pport;             /* plaintext-port, when base port is TLS */
     uint16_t notused1;
+    int has_human_readable_name; /* Indicates whether custom nodename is used */
 } clusterMsgDataGossip;
 
 typedef struct {
@@ -287,6 +291,7 @@ typedef struct {
     unsigned char myslots[CLUSTER_SLOTS/8];
     char slaveof[CLUSTER_NAMELEN];
     char myip[NET_IP_STR_LEN];    /* Sender IP, if not all zeroed. */
+    char human_readable_name[CLUSTER_HUMAN_NAMELEN]; /* Human readable name assigned to the sender */
     char notused1[32];  /* 32 bytes reserved for future usage. */
     uint16_t pport;      /* Sender TCP plaintext port, if base port is TLS */
     uint16_t cport;      /* Sender TCP cluster bus port */
@@ -294,6 +299,7 @@ typedef struct {
     unsigned char state; /* Cluster state from the POV of the sender */
     unsigned char mflags[3]; /* Message flags: CLUSTERMSG_FLAG[012]_... */
     union clusterMsgData data;
+    int has_human_readable_name; /* Indicates whether custom nodename is used */
 } clusterMsg;
 
 #define CLUSTERMSG_MIN_LEN (sizeof(clusterMsg)-sizeof(union clusterMsgData))
