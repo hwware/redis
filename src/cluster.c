@@ -4341,7 +4341,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     else
         ci = sdscatlen(ci,"-",1);
 
-    /* Adding custom name */
+    /* Adding has human readable name */
     ci = sdscatfmt(ci," %i",node->has_human_readable_name);  
 
     unsigned long long nodeEpoch = node->configEpoch;
@@ -4673,7 +4673,7 @@ void clusterCommand(client *c) {
 "    Sets the human-readable node name.",
 "NODES",
 "    Return cluster configuration seen by node. Output format:",
-"    <id> <human-readable-name> <ip:port> <flags> <master> <pings> <pongs> <epoch> <link> <slot> ...",
+"    <id> <human-readable-name> <ip:port> <flags> <master> <has-human-readable-name> <pings> <pongs> <epoch> <link> <slot> ...",
 "REPLICATE <node-id>",
 "    Configure current node as replica to <node-id>.",
 "RESET [HARD|SOFT]",
