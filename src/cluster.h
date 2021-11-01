@@ -9,7 +9,7 @@
 #define CLUSTER_OK 0          /* Everything looks ok */
 #define CLUSTER_FAIL 1        /* The cluster can't work */
 #define CLUSTER_NAMELEN 40    /* sha1 hex length */
-#define CLUSTER_HUMAN_NAMELEN 32    /* Max length of human readable node name */
+#define CLUSTER_HUMAN_NAMELEN 64    /* Max length of human readable node name */
 #define CLUSTER_PORT_INCR 10000 /* Cluster port = baseport + PORT_INCR */
 
 /* The following defines are amount of time, sometimes expressed as
