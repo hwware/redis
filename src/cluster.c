@@ -2461,6 +2461,7 @@ void clusterLinkConnectHandler(connection *conn) {
 
     serverLog(LL_DEBUG,"Connecting with Node %.40s %s at %s:%d",
             node->name, node->human_readable_name, node->ip, node->cport);
+}
 
 /* Read data. Try to read the first field of the header first to check the
  * full length of the packet. When a whole packet is in memory this function
