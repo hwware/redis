@@ -6140,21 +6140,21 @@ void infoCommand(client *c) {
         return;
     }
 
-    int all = 0;
-    int def = 0;
+    int has_all_sections = 0;
+    int has_def_sections = 0;
 
     /* Checking for default all and eveything */
     for (int i = 1; i < c->argc; i++) {
         if (!strcasecmp(c->argv[i]->ptr,"default")) {
             sds subcommandsds = sdsnew(c->argv[i]->ptr);
-            def = 1;
+            has_def_sections = 1;
             if (dictFind(final,subcommandsds) == NULL ) /* Skip if subsection already present */
                 dictAdd(final, subcommandsds, NULL);
             else
                 sdsfree(subcommandsds);
         }
         else if (!strcasecmp(c->argv[i]->ptr,"all") || !strcasecmp(c->argv[i]->ptr,"everything")) {
-            all = 1;
+            has_all_sections = 1;
             sds subcommandsds = sdsnew(c->argv[i]->ptr);
             if (dictFind(final,subcommandsds) == NULL )
                 dictAdd(final, subcommandsds, NULL);
@@ -6167,12 +6167,15 @@ void infoCommand(client *c) {
     for (int i = 1; i < c->argc; i++) {
         sds subcommandsds = sdsnew(c->argv[i]->ptr);
         if (dictFind(final,subcommandsds) == NULL ) {
-            if (all && (dictFind(allSet,subcommandsds) == NULL))
+            /* If all or everything is present and section is not in the allSet */
+            if (has_all_sections && (dictFind(allSet,subcommandsds) == NULL))
                 dictAdd(final,subcommandsds,NULL);
-            else if (def && (dictFind(defaultSet,subcommandsds) == NULL)) {
+            /* If default is present and section is not in the defSet */
+            else if (has_def_sections && (dictFind(defaultSet,subcommandsds) == NULL)) {
                 dictAdd(final,subcommandsds,NULL);
             }
-            else if (def == 0 && all == 0) {
+            /* If default, all and everthing not present in input */
+            else if (has_def_sections == 0 && has_all_sections == 0) {
                 dictAdd(final,subcommandsds,NULL);
             }
             else {
