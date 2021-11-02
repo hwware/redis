@@ -6174,7 +6174,7 @@ void infoCommand(client *c) {
             else if (has_def_sections && (dictFind(defaultSet,subcommandsds) == NULL)) {
                 dictAdd(final,subcommandsds,NULL);
             }
-            /* If default, all and everthing not present in input */
+            /* If default, all and everything not present in input */
             else if ((has_def_sections || has_all_sections) == 0) {
                 dictAdd(final,subcommandsds,NULL);
             }
