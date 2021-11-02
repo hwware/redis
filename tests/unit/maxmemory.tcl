@@ -230,7 +230,6 @@ start_server {tags {"maxmemory external:skip"}} {
             for {set j 0} {$j < $numkeys} {incr j} {
                 if {[catch {r set [randomKey] x} e]} {
                     if {[string match {*used memory*} $e]} {
-                        puts $e
                         set err 1
                     }
                 }
