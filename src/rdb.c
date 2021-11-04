@@ -1404,7 +1404,7 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
         return C_ERR;
     }
 
-    serverLog(LL_NOTICE,"DB saved on disk");
+    serverLog(LL_NOTICE,"DB %s saved on disk.". filename);
     server.dirty = 0;
     server.lastsave = time(NULL);
     server.lastbgsave_status = C_OK;
@@ -1412,7 +1412,7 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
     return C_OK;
 
 werr:
-    serverLog(LL_WARNING,"Write error saving DB on disk: %s", strerror(errno));
+    serverLog(LL_WARNING,"Write error saving DB %s on disk: %s", filename, strerror(errno));
     if (fp) fclose(fp);
     unlink(tmpfile);
     stopSaving(0);
