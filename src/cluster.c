@@ -593,8 +593,8 @@ void clusterInit(void) {
         serverPanic("Unrecoverable error creating Redis Cluster socket accept handler.");
     }
 
-    /* Reset data for the Slot to key API. */
-    slotToKeyFlush();
+    /* Initialize data for the Slot to key API. */
+    slotToKeyInit(server.db);
 
     /* Set myself->port/cport/pport to my listening ports, we'll just need to
      * discover the IP address via MEET messages. */
@@ -4440,6 +4440,42 @@ static int isReplicaAvailable(clusterNode *node) {
     return (repl_offset != 0);
 }
 
+int checkSlotAssignmentsOrReply(client *c, unsigned char *slots, int del, int start_slot, int end_slot) {
+    int slot;
+    for (slot = start_slot; slot <= end_slot; slot++) {
+        if (del && server.cluster->slots[slot] == NULL) {
+            addReplyErrorFormat(c,"Slot %d is already unassigned", slot);
+            return C_ERR;
+        } else if (!del && server.cluster->slots[slot]) {
+            addReplyErrorFormat(c,"Slot %d is already busy", slot);
+            return C_ERR;
+        }
+        if (slots[slot]++ == 1) {
+            addReplyErrorFormat(c,"Slot %d specified multiple times",(int)slot);
+            return C_ERR;
+        }
+    }
+    return C_OK;
+}
+
+void clusterUpdateSlots(client *c, unsigned char *slots, int del) {
+    int j;
+    for (j = 0; j < CLUSTER_SLOTS; j++) {
+        if (slots[j]) {
+            int retval;
+                
+            /* If this slot was set as importing we can clear this
+             * state as now we are the real owner of the slot. */
+            if (server.cluster->importing_slots_from[j])
+                server.cluster->importing_slots_from[j] = NULL;
+
+            retval = del ? clusterDelSlot(j) :
+                           clusterAddSlot(myself,j);
+            serverAssertWithInfo(c,NULL,retval == C_OK);
+        }
+    }
+}
+
 void addNodeReplyForClusterSlot(client *c, clusterNode *node, int start_slot, int end_slot) {
     int i, nested_elements = 3; /* slots (2) + master addr (1) */
     void *nested_replylen = addReplyDeferredLen(c);
@@ -4517,6 +4553,8 @@ void clusterCommand(client *c) {
         const char *help[] = {
 "ADDSLOTS <slot> [<slot> ...]",
 "    Assign slots to current node.",
+"ADDSLOTSRANGE <start slot> <end slot> [<start slot> <end slot> ...]",
+"    Assign slots which are between <start-slot> and <end-slot> to current node.",
 "BUMPEPOCH",
 "    Advance the cluster config epoch.",
 "COUNT-FAILURE-REPORTS <node-id>",
@@ -4525,6 +4563,8 @@ void clusterCommand(client *c) {
 "    Return the number of keys in <slot>.",
 "DELSLOTS <slot> [<slot> ...]",
 "    Delete slots information from current node.",
+"DELSLOTSRANGE <start slot> <end slot> [<start slot> <end slot> ...]",
+"    Delete slots information which are between <start-slot> and <end-slot> from current node.",
 "FAILOVER [FORCE|TAKEOVER]",
 "    Promote current replica node to being a master.",
 "FORGET <node-id>",
@@ -4624,43 +4664,62 @@ NULL
         int del = !strcasecmp(c->argv[1]->ptr,"delslots");
 
         memset(slots,0,CLUSTER_SLOTS);
+        /* Check that all the arguments are parseable.*/
+        for (j = 2; j < c->argc; j++) {
+            if ((slot = getSlotOrReply(c,c->argv[j])) == C_ERR) {
+                zfree(slots);
+                return;
+            }
+        }
+        /* Check that the slots are not already busy. */
+        for (j = 2; j < c->argc; j++) {
+            slot = getSlotOrReply(c,c->argv[j]);
+            if (checkSlotAssignmentsOrReply(c, slots, del, slot, slot) == C_ERR) {
+                zfree(slots);
+                return;
+            }
+        }
+        clusterUpdateSlots(c, slots, del);    
+        zfree(slots);
+        clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|CLUSTER_TODO_SAVE_CONFIG);
+        addReply(c,shared.ok);
+    } else if ((!strcasecmp(c->argv[1]->ptr,"addslotsrange") ||
+               !strcasecmp(c->argv[1]->ptr,"delslotsrange")) && c->argc >= 4) {
+        if (c->argc % 2 == 1) {
+            addReplyErrorFormat(c,"wrong number of arguments for '%s' command",
+                            c->cmd->name);
+            return;
+        }
+        /* CLUSTER ADDSLOTSRANGE <start slot> <end slot> [<start slot> <end slot> ...] */
+        /* CLUSTER DELSLOTSRANGE <start slot> <end slot> [<start slot> <end slot> ...] */
+        int j, startslot, endslot;
+        unsigned char *slots = zmalloc(CLUSTER_SLOTS);
+        int del = !strcasecmp(c->argv[1]->ptr,"delslotsrange");
+
+        memset(slots,0,CLUSTER_SLOTS);
         /* Check that all the arguments are parseable and that all the
          * slots are not already busy. */
-        for (j = 2; j < c->argc; j++) {
-            if ((slot = getSlotOrReply(c,c->argv[j])) == -1) {
+        for (j = 2; j < c->argc; j += 2) {
+            if ((startslot = getSlotOrReply(c,c->argv[j])) == C_ERR) {
                 zfree(slots);
                 return;
             }
-            if (del && server.cluster->slots[slot] == NULL) {
-                addReplyErrorFormat(c,"Slot %d is already unassigned", slot);
-                zfree(slots);
-                return;
-            } else if (!del && server.cluster->slots[slot]) {
-                addReplyErrorFormat(c,"Slot %d is already busy", slot);
+            if ((endslot = getSlotOrReply(c,c->argv[j+1])) == C_ERR) {
                 zfree(slots);
                 return;
             }
-            if (slots[slot]++ == 1) {
-                addReplyErrorFormat(c,"Slot %d specified multiple times",
-                    (int)slot);
+            if (startslot > endslot) {
+                addReplyErrorFormat(c,"start slot number %d is greater than end slot number %d", startslot, endslot);
+                zfree(slots);
+                return;
+            }
+
+            if (checkSlotAssignmentsOrReply(c, slots, del, startslot, endslot) == C_ERR) {
                 zfree(slots);
                 return;
             }
         }
-        for (j = 0; j < CLUSTER_SLOTS; j++) {
-            if (slots[j]) {
-                int retval;
-
-                /* If this slot was set as importing we can clear this
-                 * state as now we are the real owner of the slot. */
-                if (server.cluster->importing_slots_from[j])
-                    server.cluster->importing_slots_from[j] = NULL;
-
-                retval = del ? clusterDelSlot(j) :
-                               clusterAddSlot(myself,j);
-                serverAssertWithInfo(c,NULL,retval == C_OK);
-            }
-        }
+        clusterUpdateSlots(c, slots, del);
         zfree(slots);
         clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|CLUSTER_TODO_SAVE_CONFIG);
         addReply(c,shared.ok);
@@ -4895,7 +4954,7 @@ NULL
         unsigned int keys_in_slot = countKeysInSlot(slot);
         unsigned int numkeys = maxkeys > keys_in_slot ? keys_in_slot : maxkeys;
         addReplyArrayLen(c,numkeys);
-        dictEntry *de = server.cluster->slots_to_keys[slot].head;
+        dictEntry *de = (*server.db->slots_to_keys).by_slot[slot].head;
         for (unsigned int j = 0; j < numkeys; j++) {
             serverAssert(de != NULL);
             sds sdskey = dictGetKey(de);
@@ -6142,26 +6201,28 @@ int clusterRedirectBlockedClientIfNeeded(client *c) {
  * while rehashing the cluster and in other conditions when we need to
  * understand if we have keys for a given hash slot. */
 
-void slotToKeyAddEntry(dictEntry *entry) {
+void slotToKeyAddEntry(dictEntry *entry, redisDb *db) {
     sds key = entry->key;
     unsigned int hashslot = keyHashSlot(key, sdslen(key));
-    server.cluster->slots_to_keys[hashslot].count++;
+    slotToKeys *slot_to_keys = &(*db->slots_to_keys).by_slot[hashslot];
+    slot_to_keys->count++;
 
     /* Insert entry before the first element in the list. */
-    dictEntry *first = server.cluster->slots_to_keys[hashslot].head;
+    dictEntry *first = slot_to_keys->head;
     dictEntryNextInSlot(entry) = first;
     if (first != NULL) {
         serverAssert(dictEntryPrevInSlot(first) == NULL);
         dictEntryPrevInSlot(first) = entry;
     }
     serverAssert(dictEntryPrevInSlot(entry) == NULL);
-    server.cluster->slots_to_keys[hashslot].head = entry;
+    slot_to_keys->head = entry;
 }
 
-void slotToKeyDelEntry(dictEntry *entry) {
+void slotToKeyDelEntry(dictEntry *entry, redisDb *db) {
     sds key = entry->key;
     unsigned int hashslot = keyHashSlot(key, sdslen(key));
-    server.cluster->slots_to_keys[hashslot].count--;
+    slotToKeys *slot_to_keys = &(*db->slots_to_keys).by_slot[hashslot];
+    slot_to_keys->count--;
 
     /* Connect previous and next entries to each other. */
     dictEntry *next = dictEntryNextInSlot(entry);
@@ -6173,14 +6234,14 @@ void slotToKeyDelEntry(dictEntry *entry) {
         dictEntryNextInSlot(prev) = next;
     } else {
         /* The removed entry was the first in the list. */
-        serverAssert(server.cluster->slots_to_keys[hashslot].head == entry);
-        server.cluster->slots_to_keys[hashslot].head = next;
+        serverAssert(slot_to_keys->head == entry);
+        slot_to_keys->head = next;
     }
 }
 
 /* Updates neighbour entries when an entry has been replaced (e.g. reallocated
  * during active defrag). */
-void slotToKeyReplaceEntry(dictEntry *entry) {
+void slotToKeyReplaceEntry(dictEntry *entry, redisDb *db) {
     dictEntry *next = dictEntryNextInSlot(entry);
     dictEntry *prev = dictEntryPrevInSlot(entry);
     if (next != NULL) {
@@ -6192,33 +6253,33 @@ void slotToKeyReplaceEntry(dictEntry *entry) {
         /* The replaced entry was the first in the list. */
         sds key = entry->key;
         unsigned int hashslot = keyHashSlot(key, sdslen(key));
-        server.cluster->slots_to_keys[hashslot].head = entry;
+        slotToKeys *slot_to_keys = &(*db->slots_to_keys).by_slot[hashslot];
+        slot_to_keys->head = entry;
     }
 }
 
-/* Copies the slots-keys map to the specified backup structure. */
-void slotToKeyCopyToBackup(clusterSlotsToKeysData *backup) {
-    memcpy(backup, server.cluster->slots_to_keys,
-           sizeof(server.cluster->slots_to_keys));
+/* Initialize slots-keys map of given db. */
+void slotToKeyInit(redisDb *db) {
+    db->slots_to_keys = zcalloc(sizeof(clusterSlotToKeyMapping));
 }
 
-/* Overwrites the slots-keys map by copying the provided backup structure. */
-void slotToKeyRestoreBackup(clusterSlotsToKeysData *backup) {
-    memcpy(server.cluster->slots_to_keys, backup,
-           sizeof(server.cluster->slots_to_keys));
+/* Empty slots-keys map of given db. */
+void slotToKeyFlush(redisDb *db) {
+    memset(db->slots_to_keys, 0,
+        sizeof(clusterSlotToKeyMapping));
 }
 
-/* Empty the slots-keys map of Redis Cluster. */
-void slotToKeyFlush(void) {
-    memset(&server.cluster->slots_to_keys, 0,
-           sizeof(server.cluster->slots_to_keys));
+/* Free slots-keys map of given db. */
+void slotToKeyDestroy(redisDb *db) {
+    zfree(db->slots_to_keys);
+    db->slots_to_keys = NULL;
 }
 
 /* Remove all the keys in the specified hash slot.
  * The number of removed items is returned. */
 unsigned int delKeysInSlot(unsigned int hashslot) {
     unsigned int j = 0;
-    dictEntry *de = server.cluster->slots_to_keys[hashslot].head;
+    dictEntry *de = (*server.db->slots_to_keys).by_slot[hashslot].head;
     while (de != NULL) {
         sds sdskey = dictGetKey(de);
         de = dictEntryNextInSlot(de);
@@ -6231,5 +6292,5 @@ unsigned int delKeysInSlot(unsigned int hashslot) {
 }
 
 unsigned int countKeysInSlot(unsigned int hashslot) {
-    return server.cluster->slots_to_keys[hashslot].count;
+    return (*server.db->slots_to_keys).by_slot[hashslot].count;
 }
