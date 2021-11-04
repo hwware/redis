@@ -1808,7 +1808,7 @@ void aofUpdateCurrentSize(void) {
     latencyStartMonitor(latency);
     if (redis_stat(server.aof_filename,&sb) == -1) {
         serverLog(LL_WARNING,"Unable to obtain the AOF (%s) file length. stat: %s",
-            filename,
+            server.aof_filename,
             strerror(errno));
     } else {
         server.aof_current_size = sb.st_size;
