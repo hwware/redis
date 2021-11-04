@@ -709,10 +709,10 @@ int loadAppendOnlyFile(char *filename) {
     if (fp == NULL) {
         int en = errno;
         if (redis_stat(filename, &sb) == 0) {
-            serverLog(LL_WARNING,"Fatal error: can't open the append log file for reading: %s",strerror(en));
+            serverLog(LL_WARNING,"Fatal error: can't open the append log file %s for reading: %s", filename, strerror(en));
             return AOF_OPEN_ERR;
         } else {
-            serverLog(LL_WARNING,"The append log file doesn't exist: %s",strerror(errno));
+            serverLog(LL_WARNING,"The append log file %s doesn't exist: %s", filename, strerror(errno));
             return AOF_NOT_EXIST;
         }
     }
@@ -895,7 +895,8 @@ uxeof: /* Unexpected AOF end of file. */
             if (valid_up_to == -1) {
                 serverLog(LL_WARNING,"Last valid command offset is invalid");
             } else {
-                serverLog(LL_WARNING,"Error truncating the AOF file: %s",
+                serverLog(LL_WARNING,"Error truncating the AOF file %s: %s",
+                    filename,
                     strerror(errno));
             }
         } else {
@@ -1806,7 +1807,8 @@ void aofUpdateCurrentSize(void) {
 
     latencyStartMonitor(latency);
     if (redis_stat(server.aof_filename,&sb) == -1) {
-        serverLog(LL_WARNING,"Unable to obtain the AOF file length. stat: %s",
+        serverLog(LL_WARNING,"Unable to obtain the AOF (%s) file length. stat: %s",
+            filename,
             strerror(errno));
     } else {
         server.aof_current_size = sb.st_size;

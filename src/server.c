@@ -7569,7 +7569,7 @@ void loadDataFromDisk(void) {
         if (ret == AOF_FAILED || ret == AOF_OPEN_ERR)
             exit(1);
         if (ret == AOF_OK)
-            serverLog(LL_NOTICE,"DB loaded from append only file: %.3f seconds",(float)(ustime()-start)/1000000);
+            serverLog(LL_NOTICE,"DB loaded from append only file %s: %.3f seconds",server.aof_filename, (float)(ustime()-start)/1000000);
     } else {
         rdbSaveInfo rsi = RDB_SAVE_INFO_INIT;
         errno = 0; /* Prevent a stale value from affecting error checking */
@@ -7581,7 +7581,8 @@ void loadDataFromDisk(void) {
             rdb_flags |= RDBFLAGS_FEED_REPL;
         }
         if (rdbLoad(server.rdb_filename,&rsi,rdb_flags) == C_OK) {
-            serverLog(LL_NOTICE,"DB loaded from disk: %.3f seconds",
+            serverLog(LL_NOTICE,"DB loaded from disk %s: %.3f seconds",
+                server.rdb_filename,
                 (float)(ustime()-start)/1000000);
 
             /* Restore the replication ID / offset from the RDB file. */
@@ -7625,7 +7626,7 @@ void loadDataFromDisk(void) {
                 }
             }
         } else if (errno != ENOENT) {
-            serverLog(LL_WARNING,"Fatal error loading the DB: %s. Exiting.",strerror(errno));
+            serverLog(LL_WARNING,"Fatal error loading the DB %s: %s. Exiting.", server.rdb_filename, strerror(errno));
             exit(1);
         }
 
@@ -8047,8 +8048,9 @@ int main(int argc, char **argv) {
             server.aof_fd = open(server.aof_filename,
                                  O_WRONLY|O_APPEND|O_CREAT,0644);
             if (server.aof_fd == -1) {
-                serverLog(LL_WARNING, "Can't open the append-only file: %s",
-                          strerror(errno));
+                serverLog(LL_WARNING, "Can't open the append-only file %s: %s",
+                    server.aof_filename,
+                    strerror(errno));
                 exit(1);
             }
         }
