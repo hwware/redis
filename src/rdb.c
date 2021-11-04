@@ -1404,7 +1404,7 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
         return C_ERR;
     }
 
-    serverLog(LL_NOTICE,"DB %s saved on disk.", filename);
+    serverLog(LL_NOTICE,"DB file %s saved on disk.", filename);
     server.dirty = 0;
     server.lastsave = time(NULL);
     server.lastbgsave_status = C_OK;
@@ -1412,7 +1412,7 @@ int rdbSave(char *filename, rdbSaveInfo *rsi) {
     return C_OK;
 
 werr:
-    serverLog(LL_WARNING,"Write error saving DB %s on disk: %s", filename, strerror(errno));
+    serverLog(LL_WARNING,"Write error saving DB file %s on disk: %s", filename, strerror(errno));
     if (fp) fclose(fp);
     unlink(tmpfile);
     stopSaving(0);
@@ -1442,7 +1442,7 @@ int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
         /* Parent */
         if (childpid == -1) {
             server.lastbgsave_status = C_ERR;
-            serverLog(LL_WARNING,"Can't save %s in background: fork: %s",
+            serverLog(LL_WARNING,"Can't save file %s in background: fork: %s",
                 filename,
                 strerror(errno));
             return C_ERR;
@@ -2902,11 +2902,11 @@ int rdbLoadRio(rio *rdb, int rdbflags, rdbSaveInfo *rsi) {
 
     if (empty_keys_skipped) {
         serverLog(LL_WARNING,
-            "Done loading RDB %s, keys loaded: %lld, keys expired: %lld, empty keys skipped: %lld.",
+            "Done loading RDB file %s, keys loaded: %lld, keys expired: %lld, empty keys skipped: %lld.",
                 server.rdb_filename, server.rdb_last_load_keys_loaded, server.rdb_last_load_keys_expired, empty_keys_skipped);
     } else {
         serverLog(LL_NOTICE,
-            "Done loading RDB %s, keys loaded: %lld, keys expired: %lld.",
+            "Done loading RDB file %s, keys loaded: %lld, keys expired: %lld.",
                 server.rdb_filename, server.rdb_last_load_keys_loaded, server.rdb_last_load_keys_expired);
     }
     return C_OK;
