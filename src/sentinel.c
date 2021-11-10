@@ -457,6 +457,7 @@ dictType renamedCommandsDictType = {
 /* =========================== Initialization =============================== */
 
 void sentinelSetCommand(client *c);
+void sentinelGetCommand(client *c);
 void sentinelConfigGetCommand(client *c);
 void sentinelConfigSetCommand(client *c);
 
@@ -3942,6 +3943,9 @@ NULL
     } else if (!strcasecmp(c->argv[1]->ptr,"set")) {
         if (c->argc <= 3) goto numargserr;
         sentinelSetCommand(c);
+    } else if (!strcasecmp(c->argv[1]->ptr,"get")) {
+        if (c->argc != 3) goto numargserr;
+        sentinelGetCommand(c);
     } else if (!strcasecmp(c->argv[1]->ptr,"config")) {
         if (c->argc < 3) goto numargserr;
         if (!strcasecmp(c->argv[2]->ptr,"set") && c->argc == 5)
@@ -4151,6 +4155,58 @@ void sentinelRoleCommand(client *c) {
         addReplyBulkCString(c,ri->name);
     }
     dictReleaseIterator(di);
+}
+
+/* SENTINEL GET <mastername> <option> */
+void sentinelGetCommand(client *c) {
+    sentinelRedisInstance *ri;
+    int j, changes = 0;
+    char *option;
+    int has_get_all = 0;
+
+    if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2]))
+        == NULL) return;
+
+    ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
+    
+    option = c->argv[3]->ptr;
+    if (!strcasecmp(option,"all")) {
+        has_get_all = 1;
+    }
+
+    if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
+        /* down-after-milliseconds <milliseconds> */
+        sdscatprintf(ci, "sentinel down-after-milliseconds %s", ri->down_after_period);
+    } else if (!strcasecmp(option,"failover-timeout") || has_get_all) {
+        /* failover-timeout <milliseconds> */
+        sdscatprintf(ci, "sentinel failover-timeout %s", ri->failover_timeout);
+    } else if (!strcasecmp(option,"parallel-syncs") || has_get_all) {
+        /* parallel-syncs <milliseconds> */
+        sdscatprintf(ci, "sentinel parallel-syncs %s", ri->parallel_syncs);
+    } else if (!strcasecmp(option,"auth-user") || has_get_all) {
+        /* auth-user <username> */
+        sdscatprintf(ci, "sentinel auth-user %s", ri->auth_user);
+    } else if (!strcasecmp(option,"quorum") || has_get_all) {
+        /* quorum <count> */
+        sdscatprintf(ci, "sentinel quorum %s", ri->quorum);
+    } else if (!strcasecmp(option,"deny-scripts-reconfig") || has_get_all) {
+        /* quorum <count> */
+        sdscatprintf(ci, "sentinel deny-scripts-reconfig %s", ri->deny_scripts_reconfig);
+    } else if (!strcasecmp(option,"runid") || has_get_all) {
+        /* quorum <count> */
+        sdscatprintf(ci, "sentinel runid %s", ri->runid);
+    } else if (!strcasecmp(option,"deny-scripts-reconfig") || has_get_all) {
+        /* quorum <count> */
+        sdscatprintf(ci, "sentinel config-epoch %s", ri->config_epoch);
+    }else {
+        addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s'", option);
+        sdsfree(ci);
+        return;
+    }
+
+    addReplyBulkCString(c,ci);
+    sdsfree(ci);
+    return;
 }
 
 /* SENTINEL SET <mastername> [<option> <value> ...] */
