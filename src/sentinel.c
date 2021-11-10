@@ -4194,7 +4194,7 @@ void sentinelGetCommand(client *c) {
         sdscatprintf(ci, "sentinel runid %s", ri->runid);
     } else if (!strcasecmp(option,"deny-scripts-reconfig") || has_get_all) {
         /* quorum <count> */
-        sdscatprintf(ci, "sentinel config-epoch %llu", ri->config_epoch);
+        sdscatprintf(ci, "sentinel config-epoch %lu", ri->config_epoch);
     }else {
         addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s'", option);
         sdsfree(ci);
