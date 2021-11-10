@@ -4160,14 +4160,13 @@ void sentinelRoleCommand(client *c) {
 /* SENTINEL GET <mastername> <option> */
 void sentinelGetCommand(client *c) {
     sentinelRedisInstance *ri;
-    int j, changes = 0;
     char *option;
     int has_get_all = 0;
 
     if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2]))
         == NULL) return;
 
-    ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
+    sds ci = sdsempty();
     
     option = c->argv[3]->ptr;
     if (!strcasecmp(option,"all")) {
