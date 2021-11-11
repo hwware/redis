@@ -4172,35 +4172,35 @@ void sentinelGetCommand(client *c) {
 
     if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
         /* down-after-milliseconds <milliseconds> */
-        ci = sdscatprintf(ci, "sentinel down-after-milliseconds %lld", ri->down_after_period);
+        ci = sdscatprintf(ci, "sentinel down-after-milliseconds %lld \n", ri->down_after_period);
     }
     if (!strcasecmp(option,"failover-timeout") || has_get_all) {
         /* failover-timeout <milliseconds> */
-        ci = sdscatprintf(ci, "sentinel failover-timeout %lld", ri->failover_timeout);
+        ci = sdscatprintf(ci, "sentinel failover-timeout %lld \n", ri->failover_timeout);
     }
     if (!strcasecmp(option,"parallel-syncs") || has_get_all) {
         /* parallel-syncs <milliseconds> */
-        ci = sdscatprintf(ci, "sentinel parallel-syncs %s", 
+        ci = sdscatprintf(ci, "sentinel parallel-syncs %s \n", 
             ri->parallel_syncs ? "yes" : "no");
     }
     if (!strcasecmp(option,"auth-user") || has_get_all) {
         /* auth-user <username> */
-        ci = sdscatprintf(ci, "sentinel auth-user %s", ri->auth_user);
+        ci = sdscatprintf(ci, "sentinel auth-user %s \n", ri->auth_user);
     }
     if (!strcasecmp(option,"quorum") || has_get_all) {
         /* quorum <count> */
-        ci = sdscatprintf(ci, "sentinel quorum %d", ri->quorum);
+        ci = sdscatprintf(ci, "sentinel quorum %d \n", ri->quorum);
     }
     if (!strcasecmp(option,"runid") || has_get_all) {
         /* quorum <count> */
-        ci = sdscatprintf(ci, "sentinel runid %s", ri->runid);
+        ci = sdscatprintf(ci, "sentinel runid %s \n", ri->runid);
     }
     if (!strcasecmp(option,"deny-scripts-reconfig") || has_get_all) {
         /* quorum <count> */
-        ci = sdscatprintf(ci, "sentinel config-epoch %lu", ri->config_epoch);
+        ci = sdscatprintf(ci, "sentinel config-epoch %lu \n", ri->config_epoch);
     }
     if (sdslen(ci) == 0) {
-        addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s'", option);
+        addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s' \n", option);
         sdsfree(ci);
         return;
     }
