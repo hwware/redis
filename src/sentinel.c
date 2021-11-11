@@ -4159,6 +4159,7 @@ void sentinelRoleCommand(client *c) {
 
 /* SENTINEL GET <mastername> <option> */
 void sentinelGetCommand(client *c) {
+    void *replylen = addReplyDeferredLen(c);
     sentinelRedisInstance *ri;
     char *option;
     int has_get_all = 0;
