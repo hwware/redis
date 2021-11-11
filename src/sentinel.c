@@ -4175,6 +4175,8 @@ void sentinelGetCommand(client *c) {
         has_get_all = 1;
     }
 
+    serverLog("value of has get all is : %d", has_get_all);
+
     if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
         /* down-after-milliseconds <milliseconds> */
         sdscatprintf(ci, "sentinel down-after-milliseconds %lld", ri->down_after_period);
