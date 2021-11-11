@@ -4170,35 +4170,35 @@ void sentinelGetCommand(client *c) {
         has_get_all = 1;
     }
 
-    // if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
-    //     /* down-after-milliseconds <milliseconds> */
-    //     ci = sdscatfmt(ci, "sentinel down-after-milliseconds %lld", ri->down_after_period);
-    // }
-    // if (!strcasecmp(option,"failover-timeout") || has_get_all) {
-    //     /* failover-timeout <milliseconds> */
-    //     ci = sdscatfmt(ci, "sentinel failover-timeout %lld", ri->failover_timeout);
-    // }
+    if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
+        /* down-after-milliseconds <milliseconds> */
+        ci = sdscatfmt(ci, "sentinel down-after-milliseconds %lld", ri->down_after_period);
+    }
+    if (!strcasecmp(option,"failover-timeout") || has_get_all) {
+        /* failover-timeout <milliseconds> */
+        ci = sdscatfmt(ci, "sentinel failover-timeout %lld", ri->failover_timeout);
+    }
     if (!strcasecmp(option,"parallel-syncs") || has_get_all) {
         /* parallel-syncs <milliseconds> */
         ci = sdscatfmt(ci, "sentinel parallel-syncs %s", 
             ri->parallel_syncs ? "yes" : "no");
     }
-    if (!strcasecmp(option,"auth-user") || has_get_all) {
-        /* auth-user <username> */
-        ci = sdscatfmt(ci, "sentinel auth-user %s", ri->auth_user);
-    }
-    // if (!strcasecmp(option,"quorum") || has_get_all) {
-    //      quorum <count> 
-    //     ci = sdscatfmt(ci, "sentinel quorum %d", ri->quorum);
+    // if (!strcasecmp(option,"auth-user") || has_get_all) {
+    //      auth-user <username> 
+    //     ci = sdscatfmt(ci, "sentinel auth-user %s", ri->auth_user);
     // }
+    if (!strcasecmp(option,"quorum") || has_get_all) {
+        /* quorum <count> */
+        ci = sdscatfmt(ci, "sentinel quorum %d", ri->quorum);
+    }
     if (!strcasecmp(option,"runid") || has_get_all) {
         /* quorum <count> */
         ci = sdscatfmt(ci, "sentinel runid %s", ri->runid);
     }
-    // if (!strcasecmp(option,"deny-scripts-reconfig") || has_get_all) {
-    //      quorum <count> 
-    //     ci = sdscatfmt(ci, "sentinel config-epoch %lu", ri->config_epoch);
-    // }
+    if (!strcasecmp(option,"deny-scripts-reconfig") || has_get_all) {
+        /* quorum <count> */
+        ci = sdscatfmt(ci, "sentinel config-epoch %lu", ri->config_epoch);
+    }
     if (sdslen(ci) == 0) {
         addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s'", option);
         sdsfree(ci);
