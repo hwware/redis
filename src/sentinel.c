@@ -4210,7 +4210,7 @@ void sentinelGetCommand(client *c) {
 
     addReplyVerbatim(c,ci,sdslen(ci),"txt");
     sdsfree(ci);
-    setDeferredMapLen(c, replylen, 6);
+    setDeferredMapLen(c, replylen, 2);
 }
 
 /* SENTINEL SET <mastername> [<option> <value> ...] */
