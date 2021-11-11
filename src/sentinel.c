@@ -4205,7 +4205,7 @@ void sentinelGetCommand(client *c) {
         return;
     }
 
-    addReplyBulkCString(c,ci);
+    addReplyVerbatim(c,ci,sdslen(ci),"txt");
     sdsfree(ci);
     return;
 }
