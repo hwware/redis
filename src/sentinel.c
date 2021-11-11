@@ -4173,26 +4173,33 @@ void sentinelGetCommand(client *c) {
     if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
         /* down-after-milliseconds <milliseconds> */
         ci = sdscatprintf(ci, "sentinel down-after-milliseconds %lld", ri->down_after_period);
-    } else if (!strcasecmp(option,"failover-timeout") || has_get_all) {
+    }
+    if (!strcasecmp(option,"failover-timeout") || has_get_all) {
         /* failover-timeout <milliseconds> */
         ci = sdscatprintf(ci, "sentinel failover-timeout %lld", ri->failover_timeout);
-    } else if (!strcasecmp(option,"parallel-syncs") || has_get_all) {
+    }
+    if (!strcasecmp(option,"parallel-syncs") || has_get_all) {
         /* parallel-syncs <milliseconds> */
         ci = sdscatprintf(ci, "sentinel parallel-syncs %s", 
             ri->parallel_syncs ? "yes" : "no");
-    } else if (!strcasecmp(option,"auth-user") || has_get_all) {
+    }
+    if (!strcasecmp(option,"auth-user") || has_get_all) {
         /* auth-user <username> */
         ci = sdscatprintf(ci, "sentinel auth-user %s", ri->auth_user);
-    } else if (!strcasecmp(option,"quorum") || has_get_all) {
+    }
+    if (!strcasecmp(option,"quorum") || has_get_all) {
         /* quorum <count> */
         ci = sdscatprintf(ci, "sentinel quorum %d", ri->quorum);
-    } else if (!strcasecmp(option,"runid") || has_get_all) {
+    }
+    if (!strcasecmp(option,"runid") || has_get_all) {
         /* quorum <count> */
         ci = sdscatprintf(ci, "sentinel runid %s", ri->runid);
-    } else if (!strcasecmp(option,"deny-scripts-reconfig") || has_get_all) {
+    }
+    if (!strcasecmp(option,"deny-scripts-reconfig") || has_get_all) {
         /* quorum <count> */
         ci = sdscatprintf(ci, "sentinel config-epoch %lu", ri->config_epoch);
-    }else {
+    }
+    if (sdslen(ci) == 0) {
         addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s'", option);
         sdsfree(ci);
         return;
