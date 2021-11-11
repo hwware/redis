@@ -4165,7 +4165,7 @@ void sentinelGetCommand(client *c) {
 
     serverLog(LL_WARNING, " first argument %s, second argument %s, third argument %s", c->argv[1]->ptr, c->argv[2]->ptr, c->argv[3]->ptr);
 
-    if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2]))
+    if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2]->ptr))
         == NULL) return;
 
     sds ci = sdsempty();
