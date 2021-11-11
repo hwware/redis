@@ -4174,7 +4174,7 @@ void sentinelGetCommand(client *c) {
         /* down-after-milliseconds <milliseconds> */
         // ci = sdscatfmt(ci, "sentinel down-after-milliseconds %lld", ri->down_after_period);
         addReplyBulkCString(c,"sentinel down-after-milliseconds");
-        addReplyLongLong(ri->down_after_period);
+        addReplyLongLong(c, ri->down_after_period);
     }
     if (!strcasecmp(option,"failover-timeout") || has_get_all) {
         /* failover-timeout <milliseconds> */
