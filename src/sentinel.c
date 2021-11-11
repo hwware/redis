@@ -457,7 +457,7 @@ dictType renamedCommandsDictType = {
 /* =========================== Initialization =============================== */
 
 void sentinelSetCommand(client *c);
-sds sentinelGetCommand(client *c);
+void sentinelGetCommand(client *c);
 void sentinelConfigGetCommand(client *c);
 void sentinelConfigSetCommand(client *c);
 
@@ -3945,9 +3945,7 @@ NULL
         sentinelSetCommand(c);
     } else if (!strcasecmp(c->argv[1]->ptr,"get")) {
         // if (c->argc != 4) goto numargserr;
-        sds info = sentinelGetCommand(c);
-        addReplyBulkSds(c,info);
-        sdsfree(info);
+        sentinelGetCommand(c);
     } else if (!strcasecmp(c->argv[1]->ptr,"config")) {
         if (c->argc < 3) goto numargserr;
         if (!strcasecmp(c->argv[2]->ptr,"set") && c->argc == 5)
@@ -4160,7 +4158,7 @@ void sentinelRoleCommand(client *c) {
 }
 
 /* SENTINEL GET <mastername> <option> */
-sds sentinelGetCommand(client *c) {
+void sentinelGetCommand(client *c) {
     sentinelRedisInstance *ri;
     char *option;
     int has_get_all = 0;
@@ -4203,8 +4201,8 @@ sds sentinelGetCommand(client *c) {
         return;
     }
 
-    // addReplyBulkSds(c,ci);
-    // sdsfree(ci);
+    addReplyBulkSds(c,ci);
+    sdsfree(ci);
     // setDeferredMapLen(c, replylen, 2);
 }
 
