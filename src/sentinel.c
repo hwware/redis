@@ -4163,44 +4163,35 @@ void sentinelGetCommand(client *c) {
     char *option;
     int has_get_all = 0;
 
-    // serverLog(LL_WARNING, " first argument %s, second argument %s, third argument %s", c->argv[1]->ptr, c->argv[2]->ptr, c->argv[3]->ptr);
-
     if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL) return;
-    serverLog(LL_WARNING, "FOUND MASTER : %s", ri->name);
-
     sds ci = sdsempty();
-    
     option = c->argv[3]->ptr;
     if (!strcasecmp(option,"all")) {
         has_get_all = 1;
     }
 
-    serverLog(LL_WARNING, "Command is : %s", option);
-
-
     if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
-        serverLog(LL_WARNING, "IN THE RIGHT IF STATEMENT");
         /* down-after-milliseconds <milliseconds> */
-        sdscatprintf(ci, "sentinel down-after-milliseconds %lld", ri->down_after_period);
+        ci = sdscatprintf(ci, "sentinel down-after-milliseconds %lld", ri->down_after_period);
     } else if (!strcasecmp(option,"failover-timeout") || has_get_all) {
         /* failover-timeout <milliseconds> */
-        sdscatprintf(ci, "sentinel failover-timeout %lld", ri->failover_timeout);
+        ci = sdscatprintf(ci, "sentinel failover-timeout %lld", ri->failover_timeout);
     } else if (!strcasecmp(option,"parallel-syncs") || has_get_all) {
         /* parallel-syncs <milliseconds> */
-        sdscatprintf(ci, "sentinel parallel-syncs %s", 
+        ci = sdscatprintf(ci, "sentinel parallel-syncs %s", 
             ri->parallel_syncs ? "yes" : "no");
     } else if (!strcasecmp(option,"auth-user") || has_get_all) {
         /* auth-user <username> */
-        sdscatprintf(ci, "sentinel auth-user %s", ri->auth_user);
+        ci = sdscatprintf(ci, "sentinel auth-user %s", ri->auth_user);
     } else if (!strcasecmp(option,"quorum") || has_get_all) {
         /* quorum <count> */
-        sdscatprintf(ci, "sentinel quorum %d", ri->quorum);
+        ci = sdscatprintf(ci, "sentinel quorum %d", ri->quorum);
     } else if (!strcasecmp(option,"runid") || has_get_all) {
         /* quorum <count> */
-        sdscatprintf(ci, "sentinel runid %s", ri->runid);
+        ci = sdscatprintf(ci, "sentinel runid %s", ri->runid);
     } else if (!strcasecmp(option,"deny-scripts-reconfig") || has_get_all) {
         /* quorum <count> */
-        sdscatprintf(ci, "sentinel config-epoch %lu", ri->config_epoch);
+        ci = sdscatprintf(ci, "sentinel config-epoch %lu", ri->config_epoch);
     }else {
         addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s'", option);
         sdsfree(ci);
