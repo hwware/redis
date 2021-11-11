@@ -3681,7 +3681,6 @@ int sentinelIsQuorumReachable(sentinelRedisInstance *master, int *usableptr) {
 }
 
 void sentinelCommand(client *c) {
-    serverLog(LL_WARNING, "======================Command called is %s", c->argv[1]->ptr);
     if (c->argc == 2 && !strcasecmp(c->argv[1]->ptr,"help")) {
         const char *help[] = {
 "CKQUORUM <master-name>",
@@ -4163,6 +4162,8 @@ void sentinelGetCommand(client *c) {
     sentinelRedisInstance *ri;
     char *option;
     int has_get_all = 0;
+
+    serverLog(LL_WARNING, " first argument %s, second argument %s, third argument %s", c->argv[1]->ptr, c->argv[2]->ptr, c->argv[3]->ptr);
 
     if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2]))
         == NULL) return;
