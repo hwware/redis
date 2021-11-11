@@ -4172,7 +4172,7 @@ void sentinelGetCommand(client *c) {
 
     if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
         /* down-after-milliseconds <milliseconds> */
-        ci = sdscatprintf(ci, "sentinel down-after-milliseconds %llu \r\n", ri->down_after_period);
+        ci = sdscatprintf(ci, "sentinel down-after-milliseconds %llu '\r\n'", ri->down_after_period);
         // addReplyBulkCString(c,"sentinel down-after-milliseconds");
         // addReplyLongLong(c, ri->down_after_period);
     }
