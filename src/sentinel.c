@@ -4175,8 +4175,11 @@ void sentinelGetCommand(client *c) {
         has_get_all = 1;
     }
 
+    serverLog(LL_WARNING, "Command is : %s", option);
+
 
     if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
+        serverLog(LL_WARNING, "IN THE RIGHT IF STATEMENT");
         /* down-after-milliseconds <milliseconds> */
         sdscatprintf(ci, "sentinel down-after-milliseconds %lld", ri->down_after_period);
     } else if (!strcasecmp(option,"failover-timeout") || has_get_all) {
