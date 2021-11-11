@@ -4166,6 +4166,7 @@ void sentinelGetCommand(client *c) {
     // serverLog(LL_WARNING, " first argument %s, second argument %s, third argument %s", c->argv[1]->ptr, c->argv[2]->ptr, c->argv[3]->ptr);
 
     if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL) return;
+    serverLog("FOUND MASTER : %s", ri->name);
 
     sds ci = sdsempty();
     
@@ -4174,7 +4175,6 @@ void sentinelGetCommand(client *c) {
         has_get_all = 1;
     }
 
-    // serverLog("value of has get all is : %d", has_get_all);
 
     if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
         /* down-after-milliseconds <milliseconds> */
