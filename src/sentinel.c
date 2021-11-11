@@ -4173,7 +4173,6 @@ void sentinelGetCommand(client *c) {
     if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
         /* down-after-milliseconds <milliseconds> */
         ci = sdscatprintf(ci, "sentinel down-after-milliseconds %llu \r\n", ri->down_after_period);
-        ci = sdscat(ci,"\r\n");
         // addReplyBulkCString(c,"sentinel down-after-milliseconds");
         // addReplyLongLong(c, ri->down_after_period);
     }
@@ -4189,7 +4188,7 @@ void sentinelGetCommand(client *c) {
     }
     if (!strcasecmp(option,"quorum") || has_get_all) {
         /* quorum <count> */
-        ci = sdscatprintf(ci, "sentinel quorum %lu", ri->quorum);
+        ci = sdscatprintf(ci, "sentinel quorum %d", ri->quorum);
     }
     if (!strcasecmp(option,"runid") || has_get_all) {
         /* quorum <count> */
@@ -4197,7 +4196,7 @@ void sentinelGetCommand(client *c) {
     }
     if (!strcasecmp(option,"deny-scripts-reconfig") || has_get_all) {
         /* quorum <count> */
-        ci = sdscatprintf(ci, "sentinel config-epoch %llu", ri->config_epoch);
+        ci = sdscatprintf(ci, "sentinel config-epoch %lu", ri->config_epoch);
     }
     if (sdslen(ci) == 0) {
         addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s'", option);
