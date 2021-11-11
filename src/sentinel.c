@@ -4159,7 +4159,6 @@ void sentinelRoleCommand(client *c) {
 
 /* SENTINEL GET <mastername> <option> */
 void sentinelGetCommand(client *c) {
-    void *replylen = addReplyDeferredLen(c);
     sentinelRedisInstance *ri;
     char *option;
     int has_get_all = 0;
@@ -4173,9 +4172,9 @@ void sentinelGetCommand(client *c) {
 
     if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
         /* down-after-milliseconds <milliseconds> */
-        // ci = sdscatfmt(ci, "sentinel down-after-milliseconds %lld", ri->down_after_period);
-        addReplyBulkCString(c,"sentinel down-after-milliseconds");
-        addReplyLongLong(c, ri->down_after_period);
+        ci = sdscatfmt(ci, "sentinel down-after-milliseconds %lld", ri->down_after_period);
+        // addReplyBulkCString(c,"sentinel down-after-milliseconds");
+        // addReplyLongLong(c, ri->down_after_period);
     }
     if (!strcasecmp(option,"failover-timeout") || has_get_all) {
         /* failover-timeout <milliseconds> */
@@ -4186,10 +4185,6 @@ void sentinelGetCommand(client *c) {
         ci = sdscatfmt(ci, "sentinel parallel-syncs %s", 
             ri->parallel_syncs ? "yes" : "no");
     }
-    // if (!strcasecmp(option,"auth-user") || has_get_all) {
-    //      auth-user <username> 
-    //     ci = sdscatfmt(ci, "sentinel auth-user %s", ri->auth_user);
-    // }
     if (!strcasecmp(option,"quorum") || has_get_all) {
         /* quorum <count> */
         ci = sdscatfmt(ci, "sentinel quorum %d", ri->quorum);
