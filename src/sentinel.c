@@ -4203,7 +4203,7 @@ void sentinelGetCommand(client *c) {
         return;
     }
 
-    addReplyVerbatim(c,ci,sdslen(ci),"txt");
+    addReplyBulkSds(c,ci);
     sdsfree(ci);
     // setDeferredMapLen(c, replylen, 2);
 }
