@@ -4172,13 +4172,13 @@ void sentinelGetCommand(client *c) {
 
     if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
         /* down-after-milliseconds <milliseconds> */
-        ci = sdscatfmt(ci, "sentinel down-after-milliseconds %I \n", ri->down_after_period);
+        ci = sdscatfmt(ci, "sentinel down-after-milliseconds %I \r\n", ri->down_after_period);
         // addReplyBulkCString(c,"sentinel down-after-milliseconds");
         // addReplyLongLong(c, ri->down_after_period);
     }
     if (!strcasecmp(option,"failover-timeout") || has_get_all) {
         /* failover-timeout <milliseconds> */
-        ci = sdscatfmt(ci, "sentinel failover-timeout %I \n", ri->failover_timeout);
+        ci = sdscatfmt(ci, "sentinel failover-timeout %I \r\n", ri->failover_timeout);
     }
     if (!strcasecmp(option,"parallel-syncs") || has_get_all) {
         /* parallel-syncs <milliseconds> */
