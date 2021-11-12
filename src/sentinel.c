@@ -4168,9 +4168,11 @@ void sentinelGetCommand(client *c) {
     int has_get_all = 0;
     void *replylen = addReplyDeferredLen(c);
 
-    option = c->argv[3]->ptr;
-    if (!strcasecmp(option,"all")) {
+    if (c->argc == 3) {
         has_get_all = 1;
+    }
+    else{
+        option = c->argv[3]->ptr;
     }
 
 
