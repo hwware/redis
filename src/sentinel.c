@@ -4164,28 +4164,6 @@ void sentinelGetCommand(client *c) {
     int has_all_masters = 0;
     dictIterator *di;
     dictEntry *de;
-
-
-    if (!strcasecmp(c->argv[2]->ptr,"all")){
-        has_all_masters = 1;
-    }
-    else if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL) return;
-
-    if (has_all_masters) {
-        di = dictGetIterator(sentinel.masters);
-        while((de = dictNext(di)) != NULL) {
-            ri = dictGetVal(de);
-            genGetCommandInfo(c, ri);
-        }
-        dictReleaseIterator(di);
-    }
-    else {
-        genGetCommandInfo(c, ri);
-    }
-}
-
-
-void genGetCommandInfo(client *c, sentinelRedisInstance *ri){
     int matches = 0;
     char *option;
     int has_get_all = 0;
@@ -4196,48 +4174,61 @@ void genGetCommandInfo(client *c, sentinelRedisInstance *ri){
         has_get_all = 1;
     }
 
-    if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
-        /* down-after-milliseconds <milliseconds> */
-        addReplyBulkCString(c,"sentinel down-after-milliseconds");
-        addReplyBulkLongLong(c,ri->down_after_period);
-        matches++;
-        matches++;
+
+    if (!strcasecmp(c->argv[2]->ptr,"all")){
+        has_all_masters = 1;
     }
-    if (!strcasecmp(option,"failover-timeout") || has_get_all) {
-        /* failover-timeout <milliseconds> */
-        addReplyBulkCString(c,"sentinel failover-timeout");
-        addReplyBulkLongLong(c,ri->failover_timeout);
+
+    di = dictGetIterator(sentinel.masters);
+    while((de = dictNext(di)) != NULL) {
+        ri = dictGetVal(de);
+        if (!has_all_masters){
+            if (ri != sentinelGetMasterByNameOrReplyError(c,c->argv[2]))
+                continue;
+        }
+
+        addReplyBulkCString(c,"sentinel master name");
+        addReplyBulkLongLong(c,ri->name);
         matches++;
-        matches++;
+
+        if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
+            /* down-after-milliseconds <milliseconds> */
+            addReplyBulkCString(c,"sentinel down-after-milliseconds");
+            addReplyBulkLongLong(c,ri->down_after_period);
+            matches++;
+        }
+        if (!strcasecmp(option,"failover-timeout") || has_get_all) {
+            /* failover-timeout <milliseconds> */
+            addReplyBulkCString(c,"sentinel failover-timeout");
+            addReplyBulkLongLong(c,ri->failover_timeout);
+            matches++;
+        }
+        if (!strcasecmp(option,"parallel-syncs") || has_get_all) {
+            /* parallel-syncs <milliseconds> */
+            addReplyBulkCString(c,"sentinel parallel-syncs");
+            addReplyBulkCString(c,ri->parallel_syncs ? "yes" : "no");
+            matches++;
+        }
+        if (!strcasecmp(option,"quorum") || has_get_all) {
+            /* quorum <count> */
+            addReplyBulkCString(c, "sentinel quorum");
+            addReplyBulkLongLong(c, ri->quorum);
+            matches++;
+        }
+        if (!strcasecmp(option,"runid") || has_get_all) {
+            /* quorum <count> */
+            addReplyBulkCString(c, "sentinel runid");
+            addReplyBulkCString(c, ri->runid ? ri->runid : "");
+            matches++;
+        }
+        if (!strcasecmp(option,"config-epoch") || has_get_all) {
+            /* quorum <count> */
+            addReplyBulkCString(c, "sentinel config-epoch");
+            addReplyBulkLongLong(c, ri->config_epoch);
+            matches++;
+        }
     }
-    if (!strcasecmp(option,"parallel-syncs") || has_get_all) {
-        /* parallel-syncs <milliseconds> */
-        addReplyBulkCString(c,"sentinel parallel-syncs");
-        addReplyBulkCString(c,ri->parallel_syncs ? "yes" : "no");
-        matches++;
-        matches++;
-    }
-    if (!strcasecmp(option,"quorum") || has_get_all) {
-        /* quorum <count> */
-        addReplyBulkCString(c, "sentinel quorum");
-        addReplyBulkLongLong(c, ri->quorum);
-        matches++;
-        matches++;
-    }
-    if (!strcasecmp(option,"runid") || has_get_all) {
-        /* quorum <count> */
-        addReplyBulkCString(c, "sentinel runid");
-        addReplyBulkCString(c, ri->runid ? ri->runid : "");
-        matches++;
-        matches++;
-    }
-    if (!strcasecmp(option,"config-epoch") || has_get_all) {
-        /* quorum <count> */
-        addReplyBulkCString(c, "sentinel config-epoch");
-        addReplyBulkLongLong(c, ri->config_epoch);
-        matches++;
-        matches++;
-    }
+    dictReleaseIterator(di);
     setDeferredMapLen(c, replylen, matches);
 }
 
