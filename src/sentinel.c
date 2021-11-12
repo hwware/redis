@@ -4171,9 +4171,6 @@ void sentinelGetCommand(client *c) {
         has_get_all = 1;
     }
 
-    if (has_get_all)
-        addReplyArrayLen(c, 6);
-
     if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
         /* down-after-milliseconds <milliseconds> */
         addReplyBulkCString(c,"sentinel down-after-milliseconds");
