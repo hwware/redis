@@ -4234,9 +4234,11 @@ void genGetCommandInfo(client *c, sentinelRedisInstance *ri){
     }
     if (matches == 0) {
         addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s'", option);
-        matches++;
+        sentinelFlushConfig();
     }
-    setDeferredMapLen(c, replylen, matches);
+    else{
+        setDeferredMapLen(c, replylen, matches);
+    }
 }
 
 /* SENTINEL SET <mastername> [<option> <value> ...] */
