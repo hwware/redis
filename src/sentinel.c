@@ -4175,6 +4175,8 @@ void sentinelGetCommand(client *c) {
         option = c->argv[3]->ptr;
     }
 
+    serverLog(LL_WARNING, "OPTION IS : %s ======================", option)
+
 
     if (!strcasecmp(c->argv[2]->ptr,"all")){
         has_all_masters = 1;
