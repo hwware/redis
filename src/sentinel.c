@@ -4161,7 +4161,10 @@ void sentinelRoleCommand(client *c) {
 void sentinelGetCommand(client *c) {
     sentinelRedisInstance *ri;
     int has_get_all = 0;
-    int has all_masters = 0;
+    int has_all_masters = 0;
+    dictIterator *di;
+    dictEntry *de;
+
 
     if (!strcasecmp(c->argv[2]->ptr,"all")){
         has_all_masters = 1;
