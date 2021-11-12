@@ -4168,8 +4168,6 @@ void sentinelGetCommand(client *c) {
     int has_get_all = 0;
     void *replylen = addReplyDeferredLen(c);
 
-    serverLog(LL_WARNING, "NUMBER OF ARGUMENTS: %d ===================", c->argc);
-
     if (c->argc == 3) {
         has_get_all = 1;
     }
