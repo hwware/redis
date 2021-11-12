@@ -4164,7 +4164,7 @@ void sentinelGetCommand(client *c) {
     dictIterator *di;
     dictEntry *de;
     int matches = 0;
-    char *option;
+    char *option = NULL;
     int has_get_all = 0;
     void *replylen = addReplyDeferredLen(c);
 
