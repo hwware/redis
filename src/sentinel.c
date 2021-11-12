@@ -4160,10 +4160,8 @@ void sentinelRoleCommand(client *c) {
 /* SENTINEL GET <mastername> <option> */
 void sentinelGetCommand(client *c) {
     sentinelRedisInstance *ri;
-    char *option;
     int has_get_all = 0;
     int has all_masters = 0;
-    int matches = 0;
 
     if (!strcasecmp(c->argv[2]->ptr,"all")){
         has_all_masters = 1;
@@ -4186,6 +4184,8 @@ void sentinelGetCommand(client *c) {
 
 void genGetCommandInfo(client *c, sentinelRedisInstance *ri){
     void *replylen = addReplyDeferredLen(c);
+    int matches = 0;
+    char *option;
 
     option = c->argv[3]->ptr;
     if (!strcasecmp(option,"all")) {
