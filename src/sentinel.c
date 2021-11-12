@@ -4162,10 +4162,31 @@ void sentinelGetCommand(client *c) {
     sentinelRedisInstance *ri;
     char *option;
     int has_get_all = 0;
-    void *replylen = addReplyDeferredLen(c);
+    int has all_masters = 0;
     int matches = 0;
 
-    if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL) return;
+    if (!strcasecmp(c->argv[2]->ptr,"all")){
+        has_all_masters = 1;
+    }
+    else if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL) return;
+
+    if (has_all_masters) {
+        di = dictGetIterator(sentinel.masters);
+        while((de = dictNext(di)) != NULL) {
+            ri = dictGetVal(de);
+            genGetCommandInfo(c, ri);
+        }
+        dictReleaseIterator(di);
+    }
+    else {
+        genGetCommandInfo(c, ri);
+    }
+}
+
+
+void genGetCommandInfo(client *c, sentinelRedisInstance *ri){
+    void *replylen = addReplyDeferredLen(c);
+
     option = c->argv[3]->ptr;
     if (!strcasecmp(option,"all")) {
         has_get_all = 1;
