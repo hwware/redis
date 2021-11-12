@@ -4162,77 +4162,55 @@ void sentinelGetCommand(client *c) {
     sentinelRedisInstance *ri;
     char *option;
     int has_get_all = 0;
-
-    // if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL) return;
-    // sds ci = sdsempty();
-    // option = c->argv[3]->ptr;
-    // if (!strcasecmp(option,"all")) {
-    //     has_get_all = 1;
-    // }
-
-    // if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
-    //     /* down-after-milliseconds <milliseconds> */
-    //     ci = sdscatprintf(ci, "sentinel down-after-milliseconds %llu\r\n", ri->down_after_period);
-    // }
-    // if (!strcasecmp(option,"failover-timeout") || has_get_all) {
-    //     /* failover-timeout <milliseconds> */
-    //     ci = sdscatprintf(ci, "sentinel failover-timeout %llu\r\n", ri->failover_timeout);
-    // }
-    // if (!strcasecmp(option,"parallel-syncs") || has_get_all) {
-    //     /* parallel-syncs <milliseconds> */
-    //     ci = sdscatprintf(ci, "sentinel parallel-syncs %s\r\n", 
-    //         ri->parallel_syncs ? "yes" : "no");
-    // }
-    // if (!strcasecmp(option,"quorum") || has_get_all) {
-    //     /* quorum <count> */
-    //     ci = sdscatprintf(ci, "sentinel quorum %d\r\n", ri->quorum);
-    // }
-    // if (!strcasecmp(option,"runid") || has_get_all) {
-    //     /* quorum <count> */
-    //     ci = sdscatprintf(ci, "sentinel runid %s\r\n", ri->runid);
-    // }
-    // if (!strcasecmp(option,"deny-scripts-reconfig") || has_get_all) {
-    //     /* quorum <count> */
-    //     ci = sdscatprintf(ci, "sentinel config-epoch %lu\r\n", ri->config_epoch);
-    // }
-    // if (sdslen(ci) == 0) {
-    //     addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s'", option);
-    //     sdsfree(ci);
-    //     return;
-    // }
-
-    // addReplyBulkSds(c,ci);
-    // sdsfree(ci);
-
-
     void *replylen = addReplyDeferredLen(c);
     int matches = 0;
 
+    if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL) return;
+    option = c->argv[3]->ptr;
+    if (!strcasecmp(option,"all")) {
+        has_get_all = 1;
+    }
 
-        addReplyBulkCString(c,"resolve-hostnames");
-        addReplyBulkCString(c,sentinel.resolve_hostnames ? "yes" : "no");
+    if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
+        /* down-after-milliseconds <milliseconds> */
+        addReplyBulkCString(c,"sentinel down-after-milliseconds");
+        addReplyBulkLongLong(c,ri->down_after_period);
         matches++;
-
-        addReplyBulkCString(c,"announce-hostnames");
-        addReplyBulkCString(c,sentinel.announce_hostnames ? "yes" : "no");
+    }
+    if (!strcasecmp(option,"failover-timeout") || has_get_all) {
+        /* failover-timeout <milliseconds> */
+        addReplyBulkCString(c,"sentinel failover-timeout");
+        addReplyBulkLongLong(c,ri->failover_timeout);
         matches++;
-
-        addReplyBulkCString(c,"announce-ip");
-        addReplyBulkCString(c,sentinel.announce_ip ? sentinel.announce_ip : "");
+    }
+    if (!strcasecmp(option,"parallel-syncs") || has_get_all) {
+        /* parallel-syncs <milliseconds> */
+        addReplyBulkCString(c,"sentinel parallel-syncs");
+        addReplyBulkCString(c,ri->parallel_syncs ? "yes" : "no");
         matches++;
-
-        addReplyBulkCString(c, "announce-port");
-        addReplyBulkLongLong(c, sentinel.announce_port);
+    }
+    if (!strcasecmp(option,"quorum") || has_get_all) {
+        /* quorum <count> */
+        addReplyBulkCString(c, "sentinel quorum");
+        addReplyBulkLongLong(c, ri->quorum);
         matches++;
-
-        addReplyBulkCString(c, "sentinel-user");
-        addReplyBulkCString(c, sentinel.sentinel_auth_user ? sentinel.sentinel_auth_user : "");
+    }
+    if (!strcasecmp(option,"runid") || has_get_all) {
+        /* quorum <count> */
+        addReplyBulkCString(c, "sentinel runid");
+        addReplyBulkCString(c, ri->runid ? ri->runid : "");
         matches++;
-
-        addReplyBulkCString(c, "sentinel-pass");
-        addReplyBulkCString(c, sentinel.sentinel_auth_pass ? sentinel.sentinel_auth_pass : "");
+    }
+    if (!strcasecmp(option,"config-epoch") || has_get_all) {
+        /* quorum <count> */
+        addReplyBulkCString(c, "sentinel config-epoch");
+        addReplyBulkLongLong(c, ri->config_epoch);
         matches++;
-
+    }
+    if (matches == 0) {
+        addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s'", option);
+        return;
+    }
     setDeferredMapLen(c, replylen, matches);
 }
 
