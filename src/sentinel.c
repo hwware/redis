@@ -4188,7 +4188,7 @@ void sentinelGetCommand(client *c) {
         }
 
         addReplyBulkCString(c,"sentinel master name");
-        addReplyBulkLongLong(c,ri->name);
+        addReplyBulkCString(c,ri->name);
         matches++;
 
         if (!strcasecmp(option,"down-after-milliseconds") || has_get_all) {
