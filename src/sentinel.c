@@ -4207,7 +4207,6 @@ void sentinelGetCommand(client *c) {
 
     void *replylen = addReplyDeferredLen(c);
     int matches = 0;
-    pattern = c->argv[3]->ptr;
 
 
         addReplyBulkCString(c,"resolve-hostnames");
