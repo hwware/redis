@@ -4187,7 +4187,7 @@ void sentinelGetCommand(client *c) {
                 continue;
         }
 
-        addReplyBulkCString(c,"sentinel master name");
+        addReplyBulkCString(c,"# SENTINEL MASTER NAME");
         addReplyBulkCString(c,ri->name);
         matches++;
 
