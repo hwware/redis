@@ -4201,11 +4201,13 @@ void genGetCommandInfo(client *c, sentinelRedisInstance *ri){
         addReplyBulkCString(c,"sentinel down-after-milliseconds");
         addReplyBulkLongLong(c,ri->down_after_period);
         matches++;
+        matches++;
     }
     if (!strcasecmp(option,"failover-timeout") || has_get_all) {
         /* failover-timeout <milliseconds> */
         addReplyBulkCString(c,"sentinel failover-timeout");
         addReplyBulkLongLong(c,ri->failover_timeout);
+        matches++;
         matches++;
     }
     if (!strcasecmp(option,"parallel-syncs") || has_get_all) {
@@ -4213,11 +4215,13 @@ void genGetCommandInfo(client *c, sentinelRedisInstance *ri){
         addReplyBulkCString(c,"sentinel parallel-syncs");
         addReplyBulkCString(c,ri->parallel_syncs ? "yes" : "no");
         matches++;
+        matches++;
     }
     if (!strcasecmp(option,"quorum") || has_get_all) {
         /* quorum <count> */
         addReplyBulkCString(c, "sentinel quorum");
         addReplyBulkLongLong(c, ri->quorum);
+        matches++;
         matches++;
     }
     if (!strcasecmp(option,"runid") || has_get_all) {
@@ -4225,11 +4229,13 @@ void genGetCommandInfo(client *c, sentinelRedisInstance *ri){
         addReplyBulkCString(c, "sentinel runid");
         addReplyBulkCString(c, ri->runid ? ri->runid : "");
         matches++;
+        matches++;
     }
     if (!strcasecmp(option,"config-epoch") || has_get_all) {
         /* quorum <count> */
         addReplyBulkCString(c, "sentinel config-epoch");
         addReplyBulkLongLong(c, ri->config_epoch);
+        matches++;
         matches++;
     }
     setDeferredMapLen(c, replylen, matches);
