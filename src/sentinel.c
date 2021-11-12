@@ -4232,13 +4232,7 @@ void genGetCommandInfo(client *c, sentinelRedisInstance *ri){
         addReplyBulkLongLong(c, ri->config_epoch);
         matches++;
     }
-    if (matches == 0) {
-        addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s'", option);
-        sentinelFlushConfig();
-    }
-    else{
-        setDeferredMapLen(c, replylen, matches);
-    }
+    setDeferredMapLen(c, replylen, matches);
 }
 
 /* SENTINEL SET <mastername> [<option> <value> ...] */
