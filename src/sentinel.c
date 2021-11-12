@@ -458,7 +458,6 @@ dictType renamedCommandsDictType = {
 
 void sentinelSetCommand(client *c);
 void sentinelGetCommand(client *c);
-void genGetCommandInfo(client *c, sentinelRedisInstance *ri);
 void sentinelConfigGetCommand(client *c);
 void sentinelConfigSetCommand(client *c);
 
