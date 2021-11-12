@@ -4201,7 +4201,7 @@ void sentinelGetCommand(client *c) {
         return;
     }
 
-    addReplyBulkSds(c,ci);
+    addReplySds(c,ci);
     sdsfree(ci);
     // setDeferredMapLen(c, replylen, 2);
 }
