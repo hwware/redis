@@ -4186,7 +4186,6 @@ void sentinelGetCommand(client *c) {
 
 
 void genGetCommandInfo(client *c, sentinelRedisInstance *ri){
-    void *replylen = addReplyDeferredLen(c);
     int matches = 0;
     char *option;
     int has_get_all = 0;
@@ -4235,7 +4234,10 @@ void genGetCommandInfo(client *c, sentinelRedisInstance *ri){
     if (matches == 0) {
         addReplyErrorFormat(c,"Unknown option \nSENTINEL SET '%s'", option);
     }
-    setDeferredMapLen(c, replylen, matches);
+    else{
+        void *replylen = addReplyDeferredLen(c);
+        setDeferredMapLen(c, replylen, matches);
+    }
 }
 
 /* SENTINEL SET <mastername> [<option> <value> ...] */
