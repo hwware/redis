@@ -4166,7 +4166,6 @@ void sentinelGetCommand(client *c) {
     int matches = 0;
     char *option = "";
     int has_get_all = 0;
-    void *replylen = addReplyDeferredLen(c);
 
     if (c->argc == 3) {
         has_get_all = 1;
@@ -4184,6 +4183,7 @@ void sentinelGetCommand(client *c) {
     }
 
     di = dictGetIterator(sentinel.masters);
+    void *replylen = addReplyDeferredLen(c);
     while((de = dictNext(di)) != NULL) {
         ri = dictGetVal(de);
         if (!has_all_masters){
