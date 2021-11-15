@@ -4178,6 +4178,10 @@ void sentinelGetCommand(client *c) {
     if (!strcasecmp(c->argv[2]->ptr,"all")){
         has_all_masters = 1;
     }
+    else {
+        if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL)
+                return;
+    }
 
     di = dictGetIterator(sentinel.masters);
     while((de = dictNext(di)) != NULL) {
