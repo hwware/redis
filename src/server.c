@@ -6164,6 +6164,16 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     if (everything) allsections = 1;
 
+    dictEntry *de;
+    dictIterator *di;
+
+    di = dictGetSafeIterator(section_dict);
+    while((de = dictNext(di)) != NULL) {
+        char * subcommand = dictGetKey(de);
+        serverLog(LL_WARNING, "ELEMENT IS : %s", subcommand);
+    }
+    dictReleaseIterator(di);
+
     /* Server */
     section = sdsnew("server");
     if (allsections || (dictFind(section_dict,section) != NULL )) {
