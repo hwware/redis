@@ -6935,9 +6935,9 @@ void infoCommand(client *c) {
                 dictAdd(final, sdsnew(defSections[i]), NULL);
             }
         } else {
-            sds subcommandsds = sdsnew(section);
-            sdstolower(subcommandsds);
-            dictAdd(final,subcommandsds,NULL);
+            sds sectionsds = sdsnew(c->argv[i]->ptr);
+            sdstolower(sectionsds);
+            dictAdd(final,sectionsds,NULL);
         }
     }
 
