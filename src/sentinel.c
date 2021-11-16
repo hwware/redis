@@ -3984,10 +3984,14 @@ NULL
         sentinelSetCommand(c);
     } else if (!strcasecmp(c->argv[1]->ptr,"get")) {
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (c->argc > 4) goto numargserr;
 =======
         if (c->argc != 3 || c->argc != 4) goto numargserr;
 >>>>>>> Added Get command
+=======
+        if (c->argc != 3 && c->argc != 4) goto numargserr;
+>>>>>>> num args condition
         sentinelGetCommand(c);
     } else if (!strcasecmp(c->argv[1]->ptr,"config")) {
         if (c->argc < 3) goto numargserr;
