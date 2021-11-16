@@ -3983,7 +3983,11 @@ NULL
     } else if (!strcasecmp(c->argv[1]->ptr,"set")) {
         sentinelSetCommand(c);
     } else if (!strcasecmp(c->argv[1]->ptr,"get")) {
+<<<<<<< HEAD
         if (c->argc > 4) goto numargserr;
+=======
+        if (c->argc != 3 || c->argc != 4) goto numargserr;
+>>>>>>> Added Get command
         sentinelGetCommand(c);
     } else if (!strcasecmp(c->argv[1]->ptr,"config")) {
         if (c->argc < 3) goto numargserr;
@@ -4211,6 +4215,7 @@ void sentinelGetCommand(client *c) {
     char *option = "";
     int has_get_all = 0;
 
+<<<<<<< HEAD
     if (c->argc == 2) {
         has_all_masters = 1;
         has_get_all = 1;
@@ -4228,12 +4233,33 @@ void sentinelGetCommand(client *c) {
         option = c->argv[3]->ptr;
     }
 
+=======
+    if (c->argc == 3) {
+        has_get_all = 1;
+    }
+    else{
+        option = c->argv[3]->ptr;
+    }
+
+    if (!strcasecmp(c->argv[2]->ptr,"all")) {
+        has_all_masters = 1;
+    }
+    else {
+        if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL)
+                return;
+    }
+
+>>>>>>> Added Get command
     di = dictGetIterator(sentinel.masters);
     void *replylen = addReplyDeferredLen(c);
     while((de = dictNext(di)) != NULL) {
         ri = dictGetVal(de);
         if (!has_all_masters) {
+<<<<<<< HEAD
             if (ri != sentinelGetMasterByName(c->argv[2]->ptr))
+=======
+            if (ri != sentinelGetMasterByNameOrReplyError(c,c->argv[2]))
+>>>>>>> Added Get command
                 continue;
         }
 
