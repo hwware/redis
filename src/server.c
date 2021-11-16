@@ -6925,6 +6925,7 @@ void infoCommand(client *c) {
         for (int i = 0; i < 11; i++){
             dictAdd(final, sdsnew(defSections[i]), NULL);
         }
+        serverLog(LL_WARNING, "DEFAULT NO ARG");
         sds info = genRedisInfoString(final, has_all_sections, has_everything);
         addReplyVerbatim(c,info,sdslen(info),"txt");
         sdsfree(info);
@@ -6943,6 +6944,7 @@ void infoCommand(client *c) {
                 dictAdd(final, sdsnew(defSections[i]), NULL);
             }
         } else {
+            serverLog(LL_WARNING, "ADDING %s", c->argv[i]->ptr);
             sds subcommandsds = sdsnew(c->argv[i]->ptr);
             dictAdd(final,subcommandsds,NULL);
             sdsfree(subcommandsds);
