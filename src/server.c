@@ -6947,7 +6947,6 @@ void infoCommand(client *c) {
             serverLog(LL_WARNING, "ADDING %s", c->argv[i]->ptr);
             sds subcommandsds = sdsnew(c->argv[i]->ptr);
             dictAdd(final,subcommandsds,NULL);
-            sdsfree(subcommandsds);
         }
     }
 
