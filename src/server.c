@@ -6176,7 +6176,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     /* Server */
     section = sdsnew("server");
-    if (allsections || (dictFind(section_dict,"server") != NULL )) {
+    if (allsections || (dictFind(section_dict,section) != NULL )) {
         static int call_uname = 1;
         static struct utsname name;
         char *mode;
@@ -6540,9 +6540,11 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
             );
         }
     }
+    sdsfree(section);
 
     /* Stats */
-    if (allsections || (dictFind(section_dict,"stats") != NULL )) {
+    section = sdsnew("stats");
+    if (allsections || (dictFind(section_dict,section) != NULL )) {
         long long stat_total_reads_processed, stat_total_writes_processed;
         long long stat_net_input_bytes, stat_net_output_bytes;
         long long current_eviction_exceeded_time = server.stat_last_eviction_exceeded_time ?
@@ -6798,7 +6800,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     /* CPU */
     section = sdsnew("cpu");
-    if (allsections || (dictFind(section_dict,"cpu") != NULL )) {
+    if (allsections || (dictFind(section_dict,section) != NULL )) {
         if (sections++) info = sdscat(info,"\r\n");
 
         struct rusage self_ru, c_ru;
