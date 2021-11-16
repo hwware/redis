@@ -6162,7 +6162,6 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
     int sections = 0;
     sds section;
 
-    modules = strcasecmp(section,"modules") == 0;
     if (everything) allsections = 1;
 
     /* Server */
