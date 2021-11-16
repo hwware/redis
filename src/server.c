@@ -6174,10 +6174,6 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
     }
     dictReleaseIterator(di);
 
-    if ((dictFind(section_dict,section) != NULL){
-
-    }
-
     /* Server */
     section = sdsnew("server");
     if (allsections || (dictFind(section_dict,"server") != NULL )) {
