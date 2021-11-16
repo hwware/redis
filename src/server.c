@@ -6164,16 +6164,6 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     if (everything) allsections = 1;
 
-    dictEntry *de;
-    dictIterator *di;
-
-    di = dictGetSafeIterator(section_dict);
-    while((de = dictNext(di)) != NULL) {
-        char * subcommand = dictGetKey(de);
-        serverLog(LL_WARNING, "ELEMENT IS : %s, add: %d, everything %d", subcommand, allsections, everything);
-    }
-    dictReleaseIterator(di);
-
     /* Server */
     section = sdsnew("server");
     if (allsections || (dictFind(section_dict,section) != NULL )) {
@@ -6927,7 +6917,6 @@ void infoCommand(client *c) {
         for (int i = 0; i < 11; i++){
             dictAdd(final, sdsnew(defSections[i]), NULL);
         }
-        serverLog(LL_WARNING, "DEFAULT NO ARG");
         sds info = genRedisInfoString(final, has_all_sections, has_everything);
         addReplyVerbatim(c,info,sdslen(info),"txt");
         sdsfree(info);
@@ -6946,7 +6935,6 @@ void infoCommand(client *c) {
                 dictAdd(final, sdsnew(defSections[i]), NULL);
             }
         } else {
-            serverLog(LL_WARNING, "ADDING %s", c->argv[i]->ptr);
             sds subcommandsds = sdsnew(c->argv[i]->ptr);
             dictAdd(final,subcommandsds,NULL);
         }
