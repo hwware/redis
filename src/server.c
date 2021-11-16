@@ -684,6 +684,9 @@ struct redisCommand sentinelSubcommands[] = {
     {"set",sentinelCommand,-3,
      "admin only-sentinel"},
 
+    {"get",sentinelCommand,-3,
+     "admin only-sentinel"},
+
     {"simulate-failure",sentinelCommand,3,
      "admin only-sentinel"},
 
