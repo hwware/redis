@@ -6167,7 +6167,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     /* Server */
     section = sdsnew("server");
-    if (allsections || defsections || (dictFind(section_dict,section) != NULL )) {
+    if (allsections || (dictFind(section_dict,section) != NULL )) {
         static int call_uname = 1;
         static struct utsname name;
         char *mode;
@@ -6252,7 +6252,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
     /* Clients */
 
     section = sdsnew("clients");
-    if (allsections || defsections || !strcasecmp(section,"clients")) {
+    if (allsections || !strcasecmp(section,"clients")) {
         size_t maxin, maxout;
         getExpansiveClientsInfo(&maxin,&maxout);
         if (sections++) info = sdscat(info,"\r\n");
@@ -6278,7 +6278,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     /* Memory */
     section = sdsnew("memory");
-    if (allsections || defsections || !strcasecmp(section,"memory")) {
+    if (allsections || !strcasecmp(section,"memory")) {
         char hmem[64];
         char peak_hmem[64];
         char total_system_hmem[64];
@@ -6404,7 +6404,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     /* Persistence */
     section = sdsnew("persistence");
-    if (allsections || defsections || !strcasecmp(section,"persistence")) {
+    if (allsections || !strcasecmp(section,"persistence")) {
         if (sections++) info = sdscat(info,"\r\n");
         double fork_perc = 0;
         if (server.stat_module_progress) {
@@ -6533,7 +6533,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
     }
 
     /* Stats */
-    if (allsections || defsections || !strcasecmp(section,"stats")) {
+    if (allsections || !strcasecmp(section,"stats")) {
         long long stat_total_reads_processed, stat_total_writes_processed;
         long long stat_net_input_bytes, stat_net_output_bytes;
         long long current_eviction_exceeded_time = server.stat_last_eviction_exceeded_time ?
@@ -6639,7 +6639,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     /* Replication */
     section = sdsnew("replication");
-    if (allsections || defsections || !strcasecmp(section,"replication")) {
+    if (allsections || !strcasecmp(section,"replication")) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,
             "# Replication\r\n"
@@ -6789,7 +6789,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     /* CPU */
     section = sdsnew("cpu");
-    if (allsections || defsections || !strcasecmp(section,"cpu")) {
+    if (allsections || !strcasecmp(section,"cpu")) {
         if (sections++) info = sdscat(info,"\r\n");
 
         struct rusage self_ru, c_ru;
@@ -6819,7 +6819,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     /* Modules */
     section = sdsnew("modules");
-    if (allsections || defsections || !strcasecmp(section,"modules")) {
+    if (allsections || !strcasecmp(section,"modules")) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,"# Modules\r\n");
         info = genModulesInfoString(info);
@@ -6838,7 +6838,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     /* Error statistics */
     section = sdsnew("errorstats");
-    if (allsections || defsections || !strcasecmp(section,"errorstats")) {
+    if (allsections || !strcasecmp(section,"errorstats")) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscat(info, "# Errorstats\r\n");
         raxIterator ri;
@@ -6859,7 +6859,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     /* Cluster */
     section = sdsnew("cluster");
-    if (allsections || defsections || !strcasecmp(section,"cluster")) {
+    if (allsections || !strcasecmp(section,"cluster")) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,
         "# Cluster\r\n"
@@ -6870,7 +6870,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
 
     /* Key space */
     section = sdsnew("keyspace");
-    if (allsections || defsections || !strcasecmp(section,"keyspace")) {
+    if (allsections || !strcasecmp(section,"keyspace")) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info, "# Keyspace\r\n");
         for (j = 0; j < server.dbnum; j++) {
