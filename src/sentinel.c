@@ -3944,7 +3944,6 @@ NULL
         if (c->argc <= 3) goto numargserr;
         sentinelSetCommand(c);
     } else if (!strcasecmp(c->argv[1]->ptr,"get")) {
-        // if (c->argc != 4) goto numargserr;
         sentinelGetCommand(c);
     } else if (!strcasecmp(c->argv[1]->ptr,"config")) {
         if (c->argc < 3) goto numargserr;
@@ -4174,7 +4173,7 @@ void sentinelGetCommand(client *c) {
         option = c->argv[3]->ptr;
     }
 
-    if (!strcasecmp(c->argv[2]->ptr,"all")){
+    if (!strcasecmp(c->argv[2]->ptr,"all")) {
         has_all_masters = 1;
     }
     else {
@@ -4186,7 +4185,7 @@ void sentinelGetCommand(client *c) {
     void *replylen = addReplyDeferredLen(c);
     while((de = dictNext(di)) != NULL) {
         ri = dictGetVal(de);
-        if (!has_all_masters){
+        if (!has_all_masters) {
             if (ri != sentinelGetMasterByNameOrReplyError(c,c->argv[2]))
                 continue;
         }
@@ -4220,13 +4219,13 @@ void sentinelGetCommand(client *c) {
             matches++;
         }
         if (!strcasecmp(option,"runid") || has_get_all) {
-            /* quorum <count> */
+            /* runid */
             addReplyBulkCString(c, "sentinel runid");
             addReplyBulkCString(c, ri->runid ? ri->runid : "");
             matches++;
         }
         if (!strcasecmp(option,"config-epoch") || has_get_all) {
-            /* quorum <count> */
+            /* config-epoch <count> */
             addReplyBulkCString(c, "sentinel config-epoch");
             addReplyBulkLongLong(c, ri->config_epoch);
             matches++;
