@@ -6170,7 +6170,7 @@ sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everyth
     di = dictGetSafeIterator(section_dict);
     while((de = dictNext(di)) != NULL) {
         char * subcommand = dictGetKey(de);
-        serverLog(LL_WARNING, "ELEMENT IS : %s", subcommand);
+        serverLog(LL_WARNING, "ELEMENT IS : %s, add: %d, everything %d", subcommand, allsections, everything);
     }
     dictReleaseIterator(di);
 
