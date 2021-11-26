@@ -74,3 +74,79 @@ jobs:
       run: |
         yum -y install gcc make
         make REDIS_CFLAGS='-Werror'
+        
+  test-ubuntu-jemalloc:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: make
+      run: make REDIS_CFLAGS='-Werror -DREDIS_TEST'
+    - name: testprep
+      run: sudo apt-get install tcl8.6 tclx
+    - name: test
+      run: ./runtest --accurate --verbose --dump-logs
+    - name: module api test
+      run: ./runtest-moduleapi --verbose --dump-logs
+    - name: sentinel tests
+      run: ./runtest-sentinel
+    - name: cluster tests
+      run: ./runtest-cluster
+    - name: unittest
+      run: ./src/redis-server test all --accurate
+      
+  test-ubuntu-libc-malloc:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: make
+      run: make MALLOC=libc
+    - name: testprep
+      run: sudo apt-get install tcl8.6 tclx
+    - name: test
+      run: ./runtest --accurate --verbose --dump-logs 
+    - name: module api test
+      run: ./runtest-moduleapi --verbose --dump-logs
+    - name: sentinel tests
+      run: ./runtest-sentinel
+    - name: cluster tests
+      run: ./runtest-cluster
+
+  test-ubuntu-no-malloc-usable-size:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: make
+      run: make MALLOC=libc CFLAGS=-DNO_MALLOC_USABLE_SIZE
+    - name: testprep
+      run: sudo apt-get install tcl8.6 tclx
+    - name: test
+      run: ./runtest --accurate --verbose --dump-logs 
+    - name: module api test
+      run: ./runtest-moduleapi --verbose --dump-logs
+    - name: sentinel tests
+      run: ./runtest-sentinel 
+    - name: cluster tests
+      run: ./runtest-cluster
+
+  test-ubuntu-32bit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: make
+      run: |
+        sudo apt-get update && sudo apt-get install libc6-dev-i386
+        make 32bit REDIS_CFLAGS='-Werror -DREDIS_TEST'
+    - name: testprep
+      run: sudo apt-get install tcl8.6 tclx
+    - name: test
+      run: ./runtest --accurate --verbose --dump-logs 
+    - name: module api test
+      run: |
+        make -C tests/modules 32bit 
+        ./runtest-moduleapi --verbose --dump-logs
+    - name: sentinel tests
+      run: ./runtest-sentinel 
+    - name: cluster tests
+      run: ./runtest-cluster
+    - name: unittest
+      run: ./src/redis-server test all --accurate
