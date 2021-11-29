@@ -39,8 +39,6 @@ jobs:
         run: ./runtest-sentinel
       - name: cluster tests
         run: ./runtest-cluster
-      - name: unittest
-        run: ./src/redis-server test all
 
   build-debian-old:
     runs-on: ubuntu-latest
