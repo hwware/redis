@@ -175,6 +175,8 @@ struct redisServer server; /* Server global state */
  *
  * sentinel-only: This command is present only when in sentinel mode.
  *
+ * no-mandatory-keys: This key arguments for this command are optional.
+ *
  * The following additional flags are only used in order to put commands
  * in a specific ACL category. Commands can have multiple ACL categories.
  * See redis.conf for the exact meaning of each.
@@ -517,20 +519,6 @@ struct redisCommand clientSubcommands[] = {
 
     {"help",clientCommand,2,
      "ok-loading ok-stale @connection"},
-
-    {NULL},
-};
-
-struct redisCommand stralgoSubcommands[] = {
-    {"lcs",stralgoCommand,-5,
-     "read-only @string",
-      {{"read incomplete", /* We can't use "keyword" here because we may give false information. */
-        KSPEC_BS_UNKNOWN,{{0}},
-        KSPEC_FK_UNKNOWN,{{0}}}},
-     lcsGetKeys},
-
-    {"help",stralgoCommand,2,
-     "ok-loading ok-stale @string"},
 
     {NULL},
 };
@@ -1528,11 +1516,12 @@ struct redisCommand redisCommandTable[] = {
     {"auth",authCommand,-2,
      "no-auth no-script ok-loading ok-stale fast sentinel @connection"},
 
-    /* We don't allow PING during loading since in Redis PING is used as
-     * failure detection, and a loading server is considered to be
-     * not available. */
+    /* PING is used for Redis failure detection and availability check.
+     * So we return LOADING in case there's a synchronous replication in progress,
+     * MASTERDOWN when replica-serve-stale-data=no and link with MASTER is down,
+     * BUSY when blocked by a script, etc. */
     {"ping",pingCommand,-1,
-     "ok-stale fast sentinel @connection"},
+     "fast sentinel @connection"},
 
     {"sentinel",NULL,-2,
      "admin only-sentinel",
@@ -1751,28 +1740,28 @@ struct redisCommand redisCommandTable[] = {
      * as opposed to after.
       */
     {"eval",evalCommand,-3,
-     "no-script no-monitor may-replicate @scripting",
+     "no-script no-monitor may-replicate no-mandatory-keys @scripting",
      {{"read write", /* We pass both read and write because these flag are worst-case-scenario */
        KSPEC_BS_INDEX,.bs.index={2},
        KSPEC_FK_KEYNUM,.fk.keynum={0,1,1}}},
      evalGetKeys},
 
     {"eval_ro",evalRoCommand,-3,
-     "no-script no-monitor @scripting",
+     "no-script no-monitor no-mandatory-keys @scripting",
      {{"read",
        KSPEC_BS_INDEX,.bs.index={2},
        KSPEC_FK_KEYNUM,.fk.keynum={0,1,1}}},
      evalGetKeys},
 
     {"evalsha",evalShaCommand,-3,
-     "no-script no-monitor may-replicate @scripting",
+     "no-script no-monitor may-replicate no-mandatory-keys @scripting",
      {{"read write", /* We pass both read and write because these flag are worst-case-scenario */
        KSPEC_BS_INDEX,.bs.index={2},
        KSPEC_FK_KEYNUM,.fk.keynum={0,1,1}}},
      evalGetKeys},
 
     {"evalsha_ro",evalShaRoCommand,-3,
-     "no-script no-monitor @scripting",
+     "no-script no-monitor no-mandatory-keys @scripting",
      {{"read",
        KSPEC_BS_INDEX,.bs.index={2},
        KSPEC_FK_KEYNUM,.fk.keynum={0,1,1}}},
@@ -2036,9 +2025,12 @@ struct redisCommand redisCommandTable[] = {
      "sentinel",
      .subcommands=aclSubcommands},
 
-    {"stralgo",NULL,-2,
-     "",
-     .subcommands=stralgoSubcommands},
+    {"lcs",lcsCommand,-3,
+     "read-only @string",
+      {{"read",
+        KSPEC_BS_INDEX,.bs.index={1},
+        KSPEC_FK_RANGE,.fk.range={1,1,0}}},
+     lcsGetKeys},
 
     {"reset",resetCommand,1,
      "no-script ok-stale ok-loading fast @connection"},
@@ -3678,6 +3670,7 @@ void initServerConfig(void) {
     server.skip_checksum_validation = 0;
     server.saveparams = NULL;
     server.loading = 0;
+    server.async_loading = 0;
     server.loading_rdb_used_mem = 0;
     server.aof_state = AOF_OFF;
     server.aof_rewrite_base_size = 0;
@@ -4250,6 +4243,7 @@ void initServer(void) {
         server.db[j].id = j;
         server.db[j].avg_ttl = 0;
         server.db[j].defrag_later = listCreate();
+        server.db[j].slots_to_keys = NULL; /* Set by clusterInit later on if necessary. */
         listSetFreeMethod(server.db[j].defrag_later,(void (*)(void*))sdsfree);
     }
     evictionPoolAlloc(); /* Initialize the LRU keys pool. */
@@ -4358,6 +4352,8 @@ void initServer(void) {
     
     /* Initialize ACL default password if it exists */
     ACLUpdateDefaultUserPassword(server.requirepass);
+
+    applyWatchdogPeriod();
 }
 
 /* Some steps in server initialization need to be done last (after modules
@@ -4510,6 +4506,8 @@ void parseCommandFlags(struct redisCommand *c, char *strflags) {
         } else if (!strcasecmp(flag,"only-sentinel")) {
             c->flags |= CMD_SENTINEL; /* Obviously it's s sentinel command */
             c->flags |= CMD_ONLY_SENTINEL;
+        } else if (!strcasecmp(flag,"no-mandatory-keys")) {
+            c->flags |= CMD_NO_MANDATORY_KEYS;
         } else {
             /* Parse ACL categories here if the flag name starts with @. */
             uint64_t catflag;
@@ -4889,7 +4887,7 @@ void slowlogPushCurrentCommand(client *c, struct redisCommand *cmd, ustime_t dur
 void call(client *c, int flags) {
     long long dirty;
     monotime call_timer;
-    int client_old_flags = c->flags;
+    uint64_t client_old_flags = c->flags;
     struct redisCommand *real_cmd = c->cmd;
     static long long prev_err_count;
 
@@ -5415,8 +5413,8 @@ int processCommand(client *c) {
         return C_OK;
     }
 
-    /* Only allow commands with flag "t", such as INFO, SLAVEOF and so on,
-     * when slave-serve-stale-data is no and we are a slave with a broken
+    /* Only allow commands with flag "t", such as INFO, REPLICAOF and so on,
+     * when replica-serve-stale-data is no and we are a replica with a broken
      * link with master. */
     if (server.masterhost && server.repl_state != REPL_STATE_CONNECTED &&
         server.repl_serve_stale_data == 0 &&
@@ -5428,7 +5426,7 @@ int processCommand(client *c) {
 
     /* Loading DB? Return an error if the command has not the
      * CMD_LOADING flag. */
-    if (server.loading && is_denyloading_command) {
+    if (server.loading && !server.async_loading && is_denyloading_command) {
         rejectCommand(c, shared.loadingerr);
         return C_OK;
     }
@@ -5906,7 +5904,11 @@ void getKeysSubcommand(client *c) {
     }
 
     if (!getKeysFromCommand(cmd,c->argv+2,c->argc-2,&result)) {
-        addReplyError(c,"Invalid arguments specified for command");
+        if (cmd->flags & CMD_NO_MANDATORY_KEYS) {
+            addReplyArrayLen(c,0);
+        } else {
+            addReplyError(c,"Invalid arguments specified for command");
+        }
     } else {
         addReplyArrayLen(c,result.numkeys);
         for (j = 0; j < result.numkeys; j++) addReplyBulk(c,c->argv[result.keys[j]+2]);
@@ -6152,22 +6154,22 @@ sds genRedisInfoStringCommandStats(sds info, dict *commands) {
 /* Create the string returned by the INFO command. This is decoupled
  * by the INFO command itself as we need to report the same information
  * on memory corruption problems. */
-sds genRedisInfoString(const char *section) {
+sds genRedisInfoString(dict *section_dict, int has_all_sections, int has_everything) {
     sds info = sdsempty();
     time_t uptime = server.unixtime-server.stat_starttime;
     int j;
-    int allsections = 0, defsections = 0, everything = 0, modules = 0;
+    
+    int allsections = has_all_sections;
+    int everything = has_everything; 
+    int modules = 0;
     int sections = 0;
+    sds section;
 
-    if (section == NULL) section = "default";
-    allsections = strcasecmp(section,"all") == 0;
-    defsections = strcasecmp(section,"default") == 0;
-    everything = strcasecmp(section,"everything") == 0;
-    modules = strcasecmp(section,"modules") == 0;
     if (everything) allsections = 1;
 
     /* Server */
-    if (allsections || defsections || !strcasecmp(section,"server")) {
+    section = sdsnew("server");
+    if (allsections || (dictFind(section_dict,section) != NULL)) {
         static int call_uname = 1;
         static struct utsname name;
         char *mode;
@@ -6248,9 +6250,11 @@ sds genRedisInfoString(const char *section) {
             server.configfile ? server.configfile : "",
             server.io_threads_active);
     }
+    sdsfree(section);
 
     /* Clients */
-    if (allsections || defsections || !strcasecmp(section,"clients")) {
+    section = sdsnew("clients");
+    if (allsections || (dictFind(section_dict,section) != NULL)) {
         size_t maxin, maxout;
         getExpansiveClientsInfo(&maxin,&maxout);
         if (sections++) info = sdscat(info,"\r\n");
@@ -6272,9 +6276,11 @@ sds genRedisInfoString(const char *section) {
             server.tracking_clients,
             (unsigned long long) raxSize(server.clients_timeout_table));
     }
+    sdsfree(section);
 
     /* Memory */
-    if (allsections || defsections || !strcasecmp(section,"memory")) {
+    section = sdsnew("memory");
+    if (allsections || (dictFind(section_dict,section) != NULL)) {
         char hmem[64];
         char peak_hmem[64];
         char total_system_hmem[64];
@@ -6396,9 +6402,11 @@ sds genRedisInfoString(const char *section) {
         );
         freeMemoryOverheadData(mh);
     }
+    sdsfree(section);
 
     /* Persistence */
-    if (allsections || defsections || !strcasecmp(section,"persistence")) {
+    section = sdsnew("persistence");
+    if (allsections || (dictFind(section_dict,section) != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         double fork_perc = 0;
         if (server.stat_module_progress) {
@@ -6412,6 +6420,7 @@ sds genRedisInfoString(const char *section) {
         info = sdscatprintf(info,
             "# Persistence\r\n"
             "loading:%d\r\n"
+            "async_loading:%d\r\n"
             "current_cow_peak:%zu\r\n"
             "current_cow_size:%zu\r\n"
             "current_cow_size_age:%lu\r\n"
@@ -6437,7 +6446,8 @@ sds genRedisInfoString(const char *section) {
             "aof_last_cow_size:%zu\r\n"
             "module_fork_in_progress:%d\r\n"
             "module_fork_last_cow_size:%zu\r\n",
-            (int)server.loading,
+            (int)(server.loading && !server.async_loading),
+            (int)server.async_loading,
             server.stat_current_cow_peak,
             server.stat_current_cow_bytes,
             server.stat_current_cow_updated ? (unsigned long) elapsedMs(server.stat_current_cow_updated) / 1000 : 0,
@@ -6525,9 +6535,11 @@ sds genRedisInfoString(const char *section) {
             );
         }
     }
+    sdsfree(section);
 
     /* Stats */
-    if (allsections || defsections || !strcasecmp(section,"stats")) {
+    section = sdsnew("stats");
+    if (allsections || (dictFind(section_dict,section) != NULL)) {
         long long stat_total_reads_processed, stat_total_writes_processed;
         long long stat_net_input_bytes, stat_net_output_bytes;
         long long current_eviction_exceeded_time = server.stat_last_eviction_exceeded_time ?
@@ -6629,9 +6641,11 @@ sds genRedisInfoString(const char *section) {
             server.stat_io_reads_processed,
             server.stat_io_writes_processed);
     }
+    sdsfree(section);
 
     /* Replication */
-    if (allsections || defsections || !strcasecmp(section,"replication")) {
+    section = sdsnew("replication");
+    if (allsections || (dictFind(section_dict,section) != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,
             "# Replication\r\n"
@@ -6777,9 +6791,11 @@ sds genRedisInfoString(const char *section) {
             server.repl_backlog ? server.repl_backlog->offset : 0,
             server.repl_backlog ? server.repl_backlog->histlen : 0);
     }
+    sdsfree(section);
 
     /* CPU */
-    if (allsections || defsections || !strcasecmp(section,"cpu")) {
+    section = sdsnew("cpu");
+    if (allsections || (dictFind(section_dict,section) != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
 
         struct rusage self_ru, c_ru;
@@ -6805,22 +6821,30 @@ sds genRedisInfoString(const char *section) {
             (long)m_ru.ru_utime.tv_sec, (long)m_ru.ru_utime.tv_usec);
 #endif  /* RUSAGE_THREAD */
     }
+    sdsfree(section);
 
     /* Modules */
-    if (allsections || defsections || !strcasecmp(section,"modules")) {
+    section = sdsnew("modules");
+    if (allsections || (dictFind(section_dict,section) != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,"# Modules\r\n");
         info = genModulesInfoString(info);
+        modules = 1;
     }
+    sdsfree(section);
 
     /* Command statistics */
-    if (allsections || !strcasecmp(section,"commandstats")) {
+    section = sdsnew("commandstats");
+    if (allsections || (dictFind(section_dict,section) != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info, "# Commandstats\r\n");
         info = genRedisInfoStringCommandStats(info, server.commands);
     }
+    sdsfree(section);
+
     /* Error statistics */
-    if (allsections || defsections || !strcasecmp(section,"errorstats")) {
+    section = sdsnew("errorstats");
+    if (allsections || (dictFind(section_dict,section) != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscat(info, "# Errorstats\r\n");
         raxIterator ri;
@@ -6837,18 +6861,22 @@ sds genRedisInfoString(const char *section) {
         }
         raxStop(&ri);
     }
+    sdsfree(section);
 
     /* Cluster */
-    if (allsections || defsections || !strcasecmp(section,"cluster")) {
+    section = sdsnew("cluster");
+    if (allsections || (dictFind(section_dict,section) != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,
         "# Cluster\r\n"
         "cluster_enabled:%d\r\n",
         server.cluster_enabled);
     }
+    sdsfree(section);
 
     /* Key space */
-    if (allsections || defsections || !strcasecmp(section,"keyspace")) {
+    section = sdsnew("keyspace");
+    if (allsections || (dictFind(section_dict,section) != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info, "# Keyspace\r\n");
         for (j = 0; j < server.dbnum; j++) {
@@ -6863,12 +6891,13 @@ sds genRedisInfoString(const char *section) {
             }
         }
     }
+    sdsfree(section);
 
     /* Get info from modules.
      * if user asked for "everything" or "modules", or a specific section
      * that's not found yet. */
     if (everything || modules ||
-        (!allsections && !defsections && sections==0)) {
+        (!allsections && sections==0)) {
         info = modulesCollectInfo(info,
                                   everything || modules ? NULL: section,
                                   0, /* not a crash report */
@@ -6878,6 +6907,7 @@ sds genRedisInfoString(const char *section) {
 }
 
 void infoCommand(client *c) {
+    
     if (server.sentinel_mode) {
         sentinelInfoCommand(c);
         return;
@@ -6885,92 +6915,42 @@ void infoCommand(client *c) {
 
     char defSections[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
     dict * final = dictCreate(&setDictType); /* Set to add the subsections to print*/
-    dict * defaultSet = dictCreate(&setDictType); /* Set Containing all subsections of default */
-    dict * allSet = dictCreate(&setDictType); /* Set Containing all subsections of all/everything */
-
-    for (int i = 0; i < 11; i++) {
-        dictAdd(defaultSet, sdsnew(defSections[i]), NULL);
-        dictAdd(allSet, sdsnew(defSections[i]), NULL);
-    }
-    dictAdd(allSet, sdsnew("commandstats"), NULL);
+    int all_sections = 0;
+    int has_everything = 0;
 
     /* When info is called with no other arguments */
     if (c->argc == 1) {
-        sds info = genRedisInfoString("default");
+        for (int i = 0; i < 11; i++){
+            dictAdd(final, sdsnew(defSections[i]), NULL);
+        }
+        sds info = genRedisInfoString(final, has_all_sections, has_everything);
         addReplyVerbatim(c,info,sdslen(info),"txt");
         sdsfree(info);
+        dictRelease(final);
         return;
-    }
-
-    int has_all_sections = 0;
-    int has_def_sections = 0;
-
-    /* Checking for default all and eveything */
-    for (int i = 1; i < c->argc; i++) {
-        if (!strcasecmp(c->argv[i]->ptr,"default")) {
-            sds subcommandsds = sdsnew(c->argv[i]->ptr);
-            has_def_sections = 1;
-            if (dictFind(final,subcommandsds) == NULL ) /* Skip if subsection already present */
-                dictAdd(final, subcommandsds, NULL);
-            else
-                sdsfree(subcommandsds);
-        }
-        else if (!strcasecmp(c->argv[i]->ptr,"all") || !strcasecmp(c->argv[i]->ptr,"everything")) {
-            has_all_sections = 1;
-            sds subcommandsds = sdsnew(c->argv[i]->ptr);
-            if (dictFind(final,subcommandsds) == NULL )
-                dictAdd(final, subcommandsds, NULL);
-            else
-                sdsfree(subcommandsds);
-        }
     }
 
     /* Populating the set with other subsections */
     for (int i = 1; i < c->argc; i++) {
-        sds subcommandsds = sdsnew(c->argv[i]->ptr);
-        if (dictFind(final,subcommandsds) == NULL ) {
-            /* If all or everything is present and section is not in the allSet */
-            if (has_all_sections && (dictFind(allSet,subcommandsds) == NULL))
-                dictAdd(final,subcommandsds,NULL);
-            /* If default is present and section is not in the defSet */
-            else if (has_def_sections && (dictFind(defaultSet,subcommandsds) == NULL)) {
-                dictAdd(final,subcommandsds,NULL);
+        if (!strcasecmp(c->argv[i]->ptr,"all")) {
+            has_all_sections = 1;
+        } else if (!strcasecmp(c->argv[i]->ptr,"everything")){
+            has_everything = 1;
+        } else if (!strcasecmp(c->argv[i]->ptr,"default")){
+            for (int i = 0; i < 11; i++){
+                dictAdd(final, sdsnew(defSections[i]), NULL);
             }
-            /* If default, all and everything not present in input */
-            else if ((has_def_sections || has_all_sections) == 0) {
-                dictAdd(final,subcommandsds,NULL);
-            }
-            else {
-                sdsfree(subcommandsds);
-            }
-        }
-        else {
-            sdsfree(subcommandsds);
+        } else {
+            sds sectionsds = sdsnew(c->argv[i]->ptr);
+            sdstolower(sectionsds);
+            dictAdd(final,sectionsds,NULL);
         }
     }
 
-    sds info = sdsempty();
-    dictEntry *de;
-    dictIterator *di = dictGetSafeIterator(final);
-    int lastValid = 0; 
-    while((de = dictNext(di)) != NULL) { /* Adding info of subsections to info */
-        char * subcommand = dictGetKey(de);
-
-        if (lastValid) {
-            info = sdscat(info,"\r\n");
-        }
-        sds sectionInfo = genRedisInfoString(subcommand);
-        info = sdscatlen(info,sectionInfo,sdslen(sectionInfo));
-        lastValid = sdslen(sectionInfo) > 0 ? 1 : 0;
-        sdsfree(sectionInfo); 
-    }
-    dictReleaseIterator(di);
-
+    sds info = genRedisInfoString(final, has_all_sections, has_everything);
     addReplyVerbatim(c,info,sdslen(info),"txt");
     sdsfree(info);
     dictRelease(final);
-    dictRelease(defaultSet);
-    dictRelease(allSet);
     return;
 }
 
@@ -7873,7 +7853,15 @@ int iAmMaster(void) {
 }
 
 #ifdef REDIS_TEST
-typedef int redisTestProc(int argc, char **argv, int accurate);
+#include "testhelp.h"
+
+int __failed_tests = 0;
+int __test_num = 0;
+
+/* The flags are the following:
+* --accurate:     Runs tests with more iterations.
+* --large-memory: Enables tests that consume more than 100mb. */
+typedef int redisTestProc(int argc, char **argv, int flags);
 struct redisTest {
     char *name;
     redisTestProc *proc;
@@ -7910,17 +7898,17 @@ int main(int argc, char **argv) {
 
 #ifdef REDIS_TEST
     if (argc >= 3 && !strcasecmp(argv[1], "test")) {
-        int accurate = 0;
+        int flags = 0;
         for (j = 3; j < argc; j++) {
-            if (!strcasecmp(argv[j], "--accurate")) {
-                accurate = 1;
-            }
+            char *arg = argv[j];
+            if (!strcasecmp(arg, "--accurate")) flags |= REDIS_TEST_ACCURATE;
+            else if (!strcasecmp(arg, "--large-memory")) flags |= REDIS_TEST_LARGE_MEMORY;
         }
 
         if (!strcasecmp(argv[2], "all")) {
             int numtests = sizeof(redisTests)/sizeof(struct redisTest);
             for (j = 0; j < numtests; j++) {
-                redisTests[j].failed = (redisTests[j].proc(argc,argv,accurate) != 0);
+                redisTests[j].failed = (redisTests[j].proc(argc,argv,flags) != 0);
             }
 
             /* Report tests result */
@@ -7941,7 +7929,7 @@ int main(int argc, char **argv) {
         } else {
             redisTestProc *proc = getTestProcByName(argv[2]);
             if (!proc) return -1; /* test not found */
-            return proc(argc,argv,accurate);
+            return proc(argc,argv,flags);
         }
 
         return 0;
