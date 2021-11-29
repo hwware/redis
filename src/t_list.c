@@ -112,7 +112,7 @@ void listTypeSetIteratorDirection(listTypeIterator *li, unsigned char direction)
 
 /* Clean up the iterator. */
 void listTypeReleaseIterator(listTypeIterator *li) {
-    zfree(li->iter);
+    quicklistReleaseIterator(li->iter);
     zfree(li);
 }
 
@@ -154,11 +154,9 @@ void listTypeInsert(listTypeEntry *entry, robj *value, int where) {
         sds str = value->ptr;
         size_t len = sdslen(str);
         if (where == LIST_TAIL) {
-            quicklistInsertAfter((quicklist *)entry->entry.quicklist,
-                                 &entry->entry, str, len);
+            quicklistInsertAfter(entry->li->iter, &entry->entry, str, len);
         } else if (where == LIST_HEAD) {
-            quicklistInsertBefore((quicklist *)entry->entry.quicklist,
-                                  &entry->entry, str, len);
+            quicklistInsertBefore(entry->li->iter, &entry->entry, str, len);
         }
         decrRefCount(value);
     } else {
@@ -172,8 +170,7 @@ void listTypeReplace(listTypeEntry *entry, robj *value) {
         value = getDecodedObject(value);
         sds str = value->ptr;
         size_t len = sdslen(str);
-        quicklistReplaceEntry((quicklist *)entry->entry.quicklist,
-                              &entry->entry, str, len);
+        quicklistReplaceEntry(entry->li->iter, &entry->entry, str, len);
         decrRefCount(value);
     } else {
         serverPanic("Unknown list encoding");
@@ -196,21 +193,6 @@ void listTypeDelete(listTypeIterator *iter, listTypeEntry *entry) {
         quicklistDelEntry(iter->iter, &entry->entry);
     } else {
         serverPanic("Unknown list encoding");
-    }
-}
-
-/* Create a quicklist from a single ziplist */
-void listTypeConvert(robj *subject, int enc) {
-    serverAssertWithInfo(NULL,subject,subject->type==OBJ_LIST);
-    serverAssertWithInfo(NULL,subject,subject->encoding==OBJ_ENCODING_ZIPLIST);
-
-    if (enc == OBJ_ENCODING_QUICKLIST) {
-        size_t zlen = server.list_max_ziplist_size;
-        int depth = server.list_compress_depth;
-        subject->ptr = quicklistCreateFromZiplist(zlen, depth, subject->ptr);
-        subject->encoding = enc;
-    } else {
-        serverPanic("Unsupported list conversion");
     }
 }
 
@@ -263,7 +245,7 @@ void pushGenericCommand(client *c, int where, int xx) {
         }
 
         lobj = createQuicklistObject();
-        quicklistSetOptions(lobj->ptr, server.list_max_ziplist_size,
+        quicklistSetOptions(lobj->ptr, server.list_max_listpack_size,
                             server.list_compress_depth);
         dbAdd(c->db,c->argv[1],lobj);
     }
@@ -363,7 +345,8 @@ void lindexCommand(client *c) {
 
     if (o->encoding == OBJ_ENCODING_QUICKLIST) {
         quicklistEntry entry;
-        if (quicklistIndex(o->ptr, index, &entry)) {
+        quicklistIter *iter = quicklistGetIteratorEntryAtIdx(o->ptr, index, &entry);
+        if (iter) {
             if (entry.value) {
                 addReplyBulkCBuffer(c, entry.value, entry.sz);
             } else {
@@ -372,6 +355,7 @@ void lindexCommand(client *c) {
         } else {
             addReplyNull(c);
         }
+        quicklistReleaseIterator(iter);
     } else {
         serverPanic("Unknown list encoding");
     }
@@ -823,7 +807,7 @@ void lmoveHandlePush(client *c, robj *dstkey, robj *dstobj, robj *value,
     /* Create the list if the key does not exist */
     if (!dstobj) {
         dstobj = createQuicklistObject();
-        quicklistSetOptions(dstobj->ptr, server.list_max_ziplist_size,
+        quicklistSetOptions(dstobj->ptr, server.list_max_listpack_size,
                             server.list_compress_depth);
         dbAdd(c->db,dstkey,dstobj);
     }

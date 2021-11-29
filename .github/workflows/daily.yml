@@ -84,7 +84,7 @@ jobs:
         repository: ${{ env.GITHUB_REPOSITORY }}
         ref: ${{ env.GITHUB_HEAD_REF }}
     - name: make
-      run: make MALLOC=libc
+      run: make MALLOC=libc REDIS_CFLAGS='-Werror'
     - name: testprep
       run: sudo apt-get install tcl8.6 tclx
     - name: test
@@ -117,7 +117,7 @@ jobs:
         repository: ${{ env.GITHUB_REPOSITORY }}
         ref: ${{ env.GITHUB_HEAD_REF }}
     - name: make
-      run: make MALLOC=libc CFLAGS=-DNO_MALLOC_USABLE_SIZE
+      run: make MALLOC=libc CFLAGS=-DNO_MALLOC_USABLE_SIZE REDIS_CFLAGS='-Werror'
     - name: testprep
       run: sudo apt-get install tcl8.6 tclx
     - name: test
@@ -190,7 +190,7 @@ jobs:
         ref: ${{ env.GITHUB_HEAD_REF }}
     - name: make
       run: |
-        make BUILD_TLS=yes
+        make BUILD_TLS=yes REDIS_CFLAGS='-Werror'
     - name: testprep
       run: |
         sudo apt-get install tcl8.6 tclx tcl-tls
@@ -233,7 +233,7 @@ jobs:
         ref: ${{ env.GITHUB_HEAD_REF }}
     - name: make
       run: |
-        make
+        make REDIS_CFLAGS='-Werror'
     - name: testprep
       run: sudo apt-get install tcl8.6 tclx
     - name: test
@@ -292,7 +292,7 @@ jobs:
         repository: ${{ env.GITHUB_REPOSITORY }}
         ref: ${{ env.GITHUB_HEAD_REF }}
     - name: make
-      run: make valgrind CFLAGS="-DNO_MALLOC_USABLE_SIZE"
+      run: make valgrind CFLAGS="-DNO_MALLOC_USABLE_SIZE" REDIS_CFLAGS='-Werror'
     - name: testprep
       run: |
         sudo apt-get update
@@ -326,7 +326,7 @@ jobs:
           repository: ${{ env.GITHUB_REPOSITORY }}
           ref: ${{ env.GITHUB_HEAD_REF }}
       - name: make
-        run: make SANITIZER=address REDIS_CFLAGS='-DREDIS_TEST'
+        run: make SANITIZER=address REDIS_CFLAGS='-DREDIS_TEST -Werror'
       - name: testprep
         run: |
           sudo apt-get update
@@ -344,7 +344,7 @@ jobs:
         if: true && !contains(github.event.inputs.skiptests, 'cluster')
         run: ./runtest-cluster ${{github.event.inputs.cluster_test_args}}
       - name: unittest
-        run: ./src/redis-server test all --accurate
+        run: ./src/redis-server test all
 
   test-sanitizer-undefined:
     runs-on: ubuntu-latest
@@ -368,7 +368,7 @@ jobs:
           repository: ${{ env.GITHUB_REPOSITORY }}
           ref: ${{ env.GITHUB_HEAD_REF }}
       - name: make
-        run: make SANITIZER=undefined REDIS_CFLAGS='-DREDIS_TEST'
+        run: make SANITIZER=undefined REDIS_CFLAGS='-DREDIS_TEST -Werror' LUA_DEBUG=yes # we (ab)use this flow to also check Lua C API violations
       - name: testprep
         run: |
           sudo apt-get update
@@ -408,7 +408,7 @@ jobs:
     - name: make
       run: |
         yum -y install gcc make
-        make
+        make REDIS_CFLAGS='-Werror'
     - name: testprep
       run: yum -y install which tcl tclx
     - name: test
@@ -445,7 +445,7 @@ jobs:
       run: |
         yum -y install centos-release-scl epel-release
         yum -y install devtoolset-7 openssl-devel openssl
-        scl enable devtoolset-7 "make BUILD_TLS=yes"
+        scl enable devtoolset-7 "make BUILD_TLS=yes REDIS_CFLAGS='-Werror'"
     - name: testprep
       run: |
         yum -y install tcl tcltls tclx
@@ -487,7 +487,7 @@ jobs:
         repository: ${{ env.GITHUB_REPOSITORY }}
         ref: ${{ env.GITHUB_HEAD_REF }}
     - name: make
-      run: make
+      run: make REDIS_CFLAGS='-Werror'
     - name: test
       if: true && !contains(github.event.inputs.skiptests, 'redis')
       run: ./runtest --accurate --verbose --no-latency --dump-logs ${{github.event.inputs.test_args}}
