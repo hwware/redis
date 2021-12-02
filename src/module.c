@@ -8119,11 +8119,11 @@ sds modulesCollectInfo(sds info, const char *section, int for_crash_report, int 
  * RedisModule_ServerInfoGetField and alike to get the individual fields.
  * When done, it needs to be freed with RedisModule_FreeServerInfo or with the
  * automatic memory management mechanism if enabled. */
-RedisModuleServerInfoData *RM_GetServerInfo(RedisModuleCtx *ctx, dict *sections) {
+RedisModuleServerInfoData *RM_GetServerInfo(RedisModuleCtx *ctx, char *sections) {
     struct RedisModuleServerInfoData *d = zmalloc(sizeof(*d));
     d->rax = raxNew();
     if (ctx != NULL) autoMemoryAdd(ctx,REDISMODULE_AM_INFO,d);
-    sds info = genRedisInfoString(sections);
+    sds info = genRedisInfoString(NULL, "module");
     int totlines, i;
     sds *lines = sdssplitlen(info, sdslen(info), "\r\n", 2, &totlines);
     for(i=0; i<totlines; i++) {
