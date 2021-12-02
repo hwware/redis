@@ -4061,49 +4061,32 @@ numargserr:
 
 /* SENTINEL INFO [section] */
 void sentinelInfoCommand(client *c) {
-    
-    char defSections[11][15] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
-    dict * sections_dict = dictCreate(&setDictType); /* Set to add the subsections to print*/
-
+    dict * sections_dict = dictCreate(&BenchmarkDictType); /* Set to add the subsections to print*/
+    dictAdd(sections_dict, "dictionary_comes_from_sentinel", NULL);
     if (c->argc > 2) {
         addReplyErrorObject(c,shared.syntaxerr);
         return;
     }
 
-    int defsections = 0, allsections = 0, everything = 0;
-    char *section = c->argc == 2 ? c->argv[1]->ptr : NULL;
-    if (section) {
-        allsections = !strcasecmp(section,"all");
-        if (!strcasecmp(section,"default")){
-            for (int i = 0; i < 11; i++){
-                dictAdd(sections_dict, sdsnew(defSections[i]), NULL);
-            }
-            defsections = 1;
-        }
-        everything = !strcasecmp(section,"everything");
-    } else {
-        for (int i = 0; i < 11; i++) {
-                dictAdd(sections_dict, sdsnew(defSections[i]), NULL);
-        }
-        defsections = 1;
+    if (c->argc == 1) {
+        dictAdd(sections_dict, "default", NULL);
     }
+    else {
+        sds section = sdsnew(c->argv[1]->ptr);
+        sdstolower(section);
+        dictAdd(sections_dict,section,NULL);
+    }
+    
 
-    int sections = 0;
     sds info = sdsempty();
-
-    dictAdd(sections_dict, sdsnew("server"), NULL);
-    dictAdd(sections_dict, sdsnew("clients"), NULL);
-    dictAdd(sections_dict, sdsnew("cpu"), NULL);
-    dictAdd(sections_dict, sdsnew("stats"), NULL);
-
-    info = genRedisInfoString(sections_dict, allsections, everything);
-
-    if (defsections || allsections || !strcasecmp(section,"sentinel")) {
+    info = genRedisInfoString(sections_dict);
+    if (c->argc == 1 || !strcasecmp(c->argv[1]->ptr,"all") || !strcasecmp(c->argv[1]->ptr,"default") || !strcasecmp(c->argv[1]->ptr,"sentinel")) {
         dictIterator *di;
         dictEntry *de;
         int master_id = 0;
 
-        if (sections++) info = sdscat(info,"\r\n");
+        if (sdslen(info) != 0)
+            info = sdscat(info,"\r\n");
         info = sdscatprintf(info,
             "# Sentinel\r\n"
             "sentinel_masters:%lu\r\n"
