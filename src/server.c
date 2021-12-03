@@ -2471,7 +2471,7 @@ dictType BenchmarkDictType = {
     NULL,
     NULL,
     compareCallback,
-    NULL,
+    dictSdsDestructor,
     NULL,
     NULL
 };
@@ -6179,7 +6179,7 @@ sds genRedisInfoStringCommandStats(sds info, dict *commands) {
 /* Create the string returned by the INFO command. This is decoupled
  * by the INFO command itself as we need to report the same information
  * on memory corruption problems. */
-sds genRedisInfoString(client * c, char * source) {
+sds genRedisInfoString(client * c, const char * source) {
     int default_sections = 0;
     int all_sections = 0;
     int everything = 0;
@@ -6190,24 +6190,32 @@ sds genRedisInfoString(client * c, char * source) {
 
     dict * section_dict = dictCreate(&BenchmarkDictType); /* Set to add the subsections to print*/
     
-    if (c == NULL || c->argc == 1) {
-        default_sections = 1;
-    }
-    else {
-        for (int i = 1; i < c->argc; i++) {
-            if (!strcasecmp(c->argv[i]->ptr,"default")) {
-                default_sections = 1;
-            } else if (!strcasecmp(c->argv[i]->ptr,"all")) {
-                all_sections = 1;
-            } else if (!strcasecmp(c->argv[i]->ptr,"everything")) {
-                everything = 1;
-            } else {
-                sds section = sdsnew(c->argv[i]->ptr);
-                sdstolower(section);
-                dictAdd(section_dict,section,NULL);
+    if (!!strcasecmp(source,"sentinel") || !strcasecmp(source,"server")) {
+        if (c == NULL || c->argc == 1) {
+            default_sections = 1;
+        }
+        else {
+            for (int i = 1; i < c->argc; i++) {
+                if (!strcasecmp(c->argv[i]->ptr,"default")) {
+                    default_sections = 1;
+                } else if (!strcasecmp(c->argv[i]->ptr,"all")) {
+                    all_sections = 1;
+                } else if (!strcasecmp(c->argv[i]->ptr,"everything")) {
+                    everything = 1;
+                } else {
+                    sds section = sdsnew(c->argv[i]->ptr);
+                    sdstolower(section);
+                    dictAdd(section_dict,section,NULL);
+                }
             }
         }
     }
+    else {
+        sds section = sdsnew(source); /* Got this from module */
+        sdstolower(section);
+        dictAdd(section_dict,section,NULL);
+    }
+    
 
     sds info = sdsempty();
     time_t uptime = server.unixtime-server.stat_starttime;
