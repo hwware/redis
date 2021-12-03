@@ -2232,6 +2232,20 @@ uint64_t dictSdsCaseHash(const void *key) {
     return dictGenCaseHashFunction((unsigned char*)key, sdslen((char*)key));
 }
 
+uint64_t hashCallback(const void *key) {
+    return dictGenHashFunction((unsigned char*)key, strlen((char*)key));
+}
+
+int compareCallback(dict *d, const void *key1, const void *key2) {
+    int l1,l2;
+    UNUSED(d);
+
+    l1 = strlen((char*)key1);
+    l2 = strlen((char*)key2);
+    if (l1 != l2) return 0;
+    return memcmp(key1, key2, l1) == 0;
+}
+
 int dictEncObjKeyCompare(dict *d, const void *key1, const void *key2)
 {
     robj *o1 = (robj*) key1, *o2 = (robj*) key2;
@@ -2452,28 +2466,14 @@ dictType replScriptCacheDictType = {
     NULL                        /* allow to expand */
 };
 
-uint64_t hashCallback(const void *key) {
-    return dictGenHashFunction((unsigned char*)key, strlen((char*)key));
-}
-
-int compareCallback(dict *d, const void *key1, const void *key2) {
-    int l1,l2;
-    UNUSED(d);
-
-    l1 = strlen((char*)key1);
-    l2 = strlen((char*)key2);
-    if (l1 != l2) return 0;
-    return memcmp(key1, key2, l1) == 0;
-}
-
-dictType BenchmarkDictType = {
-    hashCallback,
-    NULL,
-    NULL,
-    compareCallback,
-    dictSdsDestructor,
-    NULL,
-    NULL
+dictType stringSetDictType = {
+    hashCallback,               /* hash function */
+    NULL,                       /* key dup */
+    NULL,                       /* val dup */
+    compareCallback,            /* key compare */
+    dictSdsDestructor,          /* key destructor */
+    NULL,                       /* val destructor */
+    NULL                        /* allow to expand */
 };
 
 int htNeedsResize(dict *dict) {
@@ -6188,7 +6188,7 @@ sds genRedisInfoString(client * c, const char * source) {
     if (!strcasecmp(source,"sentinel"))
         is_sentinel = 1;
 
-    dict * section_dict = dictCreate(&BenchmarkDictType); /* Set to add the subsections to print*/
+    dict * section_dict = dictCreate(&stringSetDictType); /* Set to add the subsections to print*/
     
     if (!!strcasecmp(source,"sentinel") || !strcasecmp(source,"server")) {
         if (c == NULL || c->argc == 1) {
@@ -6198,9 +6198,8 @@ sds genRedisInfoString(client * c, const char * source) {
             for (int i = 1; i < c->argc; i++) {
                 if (!strcasecmp(c->argv[i]->ptr,"default")) {
                     default_sections = 1;
-                } else if (!strcasecmp(c->argv[i]->ptr,"all")) {
+                } else if (!strcasecmp(c->argv[i]->ptr,"all") || !strcasecmp(c->argv[i]->ptr,"everything")) {
                     all_sections = 1;
-                } else if (!strcasecmp(c->argv[i]->ptr,"everything")) {
                     everything = 1;
                 } else {
                     sds section = sdsnew(c->argv[i]->ptr);
@@ -6223,8 +6222,6 @@ sds genRedisInfoString(client * c, const char * source) {
     int modules = 0;
     int sections = 0;
     
-    if (everything) all_sections = 1;
-
     /* Server */
     if (default_sections || all_sections || (dictFind(section_dict,"server") != NULL)) {
         static int call_uname = 1;
