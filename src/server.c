@@ -6198,8 +6198,9 @@ sds genRedisInfoString(client * c, const char * source) {
             for (int i = 1; i < c->argc; i++) {
                 if (!strcasecmp(c->argv[i]->ptr,"default")) {
                     default_sections = 1;
-                } else if (!strcasecmp(c->argv[i]->ptr,"all") || !strcasecmp(c->argv[i]->ptr,"everything")) {
+                } else if (!strcasecmp(c->argv[i]->ptr,"all")) {
                     all_sections = 1;
+                } else if (!strcasecmp(c->argv[i]->ptr,"everything")) {
                     everything = 1;
                 } else {
                     sds section = sdsnew(c->argv[i]->ptr);
@@ -6222,6 +6223,8 @@ sds genRedisInfoString(client * c, const char * source) {
     int modules = 0;
     int sections = 0;
     
+    if (everything) all_sections = 1;
+
     /* Server */
     if (default_sections || all_sections || (dictFind(section_dict,"server") != NULL)) {
         static int call_uname = 1;
@@ -6929,7 +6932,7 @@ sds genRedisInfoString(client * c, const char * source) {
      * that's not found yet. */
 
     if (everything || modules ||
-        (!all_sections && dictFind(section_dict,"default") == NULL && sections==0)) {
+        (!all_sections && !default_sections && sections==0)) {
 
         info = modulesCollectInfo(info,
                                   everything || modules ? NULL: c->argv[1]->ptr,
