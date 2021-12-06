@@ -673,6 +673,10 @@ static void restoreBackupConfig(standardConfig **set_configs, sds *old_values, i
 
 void configSetCommand(client *c) {
     const char *errstr = NULL;
+    const char *invalid_arg_name = NULL;
+    const char *err_arg_name = NULL;
+
+
     standardConfig **set_configs; /* TODO: make this a dict for better performance */
     sds *new_values;
     sds *old_values = NULL;
@@ -709,6 +713,7 @@ void configSetCommand(client *c) {
                     if (config->flags & IMMUTABLE_CONFIG) {
                         /* Note: we don't abort the loop since we still want to handle redacting sensitive configs (above) */
                         errstr = "can't set immutable config";
+                        err_arg_name = c->argv[2+i*2]->ptr;
                         invalid_args = 1;
                     }
 
@@ -717,6 +722,7 @@ void configSetCommand(client *c) {
                         if (set_configs[j] == config) {
                             /* Note: we don't abort the loop since we still want to handle redacting sensitive configs (above) */
                             errstr = "duplicate parameter";
+                            err_arg_name = c->argv[2+i*2]->ptr;
                             invalid_args = 1;
                             break;
                         }
@@ -730,7 +736,7 @@ void configSetCommand(client *c) {
         /* Fail if we couldn't find this config */
         /* Note: we don't abort the loop since we still want to handle redacting sensitive configs (above) */
         if (!invalid_args && !set_configs[i]) {
-            errstr = "unrecognized parameter";
+            invalid_arg_name = c->argv[2+i*2]->ptr;
             invalid_args = 1;
         }
     }
@@ -741,10 +747,15 @@ void configSetCommand(client *c) {
     for (i = 0; i < config_count; i++)
         old_values[i] = set_configs[i]->interface.get(set_configs[i]->data);
 
+    serverLog(LL_WARNING, "Before for loop Current error message is. %s", errstr);
+
     /* Set all new values (don't apply yet) */
     for (i = 0; i < config_count; i++) {
         int res = performInterfaceSet(set_configs[i], new_values[i], &errstr);
+        serverLog(LL_WARNING, "Current config number is. %d", i);
+        serverLog(LL_WARNING, "Current error message is %s", errstr);
         if (!res) {
+            err_arg_name = set_configs[i]->name;
             restoreBackupConfig(set_configs, old_values, i+1, NULL);
             goto err;
         } else if (res == 1) {
@@ -765,10 +776,13 @@ void configSetCommand(client *c) {
         }
     }
 
+    serverLog(LL_WARNING, "After for loop Current error message is %s", errstr);
+
     /* Apply all configs after being set */
     for (i = 0; i < config_count && apply_fns[i] != NULL; i++) {
         if (!apply_fns[i](&errstr)) {
             serverLog(LL_WARNING, "Failed applying new %s configuration, restoring previous settings.", set_configs[i]->name);
+            //err_arg_name = set_configs[i]->name;
             restoreBackupConfig(set_configs, old_values, config_count, apply_fns);
             goto err;
         }
@@ -777,8 +791,10 @@ void configSetCommand(client *c) {
     goto end;
 
 err:
-    if (errstr) {
-        addReplyErrorFormat(c,"Config set failed - %s", errstr);
+    if (invalid_arg_name) {
+        addReplyErrorFormat(c,"Unknown option or number of arguments for CONFIG SET - '%s'", invalid_arg_name);
+    } else if (errstr) {
+        addReplyErrorFormat(c,"argument '%s' for CONFIG SET failed - %s", err_arg_name, errstr);
     } else {
         addReplyError(c,"Invalid arguments");
     }
