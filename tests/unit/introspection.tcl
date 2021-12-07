@@ -375,7 +375,6 @@ start_server {tags {"introspection"}} {
 
         # Try to listen on the used port, pass some more configs to make sure the
         # returned failure message is for the first bad config and everything is rolled back.
-        puts $some_configs
         assert_error "ERR argument 'port' for CONFIG SET failed - Unable to listen on this port*" {
             eval "r config set $some_configs"
         }
