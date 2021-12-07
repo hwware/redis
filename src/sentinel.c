@@ -4061,13 +4061,12 @@ numargserr:
 
 /* SENTINEL INFO [section] */
 void sentinelInfoCommand(client *c) {
-    if (c->argc > 2) {
-        addReplyErrorObject(c,shared.syntaxerr);
-        return;
-    }
+    int all_sections = 0;
+    int everything = 0;
+    dict * sections_dict = genSectionDict(c, "sentinel", &all_sections, &everything);
 
     sds info = sdsempty();
-    info = genRedisInfoString(c, "sentinel");
+    info = genRedisInfoString(sections_dict, all_sections, everything);
     if (c->argc == 1 || !strcasecmp(c->argv[1]->ptr,"all") || !strcasecmp(c->argv[1]->ptr,"default") || !strcasecmp(c->argv[1]->ptr,"sentinel")) {
         dictIterator *di;
         dictEntry *de;
@@ -4107,6 +4106,7 @@ void sentinelInfoCommand(client *c) {
         }
         dictReleaseIterator(di);
     }
+    dictRelease(sections_dict);
     addReplyBulkSds(c, info);
 }
 
