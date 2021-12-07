@@ -747,13 +747,10 @@ void configSetCommand(client *c) {
     for (i = 0; i < config_count; i++)
         old_values[i] = set_configs[i]->interface.get(set_configs[i]->data);
 
-    serverLog(LL_WARNING, "Before for loop Current error message is. %s", errstr);
-
     /* Set all new values (don't apply yet) */
     for (i = 0; i < config_count; i++) {
         int res = performInterfaceSet(set_configs[i], new_values[i], &errstr);
-        serverLog(LL_WARNING, "Current config number is. %d", i);
-        serverLog(LL_WARNING, "Current error message is %s", errstr);
+        
         if (!res) {
             err_arg_name = set_configs[i]->name;
             restoreBackupConfig(set_configs, old_values, i+1, NULL);
@@ -776,13 +773,17 @@ void configSetCommand(client *c) {
         }
     }
 
-    serverLog(LL_WARNING, "After for loop Current error message is %s", errstr);
+    for (i = 0; i < config_count; i++) {
+        if (apply_fns[i] == NULL) {
+            err_arg_name = set_configs[i]->name;
+            break;
+        }     
+    }
 
     /* Apply all configs after being set */
     for (i = 0; i < config_count && apply_fns[i] != NULL; i++) {
-        if (!apply_fns[i](&errstr)) {
-            serverLog(LL_WARNING, "Failed applying new %s configuration, restoring previous settings.", set_configs[i]->name);
-            //err_arg_name = set_configs[i]->name;
+        if(!apply_fns[i](&errstr)) {        
+            serverLog(LL_WARNING, "Failed applying new %s configuration, restoring previous settings.", set_configs[i]->name);            
             restoreBackupConfig(set_configs, old_values, config_count, apply_fns);
             goto err;
         }
