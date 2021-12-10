@@ -98,25 +98,25 @@ int list_edit(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
     for (size_t cmdpos = 0; cmdpos < cmdstr_len; cmdpos++) {
         switch (cmdstr[cmdpos]) {
-        case 'i': /* insert */
-            value = argv[argpos++];
-            assert(RedisModule_ListInsert(key, index, value) == REDISMODULE_OK);
-            index += reverse ? -1 : 1;
-            num_edits++;
-            break;
-        case 'd': /* delete */
-            assert(RedisModule_ListDelete(key, index) == REDISMODULE_OK);
-            num_edits++;
-            break;
-        case 'r': /* replace */
-            value = argv[argpos++];
-            assert(RedisModule_ListSet(key, index, value) == REDISMODULE_OK);
-            index += reverse ? -1 : 1;
-            num_edits++;
-            break;
-        case 'k': /* keep */
-            index += reverse ? -1 : 1;
-            break;
+            case 'i': /* insert */
+                value = argv[argpos++];
+                assert(RedisModule_ListInsert(key, index, value) == REDISMODULE_OK);
+                index += reverse ? -1 : 1;
+                num_edits++;
+                break;
+            case 'd': /* delete */
+                assert(RedisModule_ListDelete(key, index) == REDISMODULE_OK);
+                num_edits++;
+                break;
+            case 'r': /* replace */
+                value = argv[argpos++];
+                assert(RedisModule_ListSet(key, index, value) == REDISMODULE_OK);
+                index += reverse ? -1 : 1;
+                num_edits++;
+                break;
+            case 'k': /* keep */
+                index += reverse ? -1 : 1;
+                break;
         }
     }
 
@@ -128,11 +128,11 @@ int list_edit(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 /* Reply based on errno as set by the List API functions. */
 static int replyByErrno(RedisModuleCtx *ctx) {
     switch (errno) {
-    case EDOM:
-        return RedisModule_ReplyWithError(ctx, "ERR index out of bounds");
-    case ENOTSUP:
-        return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
-    default: assert(0); /* Can't happen */
+        case EDOM:
+            return RedisModule_ReplyWithError(ctx, "ERR index out of bounds");
+        case ENOTSUP:
+            return RedisModule_ReplyWithError(ctx, REDISMODULE_ERRORMSG_WRONGTYPE);
+        default: assert(0); /* Can't happen */
     }
 }
 

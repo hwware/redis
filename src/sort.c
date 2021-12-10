@@ -308,10 +308,10 @@ void sortCommandGeneric(client *c, int readonly) {
 
     /* Obtain the length of the object to sort. */
     switch(sortval->type) {
-    case OBJ_LIST: vectorlen = listTypeLength(sortval); break;
-    case OBJ_SET: vectorlen =  setTypeSize(sortval); break;
-    case OBJ_ZSET: vectorlen = dictSize(((zset*)sortval->ptr)->dict); break;
-    default: vectorlen = 0; serverPanic("Bad SORT type"); /* Avoid GCC warning */
+        case OBJ_LIST: vectorlen = listTypeLength(sortval); break;
+        case OBJ_SET: vectorlen =  setTypeSize(sortval); break;
+        case OBJ_ZSET: vectorlen = dictSize(((zset*)sortval->ptr)->dict); break;
+        default: vectorlen = 0; serverPanic("Bad SORT type"); /* Avoid GCC warning */
     }
 
     /* Perform LIMIT start,count sanity checking. */

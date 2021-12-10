@@ -571,26 +571,26 @@ int zslParseLexRangeItem(robj *item, sds *dest, int *ex) {
     char *c = item->ptr;
 
     switch(c[0]) {
-    case '+':
-        if (c[1] != '\0') return C_ERR;
-        *ex = 1;
-        *dest = shared.maxstring;
-        return C_OK;
-    case '-':
-        if (c[1] != '\0') return C_ERR;
-        *ex = 1;
-        *dest = shared.minstring;
-        return C_OK;
-    case '(':
-        *ex = 1;
-        *dest = sdsnewlen(c+1,sdslen(c)-1);
-        return C_OK;
-    case '[':
-        *ex = 0;
-        *dest = sdsnewlen(c+1,sdslen(c)-1);
-        return C_OK;
-    default:
-        return C_ERR;
+        case '+':
+            if (c[1] != '\0') return C_ERR;
+            *ex = 1;
+            *dest = shared.maxstring;
+            return C_OK;
+        case '-':
+            if (c[1] != '\0') return C_ERR;
+            *ex = 1;
+            *dest = shared.minstring;
+            return C_OK;
+        case '(':
+            *ex = 1;
+            *dest = sdsnewlen(c+1,sdslen(c)-1);
+            return C_OK;
+        case '[':
+            *ex = 0;
+            *dest = sdsnewlen(c+1,sdslen(c)-1);
+            return C_OK;
+        default:
+            return C_ERR;
     }
 }
 
@@ -1879,16 +1879,16 @@ void zremrangeGenericCommand(client *c, zrange_type rangetype) {
     /* Step 3: Perform the range deletion operation. */
     if (zobj->encoding == OBJ_ENCODING_LISTPACK) {
         switch(rangetype) {
-        case ZRANGE_AUTO:
-        case ZRANGE_RANK:
-            zobj->ptr = zzlDeleteRangeByRank(zobj->ptr,start+1,end+1,&deleted);
-            break;
-        case ZRANGE_SCORE:
-            zobj->ptr = zzlDeleteRangeByScore(zobj->ptr,&range,&deleted);
-            break;
-        case ZRANGE_LEX:
-            zobj->ptr = zzlDeleteRangeByLex(zobj->ptr,&lexrange,&deleted);
-            break;
+            case ZRANGE_AUTO:
+            case ZRANGE_RANK:
+                zobj->ptr = zzlDeleteRangeByRank(zobj->ptr,start+1,end+1,&deleted);
+                break;
+            case ZRANGE_SCORE:
+                zobj->ptr = zzlDeleteRangeByScore(zobj->ptr,&range,&deleted);
+                break;
+            case ZRANGE_LEX:
+                zobj->ptr = zzlDeleteRangeByLex(zobj->ptr,&lexrange,&deleted);
+                break;
         }
         if (zzlLength(zobj->ptr) == 0) {
             dbDelete(c->db,key);
@@ -1897,16 +1897,16 @@ void zremrangeGenericCommand(client *c, zrange_type rangetype) {
     } else if (zobj->encoding == OBJ_ENCODING_SKIPLIST) {
         zset *zs = zobj->ptr;
         switch(rangetype) {
-        case ZRANGE_AUTO:
-        case ZRANGE_RANK:
-            deleted = zslDeleteRangeByRank(zs->zsl,start+1,end+1,zs->dict);
-            break;
-        case ZRANGE_SCORE:
-            deleted = zslDeleteRangeByScore(zs->zsl,&range,zs->dict);
-            break;
-        case ZRANGE_LEX:
-            deleted = zslDeleteRangeByLex(zs->zsl,&lexrange,zs->dict);
-            break;
+            case ZRANGE_AUTO:
+            case ZRANGE_RANK:
+                deleted = zslDeleteRangeByRank(zs->zsl,start+1,end+1,zs->dict);
+                break;
+            case ZRANGE_SCORE:
+                deleted = zslDeleteRangeByScore(zs->zsl,&range,zs->dict);
+                break;
+            case ZRANGE_LEX:
+                deleted = zslDeleteRangeByLex(zs->zsl,&lexrange,zs->dict);
+                break;
         }
         if (htNeedsResize(zs->dict)) dictResize(zs->dict);
         if (dictSize(zs->dict) == 0) {
@@ -2977,19 +2977,19 @@ static void zrangeResultHandlerInit(zrange_result_handler *handler,
     handler->client = client;
 
     switch (type) {
-    case ZRANGE_CONSUMER_TYPE_CLIENT:
-        handler->beginResultEmission = zrangeResultBeginClient;
-        handler->finalizeResultEmission = zrangeResultFinalizeClient;
-        handler->emitResultFromCBuffer = zrangeResultEmitCBufferToClient;
-        handler->emitResultFromLongLong = zrangeResultEmitLongLongToClient;
-        break;
+        case ZRANGE_CONSUMER_TYPE_CLIENT:
+            handler->beginResultEmission = zrangeResultBeginClient;
+            handler->finalizeResultEmission = zrangeResultFinalizeClient;
+            handler->emitResultFromCBuffer = zrangeResultEmitCBufferToClient;
+            handler->emitResultFromLongLong = zrangeResultEmitLongLongToClient;
+            break;
 
-    case ZRANGE_CONSUMER_TYPE_INTERNAL:
-        handler->beginResultEmission = zrangeResultBeginStore;
-        handler->finalizeResultEmission = zrangeResultFinalizeStore;
-        handler->emitResultFromCBuffer = zrangeResultEmitCBufferForStore;
-        handler->emitResultFromLongLong = zrangeResultEmitLongLongForStore;
-        break;
+        case ZRANGE_CONSUMER_TYPE_INTERNAL:
+            handler->beginResultEmission = zrangeResultBeginStore;
+            handler->finalizeResultEmission = zrangeResultFinalizeStore;
+            handler->emitResultFromCBuffer = zrangeResultEmitCBufferForStore;
+            handler->emitResultFromLongLong = zrangeResultEmitLongLongForStore;
+            break;
     }
 }
 
@@ -3612,31 +3612,29 @@ void zrangeGenericCommand(zrange_result_handler *handler, int argc_start, int st
 
     /* Step 2: Parse the range. */
     switch (rangetype) {
-    case ZRANGE_AUTO:
-    case ZRANGE_RANK:
-        /* Z[REV]RANGE, ZRANGESTORE [REV]RANGE */
-        if ((getLongFromObjectOrReply(c, c->argv[minidx], &opt_start,NULL) != C_OK) ||
-            (getLongFromObjectOrReply(c, c->argv[maxidx], &opt_end,NULL) != C_OK))
-        {
-            return;
-        }
-        break;
-
-    case ZRANGE_SCORE:
-        /* Z[REV]RANGEBYSCORE, ZRANGESTORE [REV]RANGEBYSCORE */
-        if (zslParseRange(c->argv[minidx], c->argv[maxidx], &range) != C_OK) {
-            addReplyError(c, "min or max is not a float");
-            return;
-        }
-        break;
-
-    case ZRANGE_LEX:
-        /* Z[REV]RANGEBYLEX, ZRANGESTORE [REV]RANGEBYLEX */
-        if (zslParseLexRange(c->argv[minidx], c->argv[maxidx], &lexrange) != C_OK) {
-            addReplyError(c, "min or max not valid string range item");
-            return;
-        }
-        break;
+        case ZRANGE_AUTO:
+        case ZRANGE_RANK:
+            /* Z[REV]RANGE, ZRANGESTORE [REV]RANGE */
+            if ((getLongFromObjectOrReply(c, c->argv[minidx], &opt_start,NULL) != C_OK) ||
+                (getLongFromObjectOrReply(c, c->argv[maxidx], &opt_end,NULL) != C_OK))
+            {
+                return;
+            }
+            break;
+        case ZRANGE_SCORE:
+            /* Z[REV]RANGEBYSCORE, ZRANGESTORE [REV]RANGEBYSCORE */
+            if (zslParseRange(c->argv[minidx], c->argv[maxidx], &range) != C_OK) {
+                addReplyError(c, "min or max is not a float");
+                return;
+            }
+            break;
+        case ZRANGE_LEX:
+            /* Z[REV]RANGEBYLEX, ZRANGESTORE [REV]RANGEBYLEX */
+            if (zslParseLexRange(c->argv[minidx], c->argv[maxidx], &lexrange) != C_OK) {
+                addReplyError(c, "min or max not valid string range item");
+                return;
+            }
+            break;
     }
 
     if (opt_withscores || store) {
@@ -3659,21 +3657,19 @@ void zrangeGenericCommand(zrange_result_handler *handler, int argc_start, int st
 
     /* Step 4: Pass this to the command-specific handler. */
     switch (rangetype) {
-    case ZRANGE_AUTO:
-    case ZRANGE_RANK:
-        genericZrangebyrankCommand(handler, zobj, opt_start, opt_end,
-            opt_withscores || store, direction == ZRANGE_DIRECTION_REVERSE);
-        break;
-
-    case ZRANGE_SCORE:
-        genericZrangebyscoreCommand(handler, &range, zobj, opt_offset,
-            opt_limit, direction == ZRANGE_DIRECTION_REVERSE);
-        break;
-
-    case ZRANGE_LEX:
-        genericZrangebylexCommand(handler, &lexrange, zobj, opt_withscores || store,
-            opt_offset, opt_limit, direction == ZRANGE_DIRECTION_REVERSE);
-        break;
+        case ZRANGE_AUTO:
+        case ZRANGE_RANK:
+            genericZrangebyrankCommand(handler, zobj, opt_start, opt_end,
+                opt_withscores || store, direction == ZRANGE_DIRECTION_REVERSE);
+            break;
+        case ZRANGE_SCORE:
+            genericZrangebyscoreCommand(handler, &range, zobj, opt_offset,
+                opt_limit, direction == ZRANGE_DIRECTION_REVERSE);
+            break;
+        case ZRANGE_LEX:
+            genericZrangebylexCommand(handler, &lexrange, zobj, opt_withscores || store,
+                opt_offset, opt_limit, direction == ZRANGE_DIRECTION_REVERSE);
+            break;
     }
 
     /* Instead of returning here, we'll just fall-through the clean-up. */

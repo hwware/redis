@@ -459,7 +459,7 @@ void loadServerConfigFromString(char *config) {
         /* Execute config directives */
         if (!strcasecmp(argv[0],"include") && argc == 2) {
             loadServerConfig(argv[1], 0, NULL);
-        } else if (!strcasecmp(argv[0],"list-max-ziplist-entries") && argc == 2){
+        } else if (!strcasecmp(argv[0],"list-max-ziplist-entries") && argc == 2) {
             /* DEAD OPTION */
         } else if (!strcasecmp(argv[0],"list-max-ziplist-value") && argc == 2) {
             /* DEAD OPTION */

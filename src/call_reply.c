@@ -459,7 +459,7 @@ const char *callReplyGetBigNumber(CallReply *rep, size_t *len) {
  * The returned value is not NULL terminated and its length is returned by
  * reference through len, which must not be NULL.
  */
-const char *callReplyGetVerbatim(CallReply *rep, size_t *len, const char **format){
+const char *callReplyGetVerbatim(CallReply *rep, size_t *len, const char **format) {
     callReplyParse(rep);
     if (rep->type != REDISMODULE_REPLY_VERBATIM_STRING) return NULL;
     *len = rep->len;

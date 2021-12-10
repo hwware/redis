@@ -301,7 +301,7 @@ int intsetValidateIntegrity(const unsigned char *p, size_t size, int deep) {
         record_size = INTSET_ENC_INT64;
     } else if (encoding == INTSET_ENC_INT32) {
         record_size = INTSET_ENC_INT32;
-    } else if (encoding == INTSET_ENC_INT16){
+    } else if (encoding == INTSET_ENC_INT16) {
         record_size = INTSET_ENC_INT16;
     } else {
         return 0;

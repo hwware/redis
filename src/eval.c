@@ -655,7 +655,7 @@ void ldbFlushLog(list *log) {
         listDelNode(log,ln);
 }
 
-int ldbIsEnabled(){
+int ldbIsEnabled() {
     return ldb.active && ldb.step;
 }
 
@@ -1530,7 +1530,7 @@ ldbLog(sdsnew("                     next line of code."));
                    !strcasecmp(argv[0],"n") || !strcasecmp(argv[0],"next")) {
             ldb.step = 1;
             break;
-        } else if (!strcasecmp(argv[0],"c") || !strcasecmp(argv[0],"continue")){
+        } else if (!strcasecmp(argv[0],"c") || !strcasecmp(argv[0],"continue")) {
             break;
         } else if (!strcasecmp(argv[0],"t") || !strcasecmp(argv[0],"trace")) {
             ldbTrace(lua);
@@ -1557,7 +1557,7 @@ ldbLog(sdsnew("                     next line of code."));
             else
                 ldbPrintAll(lua);
             ldbSendLogs();
-        } else if (!strcasecmp(argv[0],"l") || !strcasecmp(argv[0],"list")){
+        } else if (!strcasecmp(argv[0],"l") || !strcasecmp(argv[0],"list")) {
             int around = ldb.currentline, ctx = 5;
             if (argc > 1) {
                 int num = atoi(argv[1]);
@@ -1566,7 +1566,7 @@ ldbLog(sdsnew("                     next line of code."));
             if (argc > 2) ctx = atoi(argv[2]);
             ldbList(around,ctx);
             ldbSendLogs();
-        } else if (!strcasecmp(argv[0],"w") || !strcasecmp(argv[0],"whole")){
+        } else if (!strcasecmp(argv[0],"w") || !strcasecmp(argv[0],"whole")) {
             ldbList(1,1000000);
             ldbSendLogs();
         } else {

@@ -567,7 +567,7 @@ static void readHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
                 }
                 int requests_finished = 0;
                 atomicGetIncr(config.requests_finished, requests_finished, 1);
-                if (requests_finished < config.requests){
+                if (requests_finished < config.requests) {
                         if (config.num_threads == 0) {
                             hdr_record_value(
                             config.latency_histogram,  // Histogram to record to
@@ -910,7 +910,7 @@ static void showLatencyReport(void) {
             const double value = iter.highest_equivalent_value / 1000.0f;
             const double percentile = percentiles->percentile;
             const long long cumulative_count = iter.cumulative_count;
-            if( previous_cumulative_count != cumulative_count || cumulative_count == total_count ){
+            if( previous_cumulative_count != cumulative_count || cumulative_count == total_count ) {
                 printf("%3.3f%% <= %.3f milliseconds (cumulative count %lld)\n", percentile, value, cumulative_count);
             }
             previous_cumulative_count = cumulative_count;
@@ -924,12 +924,12 @@ static void showLatencyReport(void) {
             const double value = iter.highest_equivalent_value / 1000.0f;
             const long long cumulative_count = iter.cumulative_count;
             const double percentile = ((double)cumulative_count/(double)total_count)*100.0;
-            if( previous_cumulative_count != cumulative_count || cumulative_count == total_count ){
+            if( previous_cumulative_count != cumulative_count || cumulative_count == total_count ) {
                 printf("%3.3f%% <= %.3f milliseconds (cumulative count %lld)\n", percentile, value, cumulative_count);
             }
             /* After the 2 milliseconds latency to have percentages split
              * by decimals will just add a lot of noise to the output. */
-            if(iter.highest_equivalent_value > 2000){
+            if(iter.highest_equivalent_value > 2000) {
                 hdr_iter_linear_set_value_units_per_bucket(&iter,1000);
             }
             previous_cumulative_count = cumulative_count;
@@ -962,7 +962,7 @@ static void startBenchmarkThreads() {
     int i;
     for (i = 0; i < config.num_threads; i++) {
         benchmarkThread *t = config.threads[i];
-        if (pthread_create(&(t->thread), NULL, execBenchmarkThread, t)){
+        if (pthread_create(&(t->thread), NULL, execBenchmarkThread, t)) {
             fprintf(stderr, "FATAL: Failed to start thread %d.\n", i);
             exit(1);
         }
@@ -1141,7 +1141,7 @@ static int fetchClusterConfiguration() {
             *p = '\0';
             char *token = line;
             line = p + 1;
-            switch(i++){
+            switch(i++) {
             case 0: name = token; break;
             case 1: addr = token; break;
             case 2: flags = token; break;

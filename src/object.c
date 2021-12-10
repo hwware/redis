@@ -758,7 +758,7 @@ int collateStringObjects(robj *a, robj *b) {
  * because it can perform some more optimization. */
 int equalStringObjects(robj *a, robj *b) {
     if (a->encoding == OBJ_ENCODING_INT &&
-        b->encoding == OBJ_ENCODING_INT){
+        b->encoding == OBJ_ENCODING_INT) {
         /* If both strings are integer encoded just check if the stored
          * long is the same. */
         return a->ptr == b->ptr;

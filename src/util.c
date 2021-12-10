@@ -50,110 +50,110 @@ int stringmatchlen(const char *pattern, int patternLen,
 {
     while(patternLen && stringLen) {
         switch(pattern[0]) {
-        case '*':
-            while (patternLen && pattern[1] == '*') {
-                pattern++;
-                patternLen--;
-            }
-            if (patternLen == 1)
-                return 1; /* match */
-            while(stringLen) {
-                if (stringmatchlen(pattern+1, patternLen-1,
-                            string, stringLen, nocase))
-                    return 1; /* match */
-                string++;
-                stringLen--;
-            }
-            return 0; /* no match */
-            break;
-        case '?':
-            string++;
-            stringLen--;
-            break;
-        case '[':
-        {
-            int not, match;
-
-            pattern++;
-            patternLen--;
-            not = pattern[0] == '^';
-            if (not) {
-                pattern++;
-                patternLen--;
-            }
-            match = 0;
-            while(1) {
-                if (pattern[0] == '\\' && patternLen >= 2) {
+            case '*':
+                while (patternLen && pattern[1] == '*') {
                     pattern++;
                     patternLen--;
-                    if (pattern[0] == string[0])
-                        match = 1;
-                } else if (pattern[0] == ']') {
-                    break;
-                } else if (patternLen == 0) {
-                    pattern--;
-                    patternLen++;
-                    break;
-                } else if (patternLen >= 3 && pattern[1] == '-') {
-                    int start = pattern[0];
-                    int end = pattern[2];
-                    int c = string[0];
-                    if (start > end) {
-                        int t = start;
-                        start = end;
-                        end = t;
-                    }
-                    if (nocase) {
-                        start = tolower(start);
-                        end = tolower(end);
-                        c = tolower(c);
-                    }
-                    pattern += 2;
-                    patternLen -= 2;
-                    if (c >= start && c <= end)
-                        match = 1;
-                } else {
-                    if (!nocase) {
+                }
+                if (patternLen == 1)
+                    return 1; /* match */
+                while(stringLen) {
+                    if (stringmatchlen(pattern+1, patternLen-1,
+                                string, stringLen, nocase))
+                        return 1; /* match */
+                    string++;
+                    stringLen--;
+                }
+                return 0; /* no match */
+                break;
+            case '?':
+                string++;
+                stringLen--;
+                break;
+            case '[':
+            {
+                int not, match;
+
+                pattern++;
+                patternLen--;
+                not = pattern[0] == '^';
+                if (not) {
+                    pattern++;
+                    patternLen--;
+                }
+                match = 0;
+                while(1) {
+                    if (pattern[0] == '\\' && patternLen >= 2) {
+                        pattern++;
+                        patternLen--;
                         if (pattern[0] == string[0])
                             match = 1;
-                    } else {
-                        if (tolower((int)pattern[0]) == tolower((int)string[0]))
+                    } else if (pattern[0] == ']') {
+                        break;
+                    } else if (patternLen == 0) {
+                        pattern--;
+                        patternLen++;
+                        break;
+                    } else if (patternLen >= 3 && pattern[1] == '-') {
+                        int start = pattern[0];
+                        int end = pattern[2];
+                        int c = string[0];
+                        if (start > end) {
+                            int t = start;
+                            start = end;
+                            end = t;
+                        }
+                        if (nocase) {
+                            start = tolower(start);
+                            end = tolower(end);
+                            c = tolower(c);
+                        }
+                        pattern += 2;
+                        patternLen -= 2;
+                        if (c >= start && c <= end)
                             match = 1;
+                    } else {
+                        if (!nocase) {
+                            if (pattern[0] == string[0])
+                                match = 1;
+                        } else {
+                            if (tolower((int)pattern[0]) == tolower((int)string[0]))
+                                match = 1;
+                        }
                     }
+                    pattern++;
+                    patternLen--;
                 }
-                pattern++;
-                patternLen--;
-            }
-            if (not)
-                match = !match;
-            if (!match)
-                return 0; /* no match */
-            string++;
-            stringLen--;
-            break;
-        }
-        case '\\':
-            if (patternLen >= 2) {
-                pattern++;
-                patternLen--;
-            }
-            /* fall through */
-        default:
-            if (!nocase) {
-                if (pattern[0] != string[0])
+                if (not)
+                    match = !match;
+                if (!match)
                     return 0; /* no match */
-            } else {
-                if (tolower((int)pattern[0]) != tolower((int)string[0]))
-                    return 0; /* no match */
+                string++;
+                stringLen--;
+                break;
             }
-            string++;
-            stringLen--;
-            break;
+            case '\\':
+                if (patternLen >= 2) {
+                    pattern++;
+                    patternLen--;
+                }
+                /* fall through */
+            default:
+                if (!nocase) {
+                    if (pattern[0] != string[0])
+                        return 0; /* no match */
+                } else {
+                    if (tolower((int)pattern[0]) != tolower((int)string[0]))
+                        return 0; /* no match */
+                }
+                string++;
+                stringLen--;
+                break;
         }
         pattern++;
         patternLen--;
         if (stringLen == 0) {
-            while(*pattern == '*') {
+             while(*pattern == '*') {
                 pattern++;
                 patternLen--;
             }
@@ -615,37 +615,37 @@ int ld2string(char *buf, size_t len, long double value, ld2string_mode mode) {
         }
     } else {
         switch (mode) {
-        case LD_STR_AUTO:
-            l = snprintf(buf,len,"%.17Lg",value);
-            if (l+1 > len) return 0; /* No room. */
-            break;
-        case LD_STR_HEX:
-            l = snprintf(buf,len,"%La",value);
-            if (l+1 > len) return 0; /* No room. */
-            break;
-        case LD_STR_HUMAN:
-            /* We use 17 digits precision since with 128 bit floats that precision
-             * after rounding is able to represent most small decimal numbers in a
-             * way that is "non surprising" for the user (that is, most small
-             * decimal numbers will be represented in a way that when converted
-             * back into a string are exactly the same as what the user typed.) */
-            l = snprintf(buf,len,"%.17Lf",value);
-            if (l+1 > len) return 0; /* No room. */
-            /* Now remove trailing zeroes after the '.' */
-            if (strchr(buf,'.') != NULL) {
-                char *p = buf+l-1;
-                while(*p == '0') {
-                    p--;
-                    l--;
+            case LD_STR_AUTO:
+                l = snprintf(buf,len,"%.17Lg",value);
+                if (l+1 > len) return 0; /* No room. */
+                break;
+            case LD_STR_HEX:
+                l = snprintf(buf,len,"%La",value);
+                if (l+1 > len) return 0; /* No room. */
+                break;
+            case LD_STR_HUMAN:
+                /* We use 17 digits precision since with 128 bit floats that precision
+                * after rounding is able to represent most small decimal numbers in a
+                * way that is "non surprising" for the user (that is, most small
+                * decimal numbers will be represented in a way that when converted
+                * back into a string are exactly the same as what the user typed.) */
+                l = snprintf(buf,len,"%.17Lf",value);
+                if (l+1 > len) return 0; /* No room. */
+                /* Now remove trailing zeroes after the '.' */
+                if (strchr(buf,'.') != NULL) {
+                    char *p = buf+l-1;
+                    while(*p == '0') {
+                        p--;
+                        l--;
+                    }
+                    if (*p == '.') l--;
                 }
-                if (*p == '.') l--;
-            }
-            if (l == 2 && buf[0] == '-' && buf[1] == '0') {
-                buf[0] = '0';
-                l = 1;
-            }
-            break;
-        default: return 0; /* Invalid mode. */
+                if (l == 2 && buf[0] == '-' && buf[1] == '0') {
+                    buf[0] = '0';
+                    l = 1;
+                }
+                break;
+            default: return 0; /* Invalid mode. */
         }
     }
     buf[l] = '\0';

@@ -2824,7 +2824,7 @@ int RM_KeyExists(RedisModuleCtx *ctx, robj *keyname) {
 }
 
 /* Initialize a RedisModuleKey struct */
-static void moduleInitKey(RedisModuleKey *kp, RedisModuleCtx *ctx, robj *keyname, robj *value, int mode){
+static void moduleInitKey(RedisModuleKey *kp, RedisModuleCtx *ctx, robj *keyname, robj *value, int mode) {
     kp->ctx = ctx;
     kp->db = ctx->client->db;
     kp->key = keyname;
@@ -4357,8 +4357,8 @@ int RM_StreamIteratorStart(RedisModuleKey *key, int flags, RedisModuleStreamID *
 
     /* define range for streamIteratorStart() */
     streamID lower, upper;
-    if (start) lower = (streamID){start->ms, start->seq};
-    if (end)   upper = (streamID){end->ms,   end->seq};
+    if (start) lower = (streamID) {start->ms, start->seq};
+    if (end)   upper = (streamID) {end->ms,   end->seq};
     if (flags & REDISMODULE_STREAM_ITERATOR_EXCLUSIVE) {
         if ((start && streamIncrID(&lower) != C_OK) ||
             (end   && streamDecrID(&upper) != C_OK)) {
@@ -4712,7 +4712,7 @@ RedisModuleCallReply *RM_CallReplySetElement(RedisModuleCallReply *reply, size_t
  * The `key` and `value` arguments are used to return by reference, and may be
  * NULL if not required. */
 int RM_CallReplyMapElement(RedisModuleCallReply *reply, size_t idx, RedisModuleCallReply **key, RedisModuleCallReply **val) {
-    if (callReplyGetMapElement(reply, idx, key, val) == C_OK){
+    if (callReplyGetMapElement(reply, idx, key, val) == C_OK) {
         return REDISMODULE_OK;
     }
     return REDISMODULE_ERR;
@@ -4732,7 +4732,7 @@ RedisModuleCallReply *RM_CallReplyAttribute(RedisModuleCallReply *reply) {
  * The `key` and `value` arguments are used to return by reference, and may be
  * NULL if not required. */
 int RM_CallReplyAttributeElement(RedisModuleCallReply *reply, size_t idx, RedisModuleCallReply **key, RedisModuleCallReply **val) {
-    if (callReplyGetAttributeElement(reply, idx, key, val) == C_OK){
+    if (callReplyGetAttributeElement(reply, idx, key, val) == C_OK) {
         return REDISMODULE_OK;
     }
     return REDISMODULE_ERR;
@@ -8574,7 +8574,7 @@ int RM_CommandFilterArgDelete(RedisModuleCommandFilterCtx *fctx, int pos)
  * with the allocation calls, since sometimes the underlying allocator
  * will allocate more memory.
  */
-size_t RM_MallocSize(void* ptr){
+size_t RM_MallocSize(void* ptr) {
     return zmalloc_size(ptr);
 }
 
@@ -8586,7 +8586,7 @@ size_t RM_MallocSize(void* ptr){
  * * Exactly 1 - Memory limit reached.
  * * Greater 1 - More memory used than the configured limit.
  */
-float RM_GetUsedMemoryRatio(){
+float RM_GetUsedMemoryRatio() {
     float level;
     getMaxmemoryState(NULL, NULL, NULL, &level);
     return level;
@@ -8672,7 +8672,7 @@ void RM_ScanCursorDestroy(RedisModuleScanCursor *cursor) {
  *
  *      RedisModuleCursor *c = RedisModule_ScanCursorCreate();
  *      RedisModule_ThreadSafeContextLock(ctx);
- *      while(RedisModule_Scan(ctx, c, callback, privateData)){
+ *      while(RedisModule_Scan(ctx, c, callback, privateData)) {
  *          RedisModule_ThreadSafeContextUnlock(ctx);
  *          // do some background job
  *          RedisModule_ThreadSafeContextLock(ctx);
@@ -8770,7 +8770,7 @@ static void moduleScanKeyCallback(void *privdata, const dictEntry *de) {
  *      RedisModuleCursor *c = RedisModule_ScanCursorCreate();
  *      RedisModule_ThreadSafeContextLock(ctx);
  *      RedisModuleKey *key = RedisModule_OpenKey(...)
- *      while(RedisModule_ScanKey(ctx, c, callback, privateData)){
+ *      while(RedisModule_ScanKey(ctx, c, callback, privateData)) {
  *          RedisModule_CloseKey(key);
  *          RedisModule_ThreadSafeContextUnlock(ctx);
  *          // do some background job

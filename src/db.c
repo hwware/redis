@@ -102,7 +102,7 @@ robj *lookupKey(redisDb *db, robj *key, int flags) {
         /* Update the access time for the ageing algorithm.
          * Don't do it if we have a saving child, as this will trigger
          * a copy on write madness. */
-        if (!hasActiveChildProcess() && !(flags & LOOKUP_NOTOUCH)){
+        if (!hasActiveChildProcess() && !(flags & LOOKUP_NOTOUCH)) {
             if (server.maxmemory_policy & MAXMEMORY_FLAG_LFU) {
                 updateLFU(val);
             } else {
@@ -931,7 +931,7 @@ void scanGenericCommand(client *c, robj *o, unsigned long cursor) {
         }
 
         /* Filter an element if it isn't the type we want. */
-        if (!filter && o == NULL && typename){
+        if (!filter && o == NULL && typename) {
             robj* typecheck = lookupKeyReadWithFlags(c->db, kobj, LOOKUP_NOTOUCH);
             char* type = getObjectTypeName(typecheck);
             if (strcasecmp((char*) typename, type)) filter = 1;

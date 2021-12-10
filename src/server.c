@@ -5312,24 +5312,24 @@ int processCommand(client *c) {
     if (acl_retval != ACL_OK) {
         addACLLogEntry(c,acl_retval,(c->flags & CLIENT_MULTI) ? ACL_LOG_CTX_MULTI : ACL_LOG_CTX_TOPLEVEL,acl_errpos,NULL,NULL);
         switch (acl_retval) {
-        case ACL_DENIED_CMD:
-            rejectCommandFormat(c,
-                "-NOPERM this user has no permissions to run "
-                "the '%s' command or its subcommand", c->cmd->name);
-            break;
-        case ACL_DENIED_KEY:
-            rejectCommandFormat(c,
-                "-NOPERM this user has no permissions to access "
-                "one of the keys used as arguments");
-            break;
-        case ACL_DENIED_CHANNEL:
-            rejectCommandFormat(c,
-                "-NOPERM this user has no permissions to access "
-                "one of the channels used as arguments");
-            break;
-        default:
-            rejectCommandFormat(c, "no permission");
-            break;
+            case ACL_DENIED_CMD:
+                rejectCommandFormat(c,
+                    "-NOPERM this user has no permissions to run "
+                    "the '%s' command or its subcommand", c->cmd->name);
+                break;
+            case ACL_DENIED_KEY:
+                rejectCommandFormat(c,
+                    "-NOPERM this user has no permissions to access "
+                    "one of the keys used as arguments");
+                break;
+            case ACL_DENIED_CHANNEL:
+                rejectCommandFormat(c,
+                    "-NOPERM this user has no permissions to access "
+                    "one of the channels used as arguments");
+                break;
+            default:
+                rejectCommandFormat(c, "no permission");
+                break;
         }
         return C_OK;
     }
@@ -6827,16 +6827,16 @@ sds genRedisInfoString(const char *section) {
                     slaveip = ip;
                 }
                 switch(slave->replstate) {
-                case SLAVE_STATE_WAIT_BGSAVE_START:
-                case SLAVE_STATE_WAIT_BGSAVE_END:
-                    state = "wait_bgsave";
-                    break;
-                case SLAVE_STATE_SEND_BULK:
-                    state = "send_bulk";
-                    break;
-                case SLAVE_STATE_ONLINE:
-                    state = "online";
-                    break;
+                    case SLAVE_STATE_WAIT_BGSAVE_START:
+                    case SLAVE_STATE_WAIT_BGSAVE_END:
+                        state = "wait_bgsave";
+                        break;
+                    case SLAVE_STATE_SEND_BULK:
+                        state = "send_bulk";
+                        break;
+                    case SLAVE_STATE_ONLINE:
+                        state = "online";
+                        break;
                 }
                 if (state == NULL) continue;
                 if (slave->replstate == SLAVE_STATE_ONLINE)
@@ -7345,14 +7345,14 @@ static void sigShutdownHandler(int sig) {
     char *msg;
 
     switch (sig) {
-    case SIGINT:
-        msg = "Received SIGINT scheduling shutdown...";
-        break;
-    case SIGTERM:
-        msg = "Received SIGTERM scheduling shutdown...";
-        break;
-    default:
-        msg = "Received shutdown signal, scheduling shutdown...";
+        case SIGINT:
+            msg = "Received SIGINT scheduling shutdown...";
+            break;
+        case SIGTERM:
+            msg = "Received SIGTERM scheduling shutdown...";
+            break;
+        default:
+            msg = "Received shutdown signal, scheduling shutdown...";
     };
 
     /* SIGINT is often delivered via Ctrl+C in an interactive session.

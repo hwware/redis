@@ -341,11 +341,11 @@ static inline unsigned int zipEncodingLenSize(unsigned char encoding) {
 /* Return bytes needed to store integer encoded by 'encoding' */
 static inline unsigned int zipIntSize(unsigned char encoding) {
     switch(encoding) {
-    case ZIP_INT_8B:  return 1;
-    case ZIP_INT_16B: return 2;
-    case ZIP_INT_24B: return 3;
-    case ZIP_INT_32B: return 4;
-    case ZIP_INT_64B: return 8;
+        case ZIP_INT_8B:  return 1;
+        case ZIP_INT_16B: return 2;
+        case ZIP_INT_24B: return 3;
+        case ZIP_INT_32B: return 4;
+        case ZIP_INT_64B: return 8;
     }
     if (encoding >= ZIP_INT_IMM_MIN && encoding <= ZIP_INT_IMM_MAX)
         return 0; /* 4 bit immediate */
@@ -1783,20 +1783,20 @@ static int randstring(char *target, unsigned int min, unsigned int max) {
     int len = min+rand()%(max-min+1);
     int minval, maxval;
     switch(rand() % 3) {
-    case 0:
-        minval = 0;
-        maxval = 255;
-    break;
-    case 1:
-        minval = 48;
-        maxval = 122;
-    break;
-    case 2:
-        minval = 48;
-        maxval = 52;
-    break;
-    default:
-        assert(NULL);
+        case 0:
+            minval = 0;
+            maxval = 255;
+        break;
+        case 1:
+            minval = 48;
+            maxval = 122;
+        break;
+        case 2:
+            minval = 48;
+            maxval = 52;
+        break;
+        default:
+            assert(NULL);
     }
 
     while(p < len)
@@ -2378,17 +2378,17 @@ int ziplistTest(int argc, char **argv, int flags) {
                     buflen = randstring(buf,1,sizeof(buf)-1);
                 } else {
                     switch(rand() % 3) {
-                    case 0:
-                        buflen = sprintf(buf,"%lld",(0LL + rand()) >> 20);
-                        break;
-                    case 1:
-                        buflen = sprintf(buf,"%lld",(0LL + rand()));
-                        break;
-                    case 2:
-                        buflen = sprintf(buf,"%lld",(0LL + rand()) << 20);
-                        break;
-                    default:
-                        assert(NULL);
+                        case 0:
+                            buflen = sprintf(buf,"%lld",(0LL + rand()) >> 20);
+                            break;
+                        case 1:
+                            buflen = sprintf(buf,"%lld",(0LL + rand()));
+                            break;
+                        case 2:
+                            buflen = sprintf(buf,"%lld",(0LL + rand()) << 20);
+                            break;
+                        default:
+                            assert(NULL);
                     }
                 }
 

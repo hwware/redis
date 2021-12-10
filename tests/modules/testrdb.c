@@ -27,36 +27,36 @@ void replAsyncLoadCallback(RedisModuleCtx *ctx, RedisModuleEvent e, uint64_t sub
     REDISMODULE_NOT_USED(data);
 
     switch (sub) {
-    case REDISMODULE_SUBEVENT_REPL_ASYNC_LOAD_STARTED:
-        assert(async_loading == 0);
-        async_loading = 1;
-        break;
-    case REDISMODULE_SUBEVENT_REPL_ASYNC_LOAD_ABORTED:
-        /* Discard temp aux */
-        if (before_str_temp)
-            RedisModule_FreeString(ctx, before_str_temp);
-        if (after_str_temp)
-            RedisModule_FreeString(ctx, after_str_temp);
-        before_str_temp = NULL;
-        after_str_temp = NULL;
+        case REDISMODULE_SUBEVENT_REPL_ASYNC_LOAD_STARTED:
+            assert(async_loading == 0);
+            async_loading = 1;
+            break;
+        case REDISMODULE_SUBEVENT_REPL_ASYNC_LOAD_ABORTED:
+            /* Discard temp aux */
+            if (before_str_temp)
+                RedisModule_FreeString(ctx, before_str_temp);
+            if (after_str_temp)
+                RedisModule_FreeString(ctx, after_str_temp);
+            before_str_temp = NULL;
+            after_str_temp = NULL;
 
-        async_loading = 0;
-        break;
-    case REDISMODULE_SUBEVENT_REPL_ASYNC_LOAD_COMPLETED:
-        if (before_str)
-            RedisModule_FreeString(ctx, before_str);
-        if (after_str)
-            RedisModule_FreeString(ctx, after_str);
-        before_str = before_str_temp;
-        after_str = after_str_temp;
+            async_loading = 0;
+            break;
+        case REDISMODULE_SUBEVENT_REPL_ASYNC_LOAD_COMPLETED:
+            if (before_str)
+                RedisModule_FreeString(ctx, before_str);
+            if (after_str)
+                RedisModule_FreeString(ctx, after_str);
+            before_str = before_str_temp;
+            after_str = after_str_temp;
 
-        before_str_temp = NULL;
-        after_str_temp = NULL;
+            before_str_temp = NULL;
+            after_str_temp = NULL;
 
-        async_loading = 0;
-        break;
-    default:
-        assert(0);
+            async_loading = 0;
+            break;
+        default:
+            assert(0);
     }
 }
 

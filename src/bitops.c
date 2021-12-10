@@ -1075,7 +1075,7 @@ void bitfieldGeneric(client *c, int flags) {
             return;
         }
 
-        if (getBitOffsetFromArgument(c,c->argv[j+2],&bitoffset,1,bits) != C_OK){
+        if (getBitOffsetFromArgument(c,c->argv[j+2],&bitoffset,1,bits) != C_OK) {
             zfree(ops);
             return;
         }
@@ -1085,7 +1085,7 @@ void bitfieldGeneric(client *c, int flags) {
             if (highest_write_offset < bitoffset + bits - 1)
                 highest_write_offset = bitoffset + bits - 1;
             /* INCRBY and SET require another argument. */
-            if (getLongLongFromObjectOrReply(c,c->argv[j+3],&i64,NULL) != C_OK){
+            if (getLongLongFromObjectOrReply(c,c->argv[j+3],&i64,NULL) != C_OK) {
                 zfree(ops);
                 return;
             }

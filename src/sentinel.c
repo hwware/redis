@@ -1685,15 +1685,15 @@ const char *sentinelCheckCreateInstanceErrors(int role) {
     switch(errno) {
     case EBUSY:
         switch (role) {
-        case SRI_MASTER:
-            return "Duplicate master name.";
-        case SRI_SLAVE:
-            return "Duplicate hostname and port for replica.";
-        case SRI_SENTINEL:
-            return "Duplicate runid for sentinel.";
-        default:
-            serverAssert(0);
-            break;
+            case SRI_MASTER:
+                return "Duplicate master name.";
+            case SRI_SLAVE:
+                return "Duplicate hostname and port for replica.";
+            case SRI_SENTINEL:
+                return "Duplicate runid for sentinel.";
+            default:
+                serverAssert(0);
+                break;
         }
         break;
     case ENOENT:
@@ -3203,14 +3203,14 @@ void sentinelConfigGetCommand(client *c) {
 
 const char *sentinelFailoverStateStr(int state) {
     switch(state) {
-    case SENTINEL_FAILOVER_STATE_NONE: return "none";
-    case SENTINEL_FAILOVER_STATE_WAIT_START: return "wait_start";
-    case SENTINEL_FAILOVER_STATE_SELECT_SLAVE: return "select_slave";
-    case SENTINEL_FAILOVER_STATE_SEND_SLAVEOF_NOONE: return "send_slaveof_noone";
-    case SENTINEL_FAILOVER_STATE_WAIT_PROMOTION: return "wait_promotion";
-    case SENTINEL_FAILOVER_STATE_RECONF_SLAVES: return "reconf_slaves";
-    case SENTINEL_FAILOVER_STATE_UPDATE_CONFIG: return "update_config";
-    default: return "unknown";
+        case SENTINEL_FAILOVER_STATE_NONE: return "none";
+        case SENTINEL_FAILOVER_STATE_WAIT_START: return "wait_start";
+        case SENTINEL_FAILOVER_STATE_SELECT_SLAVE: return "select_slave";
+        case SENTINEL_FAILOVER_STATE_SEND_SLAVEOF_NOONE: return "send_slaveof_noone";
+        case SENTINEL_FAILOVER_STATE_WAIT_PROMOTION: return "wait_promotion";
+        case SENTINEL_FAILOVER_STATE_RECONF_SLAVES: return "reconf_slaves";
+        case SENTINEL_FAILOVER_STATE_UPDATE_CONFIG: return "update_config";
+        default: return "unknown";
     }
 }
 
@@ -4302,18 +4302,18 @@ void sentinelSetCommand(client *c) {
         /* Log the event. */
         int numargs = j-old_j+1;
         switch(numargs) {
-        case 2:
-            sentinelEvent(LL_WARNING,"+set",ri,"%@ %s %s",(char*)c->argv[old_j]->ptr,
-                                                          redacted ? "******" : (char*)c->argv[old_j+1]->ptr);
-            break;
-        case 3:
-            sentinelEvent(LL_WARNING,"+set",ri,"%@ %s %s %s",(char*)c->argv[old_j]->ptr,
-                                                             (char*)c->argv[old_j+1]->ptr,
-                                                             (char*)c->argv[old_j+2]->ptr);
-            break;
-        default:
-            sentinelEvent(LL_WARNING,"+set",ri,"%@ %s",(char*)c->argv[old_j]->ptr);
-            break;
+            case 2:
+                sentinelEvent(LL_WARNING,"+set",ri,"%@ %s %s",(char*)c->argv[old_j]->ptr,
+                                                            redacted ? "******" : (char*)c->argv[old_j+1]->ptr);
+                break;
+            case 3:
+                sentinelEvent(LL_WARNING,"+set",ri,"%@ %s %s %s",(char*)c->argv[old_j]->ptr,
+                                                                (char*)c->argv[old_j+1]->ptr,
+                                                                (char*)c->argv[old_j+2]->ptr);
+                break;
+            default:
+                sentinelEvent(LL_WARNING,"+set",ri,"%@ %s",(char*)c->argv[old_j]->ptr);
+                break;
         }
     }
 

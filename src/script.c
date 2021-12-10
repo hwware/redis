@@ -224,23 +224,23 @@ static int scriptVerifyACL(client *c, sds *err) {
     if (acl_retval != ACL_OK) {
         addACLLogEntry(c,acl_retval,ACL_LOG_CTX_LUA,acl_errpos,NULL,NULL);
         switch (acl_retval) {
-        case ACL_DENIED_CMD:
-            *err = sdsnew("The user executing the script can't run this "
-                          "command or subcommand");
-            break;
-        case ACL_DENIED_KEY:
-            *err = sdsnew("The user executing the script can't access "
-                          "at least one of the keys mentioned in the "
-                          "command arguments");
-            break;
-        case ACL_DENIED_CHANNEL:
-            *err = sdsnew("The user executing the script can't publish "
-                          "to the channel mentioned in the command");
-            break;
-        default:
-            *err = sdsnew("The user executing the script is lacking the "
-                          "permissions for the command");
-            break;
+            case ACL_DENIED_CMD:
+                *err = sdsnew("The user executing the script can't run this "
+                            "command or subcommand");
+                break;
+            case ACL_DENIED_KEY:
+                *err = sdsnew("The user executing the script can't access "
+                            "at least one of the keys mentioned in the "
+                            "command arguments");
+                break;
+            case ACL_DENIED_CHANNEL:
+                *err = sdsnew("The user executing the script can't publish "
+                            "to the channel mentioned in the command");
+                break;
+            default:
+                *err = sdsnew("The user executing the script is lacking the "
+                            "permissions for the command");
+                break;
         }
         return C_ERR;
     }

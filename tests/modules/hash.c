@@ -30,9 +30,9 @@ int hash_set(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     int flags = REDISMODULE_HASH_NONE;
     for (size_t i = 0; i < flags_len; i++) {
         switch (flags_str[i]) {
-        case 'n': flags |= REDISMODULE_HASH_NX; break;
-        case 'x': flags |= REDISMODULE_HASH_XX; break;
-        case 'a': flags |= REDISMODULE_HASH_COUNT_ALL; break;
+            case 'n': flags |= REDISMODULE_HASH_NX; break;
+            case 'x': flags |= REDISMODULE_HASH_XX; break;
+            case 'a': flags |= REDISMODULE_HASH_COUNT_ALL; break;
         }
     }
 
