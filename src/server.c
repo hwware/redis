@@ -6982,6 +6982,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
 
     /* Modules */
     if (all_sections || dictFind(section_dict,"modules") != NULL) {
+        if (dictFind(section_dict,"modules") != NULL) modules = 1;
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,"# Modules\r\n");
         info = genModulesInfoString(info);
