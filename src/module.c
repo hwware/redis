@@ -7945,6 +7945,7 @@ int RM_InfoAddSection(RedisModuleInfoCtx *ctx, char *name) {
     if (ctx->in_dict_field)
         RM_InfoEndDictField(ctx);
 
+    sdstolower(lower_full_name);
     sdsfree(lower_full_name);
     /* proceed only if:
      * 1) no section was requested (emit all)
