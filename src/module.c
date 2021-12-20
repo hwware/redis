@@ -7936,7 +7936,7 @@ int RM_InfoAddSection(RedisModuleInfoCtx *ctx, char *name) {
     sds lower_full_name = sdsdup(ctx->module->name);
     if (name != NULL && strlen(name) > 0){
         full_name = sdscatfmt(full_name, "_%s", name);
-        //lower_full_name = sdsdup(full_name);
+        lower_full_name = sdscatfmt(lower_full_name, "_%s", name);
     }
         
 
