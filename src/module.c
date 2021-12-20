@@ -7940,11 +7940,12 @@ int RM_InfoAddSection(RedisModuleInfoCtx *ctx, char *name) {
     }
         
 
-    sdsfree(lower_full_name);
+    
     /* Implicitly end dicts, instead of returning an error which is likely un checked. */
     if (ctx->in_dict_field)
         RM_InfoEndDictField(ctx);
 
+    sdsfree(lower_full_name);
     /* proceed only if:
      * 1) no section was requested (emit all)
      * 2) the module name was requested (emit all)
