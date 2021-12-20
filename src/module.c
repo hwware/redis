@@ -7933,10 +7933,10 @@ int RM_InfoEndDictField(RedisModuleInfoCtx *ctx);
 int RM_InfoAddSection(RedisModuleInfoCtx *ctx, char *name) {
 
     sds full_name = sdsdup(ctx->module->name);
-    sds lower_full_name = sdsdup(ctx->module->name);
+    sds lower_full_name = sdsempty();
     if (name != NULL && strlen(name) > 0){
         full_name = sdscatfmt(full_name, "_%s", name);
-        lower_full_name = sdscatfmt(full_name, "_%s", name);
+        lower_full_name = sdsdup(full_name);
     }
         
 
