@@ -6209,13 +6209,17 @@ dict *genInfoSectionDict(robj **argv, int argc, int *out_all, int *out_everythin
     } else {
         // process server dict
         if (argc == 1) {
-            if (!strcasecmp(argv[0]->ptr,"info")) 
+            if (!strcasecmp(argv[0]->ptr,"info") || !strcasecmp(argv[0]->ptr,"default")) 
                 addSectionsToDict(section_dict, defSections, sizeof(defSections)/sizeof(*defSections));
-            else {  // This is for RM_GetServerInfo Module case
-                sds section = sdsnew(argv[0]->ptr);
-                sdstolower(section);
-                dictAdd(section_dict,section,NULL);
-            }
+            else if (!strcasecmp(argv[0]->ptr,"all")) 
+                    (*out_all) = 1;
+            else if (!strcasecmp(argv[0]->ptr,"everything")) 
+                    (*out_everything) = 1;
+            else {
+                    sds section = sdsnew(argv[0]->ptr);
+                    sdstolower(section);
+                    dictAdd(section_dict,section,NULL);
+                 }
         } else {
             for (int i = 1; i < argc; i++) {
                 if (!strcasecmp(argv[i]->ptr,"default")) 
@@ -6232,47 +6236,6 @@ dict *genInfoSectionDict(robj **argv, int argc, int *out_all, int *out_everythin
             }
         }
     } 
-
-    /*
-    if (c == NULL || c->argc == 1) {
-        if (!strcasecmp(source,"sentinel")) {
-            
-        }
-        else if (!strcasecmp(source,"server")) {
-            addSectionsToDict(section_dict, defSections, sizeof(defSections)/sizeof(*defSections));
-        }
-    } else {
-        if (!strcasecmp(source,"sentinel") || !strcasecmp(source,"server")) {
-            for (int i = 1; i < c->argc; i++) {
-                if (!strcasecmp(c->argv[i]->ptr,"default")) {
-                    if (!strcasecmp(source,"sentinel")){
-                        addSectionsToDict(section_dict, defSectionsSentinel, sizeof(defSectionsSentinel)/sizeof(*defSectionsSentinel));
-                    }
-                    else if (!strcasecmp(source,"server")) {
-                        addSectionsToDict(section_dict, defSections, sizeof(defSections)/sizeof(*defSections));
-                    }
-                } else if (!strcasecmp(c->argv[i]->ptr,"all")) {
-                    (*all_sections) = 1;
-                } else if (!strcasecmp(c->argv[i]->ptr,"everything")) {
-                    (*everything) = 1;
-                } else {
-                    sds section = sdsnew(c->argv[i]->ptr);
-                    sdstolower(section);
-                    dictAdd(section_dict,section,NULL);
-                }
-            }
-        } else {
-            if (!strcasecmp(source,"all")) {
-                (*all_sections) = 1;
-            } else if (!strcasecmp(source,"everything")) {
-                (*everything) = 1;
-            } else {
-                sds section = sdsnew(source); 
-                sdstolower(section);
-                dictAdd(section_dict,section,NULL);
-            }
-        }
-        */
       
     return section_dict;
 }
@@ -6397,7 +6360,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Memory */
-    if (((all_sections)) || (dictFind(section_dict,"memory") != NULL)) {
+    if (all_sections || (dictFind(section_dict,"memory") != NULL)) {
         char hmem[64];
         char peak_hmem[64];
         char total_system_hmem[64];
@@ -6521,7 +6484,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Persistence */
-    if (((all_sections)) || (dictFind(section_dict,"persistence") != NULL)) {
+    if (all_sections || (dictFind(section_dict,"persistence") != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         double fork_perc = 0;
         if (server.stat_module_progress) {
@@ -6756,7 +6719,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Replication */
-    if (((all_sections)) || (dictFind(section_dict,"replication") != NULL)) {
+    if (all_sections || (dictFind(section_dict,"replication") != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,
             "# Replication\r\n"
@@ -6932,7 +6895,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Modules */
-    if (((all_sections || (dictFind(section_dict,"modules") != NULL)))) {
+    if (all_sections || (dictFind(section_dict,"modules") != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,"# Modules\r\n");
         info = genModulesInfoString(info);
@@ -6940,14 +6903,14 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Command statistics */
-    if ((all_sections) || (dictFind(section_dict,"commandstats") != NULL)) {
+    if (all_sections || (dictFind(section_dict,"commandstats") != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info, "# Commandstats\r\n");
         info = genRedisInfoStringCommandStats(info, server.commands);
     }
 
     /* Error statistics */
-    if (((all_sections)) || (dictFind(section_dict,"errorstats") != NULL)) {
+    if (all_sections || (dictFind(section_dict,"errorstats") != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscat(info, "# Errorstats\r\n");
         raxIterator ri;
@@ -6966,7 +6929,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Cluster */
-    if (((all_sections)) || (dictFind(section_dict,"cluster") != NULL)) {
+    if (all_sections || (dictFind(section_dict,"cluster") != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,
         "# Cluster\r\n"
@@ -6975,7 +6938,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Key space */
-    if (((all_sections)) || (dictFind(section_dict,"keyspace") != NULL)) {
+    if (all_sections || (dictFind(section_dict,"keyspace") != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info, "# Keyspace\r\n");
         for (j = 0; j < server.dbnum; j++) {
