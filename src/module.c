@@ -8153,6 +8153,7 @@ RedisModuleServerInfoData *RM_GetServerInfo(RedisModuleCtx *ctx, const char *sec
     sdsfree(info);
     sdsfreesplitres(lines,totlines);
     dictRelease(section_dict);
+    zfree(argv);
     return d;
 }
 

@@ -6219,6 +6219,11 @@ dict *genInfoSectionDict(robj **argv, int argc, int *out_all, int *out_everythin
                     sds section = sdsnew(argv[0]->ptr);
                     sdstolower(section);
                     dictAdd(section_dict,section,NULL);
+                    if (!strcasecmp(argv[0]->ptr,"modules")) {
+                        sds section = sdsnew("input-modules");
+                        dictAdd(section_dict,section,NULL);
+                    }
+
                  }
         } else {
             for (int i = 1; i < argc; i++) {
@@ -6232,6 +6237,10 @@ dict *genInfoSectionDict(robj **argv, int argc, int *out_all, int *out_everythin
                     sds section = sdsnew(argv[i]->ptr);
                     sdstolower(section);
                     dictAdd(section_dict,section,NULL);
+                    if (!strcasecmp(argv[i]->ptr,"modules")) {
+                        sds section = sdsnew("input-modules");
+                        dictAdd(section_dict,section,NULL);
+                    }
                 }
             }
         }
@@ -6899,7 +6908,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,"# Modules\r\n");
         info = genModulesInfoString(info);
-        if(section_dict != NULL && dictFind(section_dict,"modules") != NULL) modules = 1;
+        if(section_dict != NULL && dictFind(section_dict,"input-modules") != NULL) modules = 1;
     }
 
     /* Command statistics */
@@ -6957,6 +6966,13 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     /* Get info from modules.
      * if user asked for "everything" or "modules", or a specific section
      * that's not found yet. */
+    serverLog(LL_WARNING, "everything is: %d", everything);
+    serverLog(LL_WARNING, "modules is: %d", modules);
+    serverLog(LL_WARNING, "all_sections is: %d", all_sections);
+    serverLog(LL_WARNING, "sections is: %d", sections);
+    serverLog(LL_WARNING, "!all_sections && sections==0 is: %d", !all_sections && sections==0);
+
+
     if (everything || modules ||
         (!all_sections && sections==0)) {
 
