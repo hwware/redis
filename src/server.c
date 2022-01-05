@@ -6899,7 +6899,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,"# Modules\r\n");
         info = genModulesInfoString(info);
-        if(dictFind(section_dict,"modules") != NULL) modules = 1;
+        if(section_dict != NULL && dictFind(section_dict,"modules") != NULL) modules = 1;
     }
 
     /* Command statistics */
