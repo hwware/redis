@@ -6197,8 +6197,6 @@ dict *genInfoSectionDict(robj **argv, int argc, int *out_all, int *out_everythin
                     addSectionsToDict(section_dict, defSectionsSentinel, sizeof(defSectionsSentinel)/sizeof(*defSectionsSentinel));
                 else if (!strcasecmp(argv[i]->ptr,"all")) 
                     (*out_all) = 1;
-                else if (!strcasecmp(argv[i]->ptr,"everything")) 
-                    (*out_everything) = 1;
                 else {
                     sds section = sdsnew(argv[i]->ptr);
                     sdstolower(section);
@@ -6369,7 +6367,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Memory */
-    if (all_sections || (dictFind(section_dict,"memory") != NULL)) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"memory") != NULL))) {
         char hmem[64];
         char peak_hmem[64];
         char total_system_hmem[64];
@@ -6493,7 +6491,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Persistence */
-    if (all_sections || (dictFind(section_dict,"persistence") != NULL)) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"persistence") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         double fork_perc = 0;
         if (server.stat_module_progress) {
@@ -6728,7 +6726,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Replication */
-    if (all_sections || (dictFind(section_dict,"replication") != NULL)) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"replication") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,
             "# Replication\r\n"
@@ -6904,7 +6902,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Modules */
-    if (all_sections || (dictFind(section_dict,"modules") != NULL)) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"modules") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,"# Modules\r\n");
         info = genModulesInfoString(info);
@@ -6912,14 +6910,14 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Command statistics */
-    if (all_sections || (dictFind(section_dict,"commandstats") != NULL)) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"commandstats") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info, "# Commandstats\r\n");
         info = genRedisInfoStringCommandStats(info, server.commands);
     }
 
     /* Error statistics */
-    if (all_sections || (dictFind(section_dict,"errorstats") != NULL)) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"errorstats") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscat(info, "# Errorstats\r\n");
         raxIterator ri;
@@ -6938,7 +6936,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Cluster */
-    if (all_sections || (dictFind(section_dict,"cluster") != NULL)) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"cluster") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,
         "# Cluster\r\n"
@@ -6947,7 +6945,7 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     }
 
     /* Key space */
-    if (all_sections || (dictFind(section_dict,"keyspace") != NULL)) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"keyspace") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info, "# Keyspace\r\n");
         for (j = 0; j < server.dbnum; j++) {
@@ -6966,15 +6964,8 @@ sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
     /* Get info from modules.
      * if user asked for "everything" or "modules", or a specific section
      * that's not found yet. */
-    serverLog(LL_WARNING, "everything is: %d", everything);
-    serverLog(LL_WARNING, "modules is: %d", modules);
-    serverLog(LL_WARNING, "all_sections is: %d", all_sections);
-    serverLog(LL_WARNING, "sections is: %d", sections);
-    serverLog(LL_WARNING, "!all_sections && sections==0 is: %d", !all_sections && sections==0);
-
-
-    if (everything || modules ||
-        (!all_sections && sections==0)) {
+    if (!server.sentinel_mode && (everything || modules ||
+        (!all_sections && sections==0))) {
 
         info = modulesCollectInfo(info,
                                   everything || modules ? NULL: section_dict,
