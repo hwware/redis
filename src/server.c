@@ -4729,7 +4729,7 @@ void addSectionsToDict(dict *section_dict, char **sections, int len) {
 }
 
 dict *genInfoSectionDict(robj **argv, int argc, int *out_all, int *out_everything) {
-    char *defSections[] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
+    char *defSections[] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace", "latencystats"};
     char *defSectionsSentinel[] = {"server", "clients", "cpu", "stats", "sentinel"};
 
 
