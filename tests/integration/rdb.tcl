@@ -170,7 +170,7 @@ start_server {} {
 }
 
 test {client freed during loading} {
-    start_server [list overrides [list key-load-delay 50 rdbcompression no]] {
+    start_server [list overrides [list key-load-delay 50 loading-process-events-interval-bytes 1024 rdbcompression no]] {
         # create a big rdb that will take long to load. it is important
         # for keys to be big since the server processes events only once in 2mb.
         # 100mb of rdb, 100k keys will load in more than 5 seconds
@@ -354,5 +354,14 @@ start_server {overrides {save ""}} {
     }
 }
 } ;# system_name
+
+exec cp -f tests/assets/scriptbackup.rdb $server_path
+start_server [list overrides [list "dir" $server_path "dbfilename" "scriptbackup.rdb" "appendonly" "no"]] {
+    # the script is: "return redis.call('set', 'foo', 'bar')""
+    # its sha1   is: a0c38691e9fffe4563723c32ba77a34398e090e6
+    test {script won't load anymore if it's in rdb} {
+        assert_equal [r script exists a0c38691e9fffe4563723c32ba77a34398e090e6] 0
+    }
+}
 
 } ;# tags

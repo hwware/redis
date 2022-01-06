@@ -14,8 +14,7 @@
             ]
         ],
         "command_flags": [
-            "NOSCRIPT",
-            "MAY_REPLICATE"
+            "NOSCRIPT"
         ],
         "acl_categories": [
             "SCRIPTING"
@@ -25,6 +24,7 @@
                 "name": "async",
                 "type": "oneof",
                 "optional": true,
+                "since": "6.2.0",
                 "arguments": [
                     {
                         "name": "async",
