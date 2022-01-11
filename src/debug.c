@@ -1695,6 +1695,7 @@ void logServerInfo(void) {
     sdsfree(infostring);
     sdsfree(clients);
     dictRelease(section_dict);
+    zfree(argv[0]);
 }
 
 /* Log certain config values, which can be used for debuggin */

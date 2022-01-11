@@ -2286,7 +2286,6 @@ extern dictType replScriptCacheDictType;
 extern dictType dbExpiresDictType;
 extern dictType modulesDictType;
 extern dictType sdsReplyDictType;
-extern dictType stringSetDictType;
 extern dict *modules;
 
 /*-----------------------------------------------------------------------------
