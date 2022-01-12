@@ -4585,10 +4585,8 @@ static int clusterManagerNodeLoadInfo(clusterManagerNode *node, int opts,
         lines = p + 1;
         char *name = NULL, *addr = NULL, *flags = NULL, *master_id = NULL,
              *ping_sent = NULL, *ping_recv = NULL, *config_epoch = NULL,
-             *link_status = NULL, *human_readable_name = NULL, *has_human_readable_name = NULL;
+             *link_status = NULL;
         UNUSED(link_status);
-        UNUSED(human_readable_name);
-        UNUSED(has_human_readable_name);
         int i = 0;
         while ((p = strchr(line, ' ')) != NULL) {
             *p = '\0';
@@ -4596,17 +4594,15 @@ static int clusterManagerNodeLoadInfo(clusterManagerNode *node, int opts,
             line = p + 1;
             switch(i++){
             case 0: name = token; break;
-            case 1: human_readable_name = token; break;
-            case 2: addr = token; break;
-            case 3: flags = token; break;
-            case 4: master_id = token; break;
-            case 5: has_human_readable_name = token; break;
-            case 6: ping_sent = token; break;
-            case 7: ping_recv = token; break;
-            case 8: config_epoch = token; break;
-            case 9: link_status = token; break;
+            case 1: addr = token; break;
+            case 2: flags = token; break;
+            case 3: master_id = token; break;
+            case 4: ping_sent = token; break;
+            case 5: ping_recv = token; break;
+            case 6: config_epoch = token; break;
+            case 7: link_status = token; break;
             }
-            if (i == 10) break; // Slots
+            if (i == 8) break; // Slots
         }
         if (!flags) {
             success = 0;
@@ -4618,7 +4614,7 @@ static int clusterManagerNodeLoadInfo(clusterManagerNode *node, int opts,
             node->flags |= CLUSTER_MANAGER_FLAG_MYSELF;
             currentNode = node;
             clusterManagerNodeResetSlots(node);
-            if (i == 10) {
+            if (i == 8) {
                 int remaining = strlen(line);
                 while (remaining > 0) {
                     p = strchr(line, ' ');
