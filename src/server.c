@@ -289,6 +289,20 @@ uint64_t dictSdsCaseHash(const void *key) {
     return dictGenCaseHashFunction((unsigned char*)key, sdslen((char*)key));
 }
 
+uint64_t hashCallback(const void *key) {
+    return dictGenHashFunction((unsigned char*)key, strlen((char*)key));
+}
+
+int compareCallback(dict *d, const void *key1, const void *key2) {
+    int l1,l2;
+    UNUSED(d);
+
+    l1 = strlen((char*)key1);
+    l2 = strlen((char*)key2);
+    if (l1 != l2) return 0;
+    return memcmp(key1, key2, l1) == 0;
+}
+
 int dictEncObjKeyCompare(dict *d, const void *key1, const void *key2)
 {
     robj *o1 = (robj*) key1, *o2 = (robj*) key2;
@@ -506,6 +520,16 @@ dictType replScriptCacheDictType = {
     NULL,                       /* key dup */
     NULL,                       /* val dup */
     dictSdsKeyCaseCompare,      /* key compare */
+    dictSdsDestructor,          /* key destructor */
+    NULL,                       /* val destructor */
+    NULL                        /* allow to expand */
+};
+
+dictType stringSetDictType = {
+    hashCallback,               /* hash function */
+    NULL,                       /* key dup */
+    NULL,                       /* val dup */
+    compareCallback,            /* key compare */
     dictSdsDestructor,          /* key destructor */
     NULL,                       /* val destructor */
     NULL                        /* allow to expand */
@@ -4799,25 +4823,92 @@ sds genRedisInfoStringCommandStats(sds info, dict *commands) {
     return info;
 }
 
+void addSectionsToDict(dict *section_dict, char **sections, int len) {
+    for (int i = 0; i < len; i++){
+        sds section = sdsnew(sections[i]);
+        dictAdd(section_dict, section, NULL);
+    }
+}
+
+dict *genInfoSectionDict(robj **argv, int argc, int *out_all, int *out_everything) {
+    char *defSections[] = {"server", "clients", "memory", "persistence", "stats", "replication", "cpu", "modules", "errorstats", "cluster", "keyspace"};
+    char *defSectionsSentinel[] = {"server", "clients", "cpu", "stats", "sentinel"};
+
+
+    dict *section_dict = dictCreate(&stringSetDictType); /* Set to add the subsections to print*/
+    if (server.sentinel_mode) {
+        if (argc == 1) {
+            addSectionsToDict(section_dict, defSectionsSentinel, sizeof(defSectionsSentinel)/sizeof(*defSectionsSentinel));
+        } else {
+            for (int i = 1; i < argc; i++) {
+                if (!strcasecmp(argv[i]->ptr,"default")) 
+                    addSectionsToDict(section_dict, defSectionsSentinel, sizeof(defSectionsSentinel)/sizeof(*defSectionsSentinel));
+                else if (!strcasecmp(argv[i]->ptr,"all")) 
+                    (*out_all) = 1;
+                else {
+                    sds section = sdsnew(argv[i]->ptr);
+                    sdstolower(section);
+                    dictAdd(section_dict,section,NULL);
+                }
+            }
+        }
+    } else {
+        // process server dict
+        if (argc == 1) {
+            if (!strcasecmp(argv[0]->ptr,"info") || !strcasecmp(argv[0]->ptr,"default")) 
+                addSectionsToDict(section_dict, defSections, sizeof(defSections)/sizeof(*defSections));
+            else if (!strcasecmp(argv[0]->ptr,"all")) 
+                    (*out_all) = 1;
+            else if (!strcasecmp(argv[0]->ptr,"everything")) 
+                    (*out_everything) = 1;
+            else {
+                    sds section = sdsnew(argv[0]->ptr);
+                    sdstolower(section);
+                    dictAdd(section_dict,section,NULL);
+                    if (!strcasecmp(argv[0]->ptr,"modules")) {
+                        sds section = sdsnew("input-modules");
+                        dictAdd(section_dict,section,NULL);
+                    }
+
+                 }
+        } else {
+            for (int i = 1; i < argc; i++) {
+                if (!strcasecmp(argv[i]->ptr,"default")) 
+                    addSectionsToDict(section_dict, defSections, sizeof(defSections)/sizeof(*defSections));
+                else if (!strcasecmp(argv[i]->ptr,"all")) 
+                    (*out_all) = 1;
+                else if (!strcasecmp(argv[i]->ptr,"everything")) 
+                    (*out_everything) = 1;
+                else {
+                    sds section = sdsnew(argv[i]->ptr);
+                    sdstolower(section);
+                    dictAdd(section_dict,section,NULL);
+                    if (!strcasecmp(argv[i]->ptr,"modules")) {
+                        sds section = sdsnew("input-modules");
+                        dictAdd(section_dict,section,NULL);
+                    }
+                }
+            }
+        }
+    } 
+      
+    return section_dict;
+}
+
 /* Create the string returned by the INFO command. This is decoupled
  * by the INFO command itself as we need to report the same information
  * on memory corruption problems. */
-sds genRedisInfoString(const char *section) {
+sds genRedisInfoString(dict *section_dict, int all_sections, int everything) {
+    int modules = 0; 
     sds info = sdsempty();
     time_t uptime = server.unixtime-server.stat_starttime;
     int j;
-    int allsections = 0, defsections = 0, everything = 0, modules = 0;
     int sections = 0;
-
-    if (section == NULL) section = "default";
-    allsections = strcasecmp(section,"all") == 0;
-    defsections = strcasecmp(section,"default") == 0;
-    everything = strcasecmp(section,"everything") == 0;
-    modules = strcasecmp(section,"modules") == 0;
-    if (everything) allsections = 1;
+    
+    if (everything) all_sections = 1;
 
     /* Server */
-    if (allsections || defsections || !strcasecmp(section,"server")) {
+    if (all_sections || (dictFind(section_dict,"server") != NULL)) {
         static int call_uname = 1;
         static struct utsname name;
         char *mode;
@@ -4907,7 +4998,7 @@ sds genRedisInfoString(const char *section) {
     }
 
     /* Clients */
-    if (allsections || defsections || !strcasecmp(section,"clients")) {
+    if (all_sections || (dictFind(section_dict,"clients") != NULL)) {
         size_t maxin, maxout;
         getExpansiveClientsInfo(&maxin,&maxout);
         if (sections++) info = sdscat(info,"\r\n");
@@ -4931,7 +5022,7 @@ sds genRedisInfoString(const char *section) {
     }
 
     /* Memory */
-    if (allsections || defsections || !strcasecmp(section,"memory")) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"memory") != NULL))) {
         char hmem[64];
         char peak_hmem[64];
         char total_system_hmem[64];
@@ -5076,7 +5167,7 @@ sds genRedisInfoString(const char *section) {
     }
 
     /* Persistence */
-    if (allsections || defsections || !strcasecmp(section,"persistence")) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"persistence") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         double fork_perc = 0;
         if (server.stat_module_progress) {
@@ -5205,7 +5296,7 @@ sds genRedisInfoString(const char *section) {
     }
 
     /* Stats */
-    if (allsections || defsections || !strcasecmp(section,"stats")) {
+    if (all_sections  || (dictFind(section_dict,"stats") != NULL)) {
         long long stat_total_reads_processed, stat_total_writes_processed;
         long long stat_net_input_bytes, stat_net_output_bytes;
         long long current_eviction_exceeded_time = server.stat_last_eviction_exceeded_time ?
@@ -5309,7 +5400,7 @@ sds genRedisInfoString(const char *section) {
     }
 
     /* Replication */
-    if (allsections || defsections || !strcasecmp(section,"replication")) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"replication") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,
             "# Replication\r\n"
@@ -5445,7 +5536,7 @@ sds genRedisInfoString(const char *section) {
     }
 
     /* CPU */
-    if (allsections || defsections || !strcasecmp(section,"cpu")) {
+    if (all_sections || (dictFind(section_dict,"cpu") != NULL)) {
         if (sections++) info = sdscat(info,"\r\n");
 
         struct rusage self_ru, c_ru;
@@ -5473,20 +5564,22 @@ sds genRedisInfoString(const char *section) {
     }
 
     /* Modules */
-    if (allsections || defsections || !strcasecmp(section,"modules")) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"modules") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,"# Modules\r\n");
         info = genModulesInfoString(info);
+        if(section_dict != NULL && dictFind(section_dict,"input-modules") != NULL) modules = 1;
     }
 
     /* Command statistics */
-    if (allsections || !strcasecmp(section,"commandstats")) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"commandstats") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info, "# Commandstats\r\n");
         info = genRedisInfoStringCommandStats(info, server.commands);
     }
+
     /* Error statistics */
-    if (allsections || defsections || !strcasecmp(section,"errorstats")) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"errorstats") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscat(info, "# Errorstats\r\n");
         raxIterator ri;
@@ -5526,7 +5619,7 @@ sds genRedisInfoString(const char *section) {
     }
 
     /* Cluster */
-    if (allsections || defsections || !strcasecmp(section,"cluster")) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"cluster") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info,
         "# Cluster\r\n"
@@ -5535,7 +5628,7 @@ sds genRedisInfoString(const char *section) {
     }
 
     /* Key space */
-    if (allsections || defsections || !strcasecmp(section,"keyspace")) {
+    if (!server.sentinel_mode && (all_sections || (dictFind(section_dict,"keyspace") != NULL))) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info, "# Keyspace\r\n");
         for (j = 0; j < server.dbnum; j++) {
@@ -5554,31 +5647,33 @@ sds genRedisInfoString(const char *section) {
     /* Get info from modules.
      * if user asked for "everything" or "modules", or a specific section
      * that's not found yet. */
-    if (everything || modules ||
-        (!allsections && !defsections && sections==0)) {
+    if (!server.sentinel_mode && (everything || modules ||
+        (!all_sections && sections==0))) {
+
         info = modulesCollectInfo(info,
-                                  everything || modules ? NULL: section,
+                                  everything || modules ? NULL: section_dict,
                                   0, /* not a crash report */
                                   sections);
     }
     return info;
 }
 
+
 void infoCommand(client *c) {
+    int all_sections = 0;
+    int everything = 0;
+    dict *sections_dict = genInfoSectionDict(c->argv, c->argc, &all_sections, &everything);
+
     if (server.sentinel_mode) {
         sentinelInfoCommand(c);
         return;
     }
 
-    char *section = c->argc == 2 ? c->argv[1]->ptr : "default";
-
-    if (c->argc > 2) {
-        addReplyErrorObject(c,shared.syntaxerr);
-        return;
-    }
-    sds info = genRedisInfoString(section);
+    sds info = genRedisInfoString(sections_dict, all_sections, everything);
     addReplyVerbatim(c,info,sdslen(info),"txt");
     sdsfree(info);
+    dictRelease(sections_dict);
+    return;
 }
 
 void monitorCommand(client *c) {

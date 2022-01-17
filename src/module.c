@@ -70,7 +70,7 @@
 
 typedef struct RedisModuleInfoCtx {
     struct RedisModule *module;
-    const char *requested_section;
+    dict * requested_sections;
     sds info;           /* info string we collected so far */
     int sections;       /* number of sections we collected so far */
     int in_section;     /* indication if we're in an active section or not */
@@ -7917,28 +7917,35 @@ int RM_InfoEndDictField(RedisModuleInfoCtx *ctx);
  * NULL or empty string indicates the default section (only `<modulename>`) is used.
  * When return value is REDISMODULE_ERR, the section should and will be skipped. */
 int RM_InfoAddSection(RedisModuleInfoCtx *ctx, char *name) {
+
     sds full_name = sdsdup(ctx->module->name);
     if (name != NULL && strlen(name) > 0)
         full_name = sdscatfmt(full_name, "_%s", name);
-
+        
     /* Implicitly end dicts, instead of returning an error which is likely un checked. */
     if (ctx->in_dict_field)
         RM_InfoEndDictField(ctx);
+
+    sdstolower(full_name);
 
     /* proceed only if:
      * 1) no section was requested (emit all)
      * 2) the module name was requested (emit all)
      * 3) this specific section was requested. */
-    if (ctx->requested_section) {
-        if (strcasecmp(ctx->requested_section, full_name) &&
-            strcasecmp(ctx->requested_section, ctx->module->name)) {
+    if (ctx->requested_sections) {
+        if ((dictFind(ctx->requested_sections,full_name) == NULL) &&
+            (dictFind(ctx->requested_sections,ctx->module->name) == NULL)) {
             sdsfree(full_name);
             ctx->in_section = 0;
             return REDISMODULE_ERR;
         }
     }
     if (ctx->sections++) ctx->info = sdscat(ctx->info,"\r\n");
-    ctx->info = sdscatfmt(ctx->info, "# %S\r\n", full_name);
+    
+    if (name != NULL && strlen(name) > 0)
+        ctx->info = sdscatfmt(ctx->info, "# %S_%s\r\n", ctx->module->name, name);
+    else
+        ctx->info = sdscatfmt(ctx->info, "# %S\r\n", ctx->module->name);
     ctx->in_section = 1;
     sdsfree(full_name);
     return REDISMODULE_OK;
@@ -8080,7 +8087,7 @@ int RM_RegisterInfoFunc(RedisModuleCtx *ctx, RedisModuleInfoFunc cb) {
     return REDISMODULE_OK;
 }
 
-sds modulesCollectInfo(sds info, const char *section, int for_crash_report, int sections) {
+sds modulesCollectInfo(sds info, dict *sections_dict, int for_crash_report, int sections) {
     dictIterator *di = dictGetIterator(modules);
     dictEntry *de;
 
@@ -8088,7 +8095,7 @@ sds modulesCollectInfo(sds info, const char *section, int for_crash_report, int 
         struct RedisModule *module = dictGetVal(de);
         if (!module->info_cb)
             continue;
-        RedisModuleInfoCtx info_ctx = {module, section, info, sections, 0, 0};
+        RedisModuleInfoCtx info_ctx = {module, sections_dict, info, sections, 0, 0};
         module->info_cb(&info_ctx, for_crash_report);
         /* Implicitly end dicts (no way to handle errors, and we must add the newline). */
         if (info_ctx.in_dict_field)
@@ -8110,7 +8117,12 @@ RedisModuleServerInfoData *RM_GetServerInfo(RedisModuleCtx *ctx, const char *sec
     struct RedisModuleServerInfoData *d = zmalloc(sizeof(*d));
     d->rax = raxNew();
     if (ctx != NULL) autoMemoryAdd(ctx,REDISMODULE_AM_INFO,d);
-    sds info = genRedisInfoString(section);
+    int out_all = 0;
+    int out_everything = 0;
+    robj **argv = zmalloc(sizeof(robj*));
+    argv[0] = createStringObject(section, strlen(section));
+    dict *section_dict = genInfoSectionDict(argv, 1, &out_all, &out_everything);
+    sds info = genRedisInfoString(section_dict, out_all, out_everything);
     int totlines, i;
     sds *lines = sdssplitlen(info, sdslen(info), "\r\n", 2, &totlines);
     for(i=0; i<totlines; i++) {
@@ -8126,6 +8138,11 @@ RedisModuleServerInfoData *RM_GetServerInfo(RedisModuleCtx *ctx, const char *sec
     }
     sdsfree(info);
     sdsfreesplitres(lines,totlines);
+    dictRelease(section_dict);
+    for(i=0;i < 1;i++){
+        zfree(argv[0]);    
+    }
+    zfree(argv);
     return d;
 }
 
