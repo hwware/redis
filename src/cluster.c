@@ -216,7 +216,7 @@ int clusterLoadConfig(char *filename) {
             clusterAddNode(n);
         }
         /* Format for the node address information: 
-         * ip:port[@cport][,hostname] */
+         * ip:port[@cport][,hostname][-nodename] */
 
         /* Address and port */
         if ((p = strrchr(argv[1],':')) == NULL) {
@@ -247,6 +247,16 @@ int clusterLoadConfig(char *filename) {
             n->hostname = zstrdup(hostname);
         } else {
             n->hostname = NULL;
+        }
+        /* Nodename is an optional argument */
+        char *nodename = strchr(p, '-');
+        if (nodename) {
+            *nodename = '\0';
+            nodename++;
+            zfree(n->nodename);
+            n->nodename = zstrdup(nodename);
+        } else {
+            n->nodename = NULL;
         }
 
         /* The plaintext port for client in a TLS cluster (n->pport) is not
@@ -587,10 +597,34 @@ static void updateAnnouncedHostname(clusterNode *node, char *new) {
     }
 }
 
+/* Update the nodename for the specified node with the provided C string. */
+static void updateAnnouncedNodename(clusterNode *node, char *new) {
+    if (!node->nodename && !new) {
+        return;
+    }
+
+    /* Previous and new nodename are the same, no need to update. */
+    if (new && node->nodename && !strcmp(new, node->nodename)) {
+        return;
+    }
+
+    if (node->nodename) zfree(node->nodename);
+    if (new) {
+        node->nodename = zstrdup(new);
+    } else {
+        node->nodename = NULL;
+    }
+}
+
 /* Update my hostname based on server configuration values */
 void clusterUpdateMyselfHostname(void) {
     if (!myself) return;
     updateAnnouncedHostname(myself, server.cluster_announce_hostname);
+}
+
+void clusterUpdateMyselfNodename(void) {
+    if (!myself) return;
+    updateAnnouncedNodename(myself, server.cluster_announce_nodename);
 }
 
 void clusterInit(void) {
@@ -687,6 +721,7 @@ void clusterInit(void) {
     clusterUpdateMyselfFlags();
     clusterUpdateMyselfIp();
     clusterUpdateMyselfHostname();
+    clusterUpdateMyselfNodename();
 }
 
 /* Reset a node performing a soft or hard reset:
@@ -960,6 +995,7 @@ clusterNode *createClusterNode(char *nodename, int flags) {
     node->inbound_link = NULL;
     memset(node->ip,0,sizeof(node->ip));
     node->hostname = NULL;
+    node->nodename = NULL;
     node->port = 0;
     node->cport = 0;
     node->pport = 0;
@@ -1126,6 +1162,7 @@ void freeClusterNode(clusterNode *n) {
     serverAssert(dictDelete(server.cluster->nodes,nodename) == DICT_OK);
     sdsfree(nodename);
     zfree(n->hostname);
+    zfree(n->nodename);
 
     /* Release links and associated data structures. */
     if (n->link) freeClusterLink(n->link);
@@ -1955,6 +1992,16 @@ int getHostnamePingExtSize() {
     return totlen;
 }
 
+/* Returns the exact size needed to store the nodename. The returned value
+ * will be 8 byte padded. */
+int getNodenamePingExtSize() {
+    /* If nodename is not set, we don't send this extension */
+    if (!myself->nodename) return 0;
+
+    int totlen = sizeof(clusterMsgPingExt) + EIGHT_BYTE_ALIGN(strlen(myself->nodename) + 1);
+    return totlen;
+}
+
 /* Write the hostname ping extension at the start of the cursor. This function
  * will update the cursor to point to the end of the written extension and
  * will return the amount of bytes written. */
@@ -1976,11 +2023,33 @@ int writeHostnamePingExt(clusterMsgPingExt **cursor) {
     return extension_size;
 }
 
+/* Write the nodename ping extension at the start of the cursor. This function
+ * will update the cursor to point to the end of the written extension and
+ * will return the amount of bytes written. */
+int writeNodenamePingExt(clusterMsgPingExt **cursor) {
+    /* If nodename is not set, we don't send this extension */
+    if (!myself->nodename) return 0;
+
+    /* Add the nodename information at the extension cursor */
+    clusterMsgPingExtNodename *ext = &(*cursor)->ext[1].nodename;
+    size_t nodename_len = strlen(myself->nodename);
+    memcpy(ext->nodename, myself->nodename, nodename_len);
+    uint32_t extension_size = getNodenamePingExtSize();
+
+    /* Move the write cursor */
+    (*cursor)->type = CLUSTERMSG_EXT_TYPE_NODENAME;
+    (*cursor)->length = htonl(extension_size);
+    /* Make sure the string is NULL terminated by adding 1 */
+    *cursor = (clusterMsgPingExt *) (ext->nodename + EIGHT_BYTE_ALIGN(strlen(myself->nodename) + 1));
+    return extension_size;
+}
+
 /* We previously validated the extensions, so this function just needs to
  * handle the extensions. */
 void clusterProcessPingExtensions(clusterMsg *hdr, clusterLink *link) {
     clusterNode *sender = link->node ? link->node : clusterLookupNode(hdr->sender);
     char *ext_hostname = NULL;
+    char *ext_nodename = NULL;
     uint16_t extensions = ntohs(hdr->extensions);
     /* Loop through all the extensions and process them */
     clusterMsgPingExt *ext = getInitialPingExt(hdr, ntohs(hdr->count));
@@ -1989,6 +2058,9 @@ void clusterProcessPingExtensions(clusterMsg *hdr, clusterLink *link) {
         if (type == CLUSTERMSG_EXT_TYPE_HOSTNAME) {
             clusterMsgPingExtHostname *hostname_ext = (clusterMsgPingExtHostname *) &(ext->ext[0].hostname);
             ext_hostname = hostname_ext->hostname;
+        } else if (type == CLUSTERMSG_EXT_TYPE_NODENAME) {
+            clusterMsgPingExtNodename *nodename_ext = (clusterMsgPingExtNodename *) &(ext->ext[1].nodename);
+            ext_nodename = nodename_ext->nodename;
         } else {
             /* Unknown type, we will ignore it but log what happened. */
             serverLog(LL_WARNING, "Received unknown extension type %d", type);
@@ -2001,6 +2073,7 @@ void clusterProcessPingExtensions(clusterMsg *hdr, clusterLink *link) {
      * they don't have an announced hostname. Otherwise, we'll
      * set it now. */
     updateAnnouncedHostname(sender, ext_hostname);
+    updateAnnouncedNodename(sender, ext_nodename);
 }
 
 static clusterNode *getNodeFromLinkAndMsg(clusterLink *link, clusterMsg *hdr) {
@@ -2904,7 +2977,7 @@ void clusterSendPing(clusterLink *link, int type) {
      * to put inside the packet. */
     estlen = sizeof(clusterMsg) - sizeof(union clusterMsgData);
     estlen += (sizeof(clusterMsgDataGossip)*(wanted + pfail_wanted));
-    estlen += sizeof(clusterMsgPingExt) + getHostnamePingExtSize();
+    estlen += sizeof(clusterMsgPingExt) + getHostnamePingExtSize() + getNodenamePingExtSize();
 
     /* Note: clusterBuildMessageHdr() expects the buffer to be always at least
      * sizeof(clusterMsg) or more. */
@@ -2982,6 +3055,12 @@ void clusterSendPing(clusterLink *link, int type) {
     if (myself->hostname) {
         hdr->mflags[0] |= CLUSTERMSG_FLAG0_EXT_DATA;
         totlen += writeHostnamePingExt(&cursor);
+        extensions++;
+    }
+
+    if (myself->nodename) {
+        hdr->mflags[0] |= CLUSTERMSG_FLAG0_EXT_DATA;
+        totlen += writeNodenamePingExt(&cursor);
         extensions++;
     }
 
@@ -3964,6 +4043,7 @@ void clusterCron(void) {
     iteration++; /* Number of times this function was called so far. */
 
     updateAnnouncedHostname(myself, server.cluster_announce_hostname);
+    updateAnnouncedNodename(myself, server.cluster_announce_nodename);
     /* The handshake timeout is the time after which a handshake node that was
      * not turned into a normal node is removed from the nodes. Usually it is
      * just the NODE_TIMEOUT value, but when NODE_TIMEOUT is too small we use
@@ -4582,12 +4662,26 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
 
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
-    if (node->hostname) {
+    if (node->hostname && node->nodename) {
+        ci = sdscatfmt(ci," %s:%i@%i,%s-%s ",
+            node->ip,
+            port,
+            node->cport,
+            node->hostname,
+            node->nodename);
+    }
+    else if (node->hostname) {
         ci = sdscatfmt(ci," %s:%i@%i,%s ",
             node->ip,
             port,
             node->cport,
             node->hostname);
+    } else if (node->nodename) {
+        ci = sdscatfmt(ci," %s:%i@%i-%s ",
+            node->ip,
+            port,
+            node->cport,
+            node->nodename);
     } else {
         ci = sdscatfmt(ci," %s:%i@%i ",
             node->ip,
@@ -4809,6 +4903,7 @@ const char *getPreferredEndpoint(clusterNode *n) {
     switch(server.cluster_preferred_endpoint_type) {
     case CLUSTER_ENDPOINT_TYPE_IP: return n->ip;
     case CLUSTER_ENDPOINT_TYPE_HOSTNAME: return n->hostname ? n->hostname : "?";
+    case CLUSTER_ENDPOINT_TYPE_NODENAME: return n->nodename ? n->nodename : "?";
     case CLUSTER_ENDPOINT_TYPE_UNKNOWN_ENDPOINT: return "";
     }
     return "unknown";
@@ -4903,6 +4998,8 @@ void addNodeToNodeReply(client *c, clusterNode *node) {
         addReplyBulkCString(c, node->ip);
     } else if (server.cluster_preferred_endpoint_type == CLUSTER_ENDPOINT_TYPE_HOSTNAME) {
         addReplyBulkCString(c, node->hostname ? node->hostname : "?");
+    } else if (server.cluster_preferred_endpoint_type == CLUSTER_ENDPOINT_TYPE_NODENAME) {
+        addReplyBulkCString(c, node->nodename ? node->nodename : "?");
     } else if (server.cluster_preferred_endpoint_type == CLUSTER_ENDPOINT_TYPE_UNKNOWN_ENDPOINT) {
         addReplyNull(c);
     } else {
@@ -4929,6 +5026,13 @@ void addNodeToNodeReply(client *c, clusterNode *node) {
     {
         addReplyBulkCString(c, "hostname");
         addReplyBulkCString(c, node->hostname);
+        length++;
+    }
+    if (server.cluster_preferred_endpoint_type != CLUSTER_ENDPOINT_TYPE_NODENAME
+        && node->nodename)
+    {
+        addReplyBulkCString(c, "nodename");
+        addReplyBulkCString(c, node->nodename);
         length++;
     }
     setDeferredMapLen(c, deflen, length);
