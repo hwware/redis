@@ -2054,7 +2054,7 @@ void clusterProcessPingExtensions(clusterMsg *hdr, clusterLink *link) {
     /* Loop through all the extensions and process them */
     clusterMsgPingExt *ext = getInitialPingExt(hdr, ntohs(hdr->count));
     while (extensions--) {
-        uint16_t type = ntohs(ext->type);
+        uint16_t type = ext->type;
         if (type == CLUSTERMSG_EXT_TYPE_HOSTNAME) {
             clusterMsgPingExtHostname *hostname_ext = (clusterMsgPingExtHostname *) &(ext->ext[0].hostname);
             ext_hostname = hostname_ext->hostname;
