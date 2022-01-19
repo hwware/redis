@@ -256,11 +256,11 @@ int clusterLoadConfig(char *filename) {
         if (hostname) {
             *hostname = '\0';
             hostname++;
-            zfree(n->hostname);
-            n->hostname = zstrdup(hostname);
-        } else {
-            n->hostname = NULL;
+            n->hostname = sdscpy(n->hostname, hostname);
+        } else if (sdslen(n->hostname) != 0) {
+            sdsclear(n->hostname);
         }
+
         /* Nodename is an optional argument */
         char *nodename = strchr(p, '-');
         if (nodename) {
@@ -2004,7 +2004,7 @@ void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoc
              sender_slots == migrated_our_slots)) {
         serverLog(LL_WARNING,
             "Configuration change detected. Reconfiguring myself "
-            "as a replica of %.40s ", sender->name);
+            "as a replica of %.40s", sender->name);
         clusterSetMaster(sender);
         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|
                              CLUSTER_TODO_UPDATE_STATE|
@@ -2134,6 +2134,27 @@ int writeNodenamePingExt(clusterMsgPingExt **cursor) {
     (*cursor)->length = htonl(extension_size);
     /* Make sure the string is NULL terminated by adding 1 */
     *cursor = (clusterMsgPingExt *) (ext->nodename + EIGHT_BYTE_ALIGN(sdslen(myself->nodename) + 1));
+    return extension_size;
+}
+
+/* Write the nodename ping extension at the start of the cursor. This function
+ * will update the cursor to point to the end of the written extension and
+ * will return the amount of bytes written. */
+int writeNodenamePingExt(clusterMsgPingExt **cursor) {
+    /* If nodename is not set, we don't send this extension */
+    if (!myself->nodename) return 0;
+
+    /* Add the nodename information at the extension cursor */
+    clusterMsgPingExtNodename *ext = &(*cursor)->ext[1].nodename;
+    size_t nodename_len = strlen(myself->nodename);
+    memcpy(ext->nodename, myself->nodename, nodename_len);
+    uint32_t extension_size = getNodenamePingExtSize();
+
+    /* Move the write cursor */
+    (*cursor)->type = CLUSTERMSG_EXT_TYPE_NODENAME;
+    (*cursor)->length = htonl(extension_size);
+    /* Make sure the string is NULL terminated by adding 1 */
+    *cursor = (clusterMsgPingExt *) (ext->nodename + EIGHT_BYTE_ALIGN(strlen(myself->nodename) + 1));
     return extension_size;
 }
 
@@ -3169,7 +3190,7 @@ void clusterSendPing(clusterLink *link, int type) {
         dictReleaseIterator(di);
     }
 
-    if (sdslen(myself->nodename) != 0) {
+    if (myself->nodename) {
         hdr->mflags[0] |= CLUSTERMSG_FLAG0_EXT_DATA;
         totlen += writeNodenamePingExt(&cursor);
         extensions++;
@@ -3958,7 +3979,7 @@ void clusterHandleSlaveMigration(int max_slaves) {
         (mstime()-target->orphaned_time) > CLUSTER_SLAVE_MIGRATION_DELAY &&
        !(server.cluster_module_flags & CLUSTER_MODULE_FLAG_NO_FAILOVER))
     {
-        serverLog(LL_WARNING,"Migrating to orphaned master %.40s ",
+        serverLog(LL_WARNING,"Migrating to orphaned master %.40s",
             target->name);
         clusterSetMaster(target);
     }
@@ -4207,7 +4228,7 @@ void clusterCron(void) {
             }
         }
         if (min_pong_node) {
-            serverLog(LL_DEBUG,"Pinging node %.40s ", min_pong_node->name);
+            serverLog(LL_DEBUG,"Pinging node %.40s", min_pong_node->name);
             clusterSendPing(min_pong_node->link, CLUSTERMSG_TYPE_PING);
         }
     }
@@ -4789,15 +4810,30 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
 
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
-    ci = sdscatfmt(ci," %s:%i@%i",
-        node->ip,
-        port,
-        node->cport);
-    if (sdslen(node->hostname) != 0) {
-        ci = sdscatfmt(ci,",%s", node->hostname);
-    }
-    if (sdslen(node->nodename) != 0) {
-        ci = sdscatfmt(ci,"-%s", node->nodename);
+    if (sdslen(node->hostname) != 0 && node->nodename) {
+        ci = sdscatfmt(ci," %s:%i@%i,%s-%s ",
+            node->ip,
+            port,
+            node->cport,
+            node->hostname,
+            node->nodename);
+    } else if (sdslen(node->hostname) != 0) {
+        ci = sdscatfmt(ci," %s:%i@%i,%s ",
+            node->ip,
+            port,
+            node->cport,
+            node->hostname);
+    } else if (node->nodename) {
+        ci = sdscatfmt(ci," %s:%i@%i-%s ",
+            node->ip,
+            port,
+            node->cport,
+            node->nodename);
+    } else {
+        ci = sdscatfmt(ci," %s:%i@%i ",
+            node->ip,
+            port,
+            node->cport);
     }
     ci = sdscatlen(ci," ",1);
 
@@ -4809,7 +4845,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     if (node->slaveof)
         ci = sdscatlen(ci,node->slaveof->name,CLUSTER_NAMELEN);
     else
-        ci = sdscatlen(ci,"-",1); 
+        ci = sdscatlen(ci,"-",1);
 
     unsigned long long nodeEpoch = node->configEpoch;
     if (nodeIsSlave(node) && node->slaveof) {
@@ -5018,6 +5054,7 @@ const char *getPreferredEndpoint(clusterNode *n) {
     switch(server.cluster_preferred_endpoint_type) {
     case CLUSTER_ENDPOINT_TYPE_IP: return n->ip;
     case CLUSTER_ENDPOINT_TYPE_HOSTNAME: return (sdslen(n->hostname) != 0) ? n->hostname : "?";
+    case CLUSTER_ENDPOINT_TYPE_NODENAME: return n->nodename ? n->nodename : "?";
     case CLUSTER_ENDPOINT_TYPE_UNKNOWN_ENDPOINT: return "";
     }
     return "unknown";
@@ -5112,6 +5149,8 @@ void addNodeToNodeReply(client *c, clusterNode *node) {
         addReplyBulkCString(c, node->ip);
     } else if (server.cluster_preferred_endpoint_type == CLUSTER_ENDPOINT_TYPE_HOSTNAME) {
         addReplyBulkCString(c, sdslen(node->hostname) != 0 ? node->hostname : "?");
+    } else if (server.cluster_preferred_endpoint_type == CLUSTER_ENDPOINT_TYPE_NODENAME) {
+        addReplyBulkCString(c, node->nodename ? node->nodename : "?");
     } else if (server.cluster_preferred_endpoint_type == CLUSTER_ENDPOINT_TYPE_UNKNOWN_ENDPOINT) {
         addReplyNull(c);
     } else {
@@ -5138,6 +5177,13 @@ void addNodeToNodeReply(client *c, clusterNode *node) {
     {
         addReplyBulkCString(c, "hostname");
         addReplyBulkCString(c, node->hostname);
+        length++;
+    }
+    if (server.cluster_preferred_endpoint_type != CLUSTER_ENDPOINT_TYPE_NODENAME
+        && node->nodename)
+    {
+        addReplyBulkCString(c, "nodename");
+        addReplyBulkCString(c, node->nodename);
         length++;
     }
     setDeferredMapLen(c, deflen, length);
