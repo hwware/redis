@@ -4174,11 +4174,9 @@ void sentinelGetCommand(client *c) {
         has_get_all = 1;
     } else if (c->argc == 3) {
         if ((ri = sentinelGetMasterByName(c->argv[2]->ptr)) == NULL) {
-            serverLog(LL_WARNING, "Setting has_all_master and option");
             option = c->argv[2]->ptr;
             has_all_masters = 1;
         } else {
-            serverLog(LL_WARNING, "Found master");
             has_get_all = 1;
         }
     }
