@@ -3985,6 +3985,7 @@ NULL
     } else if (!strcasecmp(c->argv[1]->ptr,"get")) {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (c->argc > 4) goto numargserr;
 =======
         if (c->argc != 3 || c->argc != 4) goto numargserr;
@@ -3992,6 +3993,9 @@ NULL
 =======
         if (c->argc != 3 && c->argc != 4) goto numargserr;
 >>>>>>> num args condition
+=======
+        if (c->argc > 4) goto numargserr;
+>>>>>>> Change format of command (#62)
         sentinelGetCommand(c);
     } else if (!strcasecmp(c->argv[1]->ptr,"config")) {
         if (c->argc < 3) goto numargserr;
@@ -4220,6 +4224,7 @@ void sentinelGetCommand(client *c) {
     int has_get_all = 0;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     if (c->argc == 2) {
         has_all_masters = 1;
         has_get_all = 1;
@@ -4239,18 +4244,23 @@ void sentinelGetCommand(client *c) {
 
 =======
     if (c->argc == 3) {
+=======
+    if (c->argc == 2) {
+        has_all_masters = 1;
+>>>>>>> Change format of command (#62)
         has_get_all = 1;
+    } else if (c->argc == 3) {
+        if ((ri = sentinelGetMasterByName(c->argv[2]->ptr)) == NULL) {
+            option = c->argv[2]->ptr;
+            has_all_masters = 1;
+        } else {
+            has_get_all = 1;
+        }
     }
     else{
-        option = c->argv[3]->ptr;
-    }
-
-    if (!strcasecmp(c->argv[2]->ptr,"all")) {
-        has_all_masters = 1;
-    }
-    else {
         if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL)
-                return;
+            return;
+        option = c->argv[3]->ptr;
     }
 
 >>>>>>> Added Get command
@@ -4260,10 +4270,14 @@ void sentinelGetCommand(client *c) {
         ri = dictGetVal(de);
         if (!has_all_masters) {
 <<<<<<< HEAD
+<<<<<<< HEAD
             if (ri != sentinelGetMasterByName(c->argv[2]->ptr))
 =======
             if (ri != sentinelGetMasterByNameOrReplyError(c,c->argv[2]))
 >>>>>>> Added Get command
+=======
+            if (ri != sentinelGetMasterByName(c->argv[2]->ptr))
+>>>>>>> Change format of command (#62)
                 continue;
         }
 
