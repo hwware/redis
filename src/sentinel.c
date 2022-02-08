@@ -457,6 +457,18 @@ dictType renamedCommandsDictType = {
     NULL                       /* allow to expand */
 };
 
+/* Dict for for case-insensitive search using null terminated C strings.
+ * The keys stored in dict are sds though. */
+dictType stateSetDictType = {
+    distCStrCaseHash,           /* hash function */
+    NULL,                       /* key dup */
+    NULL,                       /* val dup */
+    distCStrKeyCaseCompare,     /* key compare */
+    dictSdsDestructor,          /* key destructor */
+    NULL,                       /* val destructor */
+    NULL                        /* allow to expand */
+};
+
 /* =========================== Initialization =============================== */
 
 void sentinelSetCommand(client *c);
@@ -3257,7 +3269,7 @@ const char *sentinelFailoverStateStr(int state) {
 }
 
 /* Redis instance to Redis protocol representation. */
-void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri) {
+void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, int display_all, dict *section_dict) {
     char *flags = sdsempty();
     void *mbl;
     int fields = 0;
@@ -3268,133 +3280,170 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri) {
     addReplyBulkCString(c,ri->name);
     fields++;
 
-    addReplyBulkCString(c,"ip");
-    addReplyBulkCString(c,announceSentinelAddr(ri->addr));
-    fields++;
+    if (display_all || (dictFind(section_dict,"ip") != NULL)) {
+        addReplyBulkCString(c,"ip");
+        addReplyBulkCString(c,announceSentinelAddr(ri->addr));
+        fields++;
+    }
 
-    addReplyBulkCString(c,"port");
-    addReplyBulkLongLong(c,ri->addr->port);
-    fields++;
+    if (display_all || (dictFind(section_dict,"port") != NULL)) {
+        addReplyBulkCString(c,"port");
+        addReplyBulkLongLong(c,ri->addr->port);
+        fields++;
+    }
 
-    addReplyBulkCString(c,"runid");
-    addReplyBulkCString(c,ri->runid ? ri->runid : "");
-    fields++;
+    if (display_all || (dictFind(section_dict,"runid") != NULL)) {
+        addReplyBulkCString(c,"runid");
+        addReplyBulkCString(c,ri->runid ? ri->runid : "");
+        fields++;
+    }
+    
+    if (display_all || (dictFind(section_dict,"flags") != NULL)) {
+        addReplyBulkCString(c,"flags");
+        if (ri->flags & SRI_S_DOWN) flags = sdscat(flags,"s_down,");
+        if (ri->flags & SRI_O_DOWN) flags = sdscat(flags,"o_down,");
+        if (ri->flags & SRI_MASTER) flags = sdscat(flags,"master,");
+        if (ri->flags & SRI_SLAVE) flags = sdscat(flags,"slave,");
+        if (ri->flags & SRI_SENTINEL) flags = sdscat(flags,"sentinel,");
+        if (ri->link->disconnected) flags = sdscat(flags,"disconnected,");
+        if (ri->flags & SRI_MASTER_DOWN) flags = sdscat(flags,"master_down,");
+        if (ri->flags & SRI_FAILOVER_IN_PROGRESS)
+            flags = sdscat(flags,"failover_in_progress,");
+        if (ri->flags & SRI_PROMOTED) flags = sdscat(flags,"promoted,");
+        if (ri->flags & SRI_RECONF_SENT) flags = sdscat(flags,"reconf_sent,");
+        if (ri->flags & SRI_RECONF_INPROG) flags = sdscat(flags,"reconf_inprog,");
+        if (ri->flags & SRI_RECONF_DONE) flags = sdscat(flags,"reconf_done,");
+        if (ri->flags & SRI_FORCE_FAILOVER) flags = sdscat(flags,"force_failover,");
+        if (ri->flags & SRI_SCRIPT_KILL_SENT) flags = sdscat(flags,"script_kill_sent,");
 
-    addReplyBulkCString(c,"flags");
-    if (ri->flags & SRI_S_DOWN) flags = sdscat(flags,"s_down,");
-    if (ri->flags & SRI_O_DOWN) flags = sdscat(flags,"o_down,");
-    if (ri->flags & SRI_MASTER) flags = sdscat(flags,"master,");
-    if (ri->flags & SRI_SLAVE) flags = sdscat(flags,"slave,");
-    if (ri->flags & SRI_SENTINEL) flags = sdscat(flags,"sentinel,");
-    if (ri->link->disconnected) flags = sdscat(flags,"disconnected,");
-    if (ri->flags & SRI_MASTER_DOWN) flags = sdscat(flags,"master_down,");
-    if (ri->flags & SRI_FAILOVER_IN_PROGRESS)
-        flags = sdscat(flags,"failover_in_progress,");
-    if (ri->flags & SRI_PROMOTED) flags = sdscat(flags,"promoted,");
-    if (ri->flags & SRI_RECONF_SENT) flags = sdscat(flags,"reconf_sent,");
-    if (ri->flags & SRI_RECONF_INPROG) flags = sdscat(flags,"reconf_inprog,");
-    if (ri->flags & SRI_RECONF_DONE) flags = sdscat(flags,"reconf_done,");
-    if (ri->flags & SRI_FORCE_FAILOVER) flags = sdscat(flags,"force_failover,");
-    if (ri->flags & SRI_SCRIPT_KILL_SENT) flags = sdscat(flags,"script_kill_sent,");
+        if (sdslen(flags) != 0) sdsrange(flags,0,-2); /* remove last "," */
+        addReplyBulkCString(c,flags);
+        sdsfree(flags);
+        fields++;    
+    }
 
-    if (sdslen(flags) != 0) sdsrange(flags,0,-2); /* remove last "," */
-    addReplyBulkCString(c,flags);
-    sdsfree(flags);
-    fields++;
+    if (display_all || (dictFind(section_dict,"link-pending-commands") != NULL)) {
+        addReplyBulkCString(c,"link-pending-commands");
+        addReplyBulkLongLong(c,ri->link->pending_commands);
+        fields++;    
+    }
 
-    addReplyBulkCString(c,"link-pending-commands");
-    addReplyBulkLongLong(c,ri->link->pending_commands);
-    fields++;
+    if (display_all || (dictFind(section_dict,"link-refcount") != NULL)) {
+        addReplyBulkCString(c,"link-refcount");
+        addReplyBulkLongLong(c,ri->link->refcount);
+        fields++;
+    }
 
-    addReplyBulkCString(c,"link-refcount");
-    addReplyBulkLongLong(c,ri->link->refcount);
-    fields++;
-
-    if (ri->flags & SRI_FAILOVER_IN_PROGRESS) {
+    if ((ri->flags & SRI_FAILOVER_IN_PROGRESS) && (display_all || (dictFind(section_dict,"failover-state") != NULL))) {
         addReplyBulkCString(c,"failover-state");
         addReplyBulkCString(c,(char*)sentinelFailoverStateStr(ri->failover_state));
         fields++;
     }
 
-    addReplyBulkCString(c,"last-ping-sent");
-    addReplyBulkLongLong(c,
-        ri->link->act_ping_time ? (mstime() - ri->link->act_ping_time) : 0);
-    fields++;
+    if (display_all || (dictFind(section_dict,"last-ping-sent") != NULL)) {
+        addReplyBulkCString(c,"last-ping-sent");
+        addReplyBulkLongLong(c,ri->link->act_ping_time ? (mstime() - ri->link->act_ping_time) : 0);
+        fields++;
+    }
 
-    addReplyBulkCString(c,"last-ok-ping-reply");
-    addReplyBulkLongLong(c,mstime() - ri->link->last_avail_time);
-    fields++;
-
-    addReplyBulkCString(c,"last-ping-reply");
-    addReplyBulkLongLong(c,mstime() - ri->link->last_pong_time);
-    fields++;
-
-    if (ri->flags & SRI_S_DOWN) {
+    if (display_all || (dictFind(section_dict,"last-ok-ping-reply") != NULL)) {
+        addReplyBulkCString(c,"last-ok-ping-reply");
+        addReplyBulkLongLong(c,mstime() - ri->link->last_avail_time);
+        fields++;
+    }
+    
+    if (display_all || (dictFind(section_dict,"last-ping-reply") != NULL)) {
+        addReplyBulkCString(c,"last-ping-reply");
+        addReplyBulkLongLong(c,mstime() - ri->link->last_pong_time);
+        fields++;
+    }
+    
+    if ((ri->flags & SRI_S_DOWN) && (display_all || (dictFind(section_dict,"s-down-time") != NULL))) {
         addReplyBulkCString(c,"s-down-time");
         addReplyBulkLongLong(c,mstime()-ri->s_down_since_time);
         fields++;
     }
-
-    if (ri->flags & SRI_O_DOWN) {
+    
+    if ((ri->flags & SRI_O_DOWN) && (display_all || (dictFind(section_dict,"o-down-time") != NULL))) {
         addReplyBulkCString(c,"o-down-time");
         addReplyBulkLongLong(c,mstime()-ri->o_down_since_time);
         fields++;
     }
-
-    addReplyBulkCString(c,"down-after-milliseconds");
-    addReplyBulkLongLong(c,ri->down_after_period);
-    fields++;
+   
+    if (display_all || (dictFind(section_dict,"down-after-milliseconds") != NULL)) {
+        addReplyBulkCString(c,"down-after-milliseconds");
+        addReplyBulkLongLong(c,ri->down_after_period);
+        fields++;
+    }
 
     /* Masters and Slaves */
     if (ri->flags & (SRI_MASTER|SRI_SLAVE)) {
-        addReplyBulkCString(c,"info-refresh");
-        addReplyBulkLongLong(c,
-            ri->info_refresh ? (mstime() - ri->info_refresh) : 0);
-        fields++;
+        if (display_all || (dictFind(section_dict,"info-refresh") != NULL)) {
+            addReplyBulkCString(c,"info-refresh");
+            addReplyBulkLongLong(c,
+                ri->info_refresh ? (mstime() - ri->info_refresh) : 0);
+            fields++;
+        }
+        
+        if (display_all || (dictFind(section_dict,"role-reported") != NULL)) {
+            addReplyBulkCString(c,"role-reported");
+            addReplyBulkCString(c, (ri->role_reported == SRI_MASTER) ? "master" :
+                                                                       "slave");
+            fields++;
+        }
 
-        addReplyBulkCString(c,"role-reported");
-        addReplyBulkCString(c, (ri->role_reported == SRI_MASTER) ? "master" :
-                                                                   "slave");
-        fields++;
-
-        addReplyBulkCString(c,"role-reported-time");
-        addReplyBulkLongLong(c,mstime() - ri->role_reported_time);
-        fields++;
+        if (display_all || (dictFind(section_dict,"role-reported-time") != NULL)) {
+            addReplyBulkCString(c,"role-reported-time");
+            addReplyBulkLongLong(c,mstime() - ri->role_reported_time);
+            fields++;    
+        }
     }
 
     /* Only masters */
     if (ri->flags & SRI_MASTER) {
-        addReplyBulkCString(c,"config-epoch");
-        addReplyBulkLongLong(c,ri->config_epoch);
-        fields++;
+        if (display_all || (dictFind(section_dict,"config-epoch") != NULL)) {
+            addReplyBulkCString(c,"config-epoch");
+            addReplyBulkLongLong(c,ri->config_epoch);
+            fields++;     
+        }
 
-        addReplyBulkCString(c,"num-slaves");
-        addReplyBulkLongLong(c,dictSize(ri->slaves));
-        fields++;
-
-        addReplyBulkCString(c,"num-other-sentinels");
-        addReplyBulkLongLong(c,dictSize(ri->sentinels));
-        fields++;
-
-        addReplyBulkCString(c,"quorum");
-        addReplyBulkLongLong(c,ri->quorum);
-        fields++;
-
-        addReplyBulkCString(c,"failover-timeout");
-        addReplyBulkLongLong(c,ri->failover_timeout);
-        fields++;
-
-        addReplyBulkCString(c,"parallel-syncs");
-        addReplyBulkLongLong(c,ri->parallel_syncs);
-        fields++;
-
-        if (ri->notification_script) {
+        if (display_all || (dictFind(section_dict,"num-slaves") != NULL)) {
+            addReplyBulkCString(c,"num-slaves");
+            addReplyBulkLongLong(c,dictSize(ri->slaves));
+            fields++;
+        }
+        
+        if (display_all || (dictFind(section_dict,"num-other-sentinels") != NULL)) {
+            addReplyBulkCString(c,"num-other-sentinels");
+            addReplyBulkLongLong(c,dictSize(ri->sentinels));
+            fields++;    
+        }
+        
+        if (display_all || (dictFind(section_dict,"quorum") != NULL)) {
+            addReplyBulkCString(c,"quorum");
+            addReplyBulkLongLong(c,ri->quorum);
+            fields++;      
+        }
+        
+        if (display_all || (dictFind(section_dict,"failover-timeout") != NULL)) {
+            addReplyBulkCString(c,"failover-timeout");
+            addReplyBulkLongLong(c,ri->failover_timeout);
+            fields++;
+        }
+        
+        if (display_all || (dictFind(section_dict,"parallel-syncs") != NULL)) {
+            addReplyBulkCString(c,"parallel-syncs");
+            addReplyBulkLongLong(c,ri->parallel_syncs);
+            fields++;
+        }
+        
+        if ((ri->notification_script) && (display_all || (dictFind(section_dict,"notification-script") != NULL))) {
             addReplyBulkCString(c,"notification-script");
             addReplyBulkCString(c,ri->notification_script);
             fields++;
         }
 
-        if (ri->client_reconfig_script) {
+        if ((ri->client_reconfig_script) && (display_all || (dictFind(section_dict,"client-reconfig-script") != NULL))) {
             addReplyBulkCString(c,"client-reconfig-script");
             addReplyBulkCString(c,ri->client_reconfig_script);
             fields++;
@@ -3403,51 +3452,71 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri) {
 
     /* Only slaves */
     if (ri->flags & SRI_SLAVE) {
-        addReplyBulkCString(c,"master-link-down-time");
-        addReplyBulkLongLong(c,ri->master_link_down_time);
-        fields++;
+        if (display_all || (dictFind(section_dict,"master-link-down-time") != NULL)) {
+            addReplyBulkCString(c,"master-link-down-time");
+            addReplyBulkLongLong(c,ri->master_link_down_time);
+            fields++;         
+        }
 
-        addReplyBulkCString(c,"master-link-status");
-        addReplyBulkCString(c,
-            (ri->slave_master_link_status == SENTINEL_MASTER_LINK_STATUS_UP) ?
-            "ok" : "err");
-        fields++;
+        if (display_all || (dictFind(section_dict,"master-link-status") != NULL)) {
+            addReplyBulkCString(c,"master-link-status");
+            addReplyBulkCString(c,
+                (ri->slave_master_link_status == SENTINEL_MASTER_LINK_STATUS_UP) ?
+                "ok" : "err");
+            fields++;           
+        }
 
-        addReplyBulkCString(c,"master-host");
-        addReplyBulkCString(c,
-            ri->slave_master_host ? ri->slave_master_host : "?");
-        fields++;
-
-        addReplyBulkCString(c,"master-port");
-        addReplyBulkLongLong(c,ri->slave_master_port);
-        fields++;
-
-        addReplyBulkCString(c,"slave-priority");
-        addReplyBulkLongLong(c,ri->slave_priority);
-        fields++;
-
-        addReplyBulkCString(c,"slave-repl-offset");
-        addReplyBulkLongLong(c,ri->slave_repl_offset);
-        fields++;
-
-        addReplyBulkCString(c,"replica-announced");
-        addReplyBulkLongLong(c,ri->replica_announced);
-        fields++;
+        if (display_all || (dictFind(section_dict,"master-host") != NULL)) {
+            addReplyBulkCString(c,"master-host");
+            addReplyBulkCString(c,
+                ri->slave_master_host ? ri->slave_master_host : "?");
+            fields++;             
+        }
+        
+        if (display_all || (dictFind(section_dict,"master-port") != NULL)) {
+            addReplyBulkCString(c,"master-port");
+            addReplyBulkLongLong(c,ri->slave_master_port);
+            fields++;         
+        }
+        
+        if (display_all || (dictFind(section_dict,"slave-priority") != NULL)) {
+            addReplyBulkCString(c,"slave-priority");
+            addReplyBulkLongLong(c,ri->slave_priority);
+            fields++;
+        }
+        
+        if (display_all || (dictFind(section_dict,"slave-repl-offset") != NULL)) {
+            addReplyBulkCString(c,"slave-repl-offset");
+            addReplyBulkLongLong(c,ri->slave_repl_offset);
+            fields++;
+        }
+        
+        if (display_all || (dictFind(section_dict,"replica-announced") != NULL)) {
+            addReplyBulkCString(c,"replica-announced");
+            addReplyBulkLongLong(c,ri->replica_announced);
+            fields++;
+        }
     }
 
     /* Only sentinels */
     if (ri->flags & SRI_SENTINEL) {
-        addReplyBulkCString(c,"last-hello-message");
-        addReplyBulkLongLong(c,mstime() - ri->last_hello_time);
-        fields++;
+        if (display_all || (dictFind(section_dict,"last-hello-message") != NULL)) {
+            addReplyBulkCString(c,"last-hello-message");
+            addReplyBulkLongLong(c,mstime() - ri->last_hello_time);
+            fields++;    
+        }
 
-        addReplyBulkCString(c,"voted-leader");
-        addReplyBulkCString(c,ri->leader ? ri->leader : "?");
-        fields++;
+        if (display_all || (dictFind(section_dict,"voted-leader") != NULL)) {
+            addReplyBulkCString(c,"voted-leader");
+            addReplyBulkCString(c,ri->leader ? ri->leader : "?");
+            fields++;    
+        }
 
-        addReplyBulkCString(c,"voted-leader-epoch");
-        addReplyBulkLongLong(c,ri->leader_epoch);
-        fields++;
+        if (display_all || (dictFind(section_dict,"voted-leader-epoch") != NULL)) {
+            addReplyBulkCString(c,"voted-leader-epoch");
+            addReplyBulkLongLong(c,ri->leader_epoch);
+            fields++;    
+        }
     }
 
     setDeferredMapLen(c,mbl,fields);
@@ -3661,7 +3730,7 @@ void addReplySentinelDebugInfo(client *c) {
 
 /* Output a number of instances contained inside a dictionary as
  * Redis protocol. */
-void addReplyDictOfRedisInstances(client *c, dict *instances) {
+void addReplyDictOfRedisInstances(client *c, dict *instances,int display_all, dict *section_dict) {
     dictIterator *di;
     dictEntry *de;
     long slaves = 0;
@@ -3673,7 +3742,7 @@ void addReplyDictOfRedisInstances(client *c, dict *instances) {
 
         /* don't announce unannounced replicas */
         if (ri->flags & SRI_SLAVE && !ri->replica_announced) continue;
-        addReplySentinelRedisInstance(c,ri);
+        addReplySentinelRedisInstance(c,ri,display_all,section_dict);
         slaves++;
     }
     dictReleaseIterator(di);
@@ -3748,9 +3817,9 @@ void sentinelCommand(client *c) {
 "IS-MASTER-DOWN-BY-ADDR <ip> <port> <current-epoch> <runid>",
 "    Check if the master specified by ip:port is down from current Sentinel's",
 "    point of view.",
-"MASTER <master-name>",
+"MASTER <master-name> [<state> <state>...]",
 "    Show the state and info of the specified master.",
-"MASTERS",
+"MASTERS [<state> <state>...]",
 "    Show a list of monitored masters and their state.",
 "MONITOR <name> <ip> <port> <quorum>",
 "    Start monitoring a new master with the specified name, ip, port and quorum.",
@@ -3760,11 +3829,11 @@ void sentinelCommand(client *c) {
 "    Get pending scripts information.",
 "REMOVE <master-name>",
 "    Remove master from Sentinel's monitor list.",
-"REPLICAS <master-name>",
+"REPLICAS <master-name> [<state> <state>...]",
 "    Show a list of replicas for this master and their state.",
 "RESET <pattern>",
 "    Reset masters for specific master name matching this pattern.",
-"SENTINELS <master-name>",
+"SENTINELS <master-name> [<state> <state>...]",
 "    Show a list of Sentinel instances for this master and their state.",
 "SET <master-name> <option> <value> [<option> <value> ...]",
 "    Set configuration parameters for certain masters.",
@@ -3774,35 +3843,72 @@ NULL
         };
         addReplyHelp(c, help);
     } else if (!strcasecmp(c->argv[1]->ptr,"masters")) {
-        /* SENTINEL MASTERS */
-        if (c->argc != 2) goto numargserr;
-        addReplyDictOfRedisInstances(c,sentinel.masters);
+        /* SENTINEL MASTERS [<state> <state>...]*/
+        dict *section_dict = dictCreate(&stateSetDictType);
+        if (c->argc == 2)
+            addReplyDictOfRedisInstances(c,sentinel.masters,1,section_dict);
+        else {
+            for (int i = 2; i < c->argc; i++) {
+                sds section = sdsnew(c->argv[i]->ptr);
+                if (dictAdd(section_dict, section, NULL) != DICT_OK)
+                    sdsfree(section);
+            }
+            addReplyDictOfRedisInstances(c,sentinel.masters,0,section_dict);
+        }
+        releaseInfoSectionDict(section_dict);
     } else if (!strcasecmp(c->argv[1]->ptr,"master")) {
-        /* SENTINEL MASTER <name> */
+        /* SENTINEL MASTER <name> [<state> <state>...]*/
         sentinelRedisInstance *ri;
-
-        if (c->argc != 3) goto numargserr;
         if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2]))
             == NULL) return;
-        addReplySentinelRedisInstance(c,ri);
+        dict *section_dict = dictCreate(&stateSetDictType);
+        if (c->argc == 3)
+            addReplySentinelRedisInstance(c,ri,1,section_dict);
+        else {
+            for (int i = 3; i < c->argc; i++) {
+                sds section = sdsnew(c->argv[i]->ptr);
+                if (dictAdd(section_dict, section, NULL) != DICT_OK)
+                    sdsfree(section);
+            }
+            addReplySentinelRedisInstance(c,ri,0,section_dict);
+        }
+        releaseInfoSectionDict(section_dict);
     } else if (!strcasecmp(c->argv[1]->ptr,"slaves") ||
                !strcasecmp(c->argv[1]->ptr,"replicas"))
     {
-        /* SENTINEL REPLICAS <master-name> */
+        /* SENTINEL REPLICAS <master-name> [<state> <state>...]*/
         sentinelRedisInstance *ri;
-
-        if (c->argc != 3) goto numargserr;
         if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL)
             return;
-        addReplyDictOfRedisInstances(c,ri->slaves);
+        dict *section_dict = dictCreate(&stateSetDictType);
+        if (c->argc == 3)
+            addReplyDictOfRedisInstances(c,ri->slaves,1,section_dict);
+        else {
+            for (int i = 3; i < c->argc; i++) {
+                sds section = sdsnew(c->argv[i]->ptr);
+                if (dictAdd(section_dict, section, NULL) != DICT_OK)
+                    sdsfree(section);
+            }
+            addReplyDictOfRedisInstances(c,ri->slaves,0,section_dict);
+        }
+        releaseInfoSectionDict(section_dict);      
     } else if (!strcasecmp(c->argv[1]->ptr,"sentinels")) {
-        /* SENTINEL SENTINELS <master-name> */
-        sentinelRedisInstance *ri;
-
-        if (c->argc != 3) goto numargserr;
+        /* SENTINEL SENTINELS <master-name> [<state> <state>...]*/
+        sentinelRedisInstance *ri;        
         if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL)
             return;
-        addReplyDictOfRedisInstances(c,ri->sentinels);
+        dict *section_dict = dictCreate(&stateSetDictType);
+        if (c->argc == 3)
+            addReplyDictOfRedisInstances(c,ri->sentinels,1,section_dict);
+        else {
+            for (int i = 3; i < c->argc; i++) {
+                sds section = sdsnew(c->argv[i]->ptr);
+                if (dictAdd(section_dict, section, NULL) != DICT_OK)
+                    sdsfree(section);
+            }
+            addReplyDictOfRedisInstances(c,ri->sentinels,0,section_dict);
+        }
+        releaseInfoSectionDict(section_dict);  
     } else if (!strcasecmp(c->argv[1]->ptr,"myid") && c->argc == 2) {
         /* SENTINEL MYID */
         addReplyBulkCBuffer(c,sentinel.myid,CONFIG_RUN_ID_SIZE);
