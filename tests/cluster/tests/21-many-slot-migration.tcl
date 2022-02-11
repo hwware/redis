@@ -3,8 +3,6 @@
 # TODO: Test is currently disabled until it is stabilized (fixing the test
 # itself or real issues in Redis).
 
-if {false} {
-
 source "../tests/includes/init-tests.tcl"
 source "../tests/includes/utils.tcl"
 
@@ -61,4 +59,4 @@ test "Keys are accessible" {
 }
 
 config_set_all_nodes cluster-allow-replica-migration yes
-}
+
