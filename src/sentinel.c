@@ -137,6 +137,10 @@ static mstime_t sentinel_default_failover_timeout = 60*3*1000;
 #define SENTINEL_SIMFAILURE_CRASH_AFTER_ELECTION (1<<0)
 #define SENTINEL_SIMFAILURE_CRASH_AFTER_PROMOTION (1<<1)
 
+static inline int shouldDisplayParam(dict *params, const char *param) {
+	return params == NULL || dictFind(params,param) != NULL;
+}
+
 /* The link to a sentinelRedisInstance. When we have the same set of Sentinels
  * monitoring many masters, we have different instances representing the
  * same Sentinels, one per master, and we need to share the hiredis connections
@@ -3269,7 +3273,7 @@ const char *sentinelFailoverStateStr(int state) {
 }
 
 /* Redis instance to Redis protocol representation. */
-void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, int display_all, dict *section_dict) {
+void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *params) {
     char *flags = sdsempty();
     void *mbl;
     int fields = 0;
@@ -3280,25 +3284,25 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, int dis
     addReplyBulkCString(c,ri->name);
     fields++;
 
-    if (display_all || (dictFind(section_dict,"ip") != NULL)) {
+    if (shouldDisplayParam(params, "ip")) {
         addReplyBulkCString(c,"ip");
         addReplyBulkCString(c,announceSentinelAddr(ri->addr));
         fields++;
     }
 
-    if (display_all || (dictFind(section_dict,"port") != NULL)) {
+    if (shouldDisplayParam(params, "port")) {
         addReplyBulkCString(c,"port");
         addReplyBulkLongLong(c,ri->addr->port);
         fields++;
     }
 
-     if (display_all || (dictFind(section_dict,"runid") != NULL)) {
+    if (shouldDisplayParam(params, "runid")) {
         addReplyBulkCString(c,"runid");
         addReplyBulkCString(c,ri->runid ? ri->runid : "");
         fields++;
     }
 
-    if (display_all || (dictFind(section_dict,"flags") != NULL)) {
+    if (shouldDisplayParam(params, "flags")) {
         addReplyBulkCString(c,"flags");
         if (ri->flags & SRI_S_DOWN) flags = sdscat(flags,"s_down,");
         if (ri->flags & SRI_O_DOWN) flags = sdscat(flags,"o_down,");
@@ -3322,55 +3326,55 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, int dis
         fields++;    
     }
 
-    if (display_all || (dictFind(section_dict,"link-pending-commands") != NULL)) {
+    if (shouldDisplayParam(params, "link-pending-commands")) {
         addReplyBulkCString(c,"link-pending-commands");
         addReplyBulkLongLong(c,ri->link->pending_commands);
         fields++;    
     }
 
-    if (display_all || (dictFind(section_dict,"link-refcount") != NULL)) {
+    if (shouldDisplayParam(params, "link-refcount")) {
         addReplyBulkCString(c,"link-refcount");
         addReplyBulkLongLong(c,ri->link->refcount);
         fields++;
     }
 
-    if ((ri->flags & SRI_FAILOVER_IN_PROGRESS) && (display_all || (dictFind(section_dict,"failover-state") != NULL))) {
+    if ((ri->flags & SRI_FAILOVER_IN_PROGRESS) && shouldDisplayParam(params, "failover-state")) {
         addReplyBulkCString(c,"failover-state");
         addReplyBulkCString(c,(char*)sentinelFailoverStateStr(ri->failover_state));
         fields++;
     }
 
-    if (display_all || (dictFind(section_dict,"last-ping-sent") != NULL)) {
+    if (shouldDisplayParam(params, "last-ping-sent")) {
         addReplyBulkCString(c,"last-ping-sent");
         addReplyBulkLongLong(c,ri->link->act_ping_time ? (mstime() - ri->link->act_ping_time) : 0);
         fields++;
     }
 
-    if (display_all || (dictFind(section_dict,"last-ok-ping-reply") != NULL)) {
+    if (shouldDisplayParam(params, "last-ok-ping-reply")) {
         addReplyBulkCString(c,"last-ok-ping-reply");
         addReplyBulkLongLong(c,mstime() - ri->link->last_avail_time);
         fields++;
     }
 
-    if (display_all || (dictFind(section_dict,"last-ping-reply") != NULL)) {
+    if (shouldDisplayParam(params, "last-ping-reply")) {
         addReplyBulkCString(c,"last-ping-reply");
         addReplyBulkLongLong(c,mstime() - ri->link->last_pong_time);
         fields++;
     }
 
-    if ((ri->flags & SRI_S_DOWN) && (display_all || (dictFind(section_dict,"s-down-time") != NULL))) {
+    if ((ri->flags & SRI_S_DOWN) && shouldDisplayParam(params, "s-down-time")) {
         addReplyBulkCString(c,"s-down-time");
         addReplyBulkLongLong(c,mstime()-ri->s_down_since_time);
         fields++;
     }
 
-    if ((ri->flags & SRI_O_DOWN) && (display_all || (dictFind(section_dict,"o-down-time") != NULL))) {
+    if ((ri->flags & SRI_O_DOWN) && shouldDisplayParam(params, "o-down-time")) {
         addReplyBulkCString(c,"o-down-time");
         addReplyBulkLongLong(c,mstime()-ri->o_down_since_time);
         fields++;
     }
 
-    if (display_all || (dictFind(section_dict,"down-after-milliseconds") != NULL)) {
+    if (shouldDisplayParam(params, "down-after-milliseconds")) {
         addReplyBulkCString(c,"down-after-milliseconds");
         addReplyBulkLongLong(c,ri->down_after_period);
         fields++;
@@ -3378,21 +3382,21 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, int dis
 
     /* Masters and Slaves */
     if (ri->flags & (SRI_MASTER|SRI_SLAVE)) {
-        if (display_all || (dictFind(section_dict,"info-refresh") != NULL)) {
+        if (shouldDisplayParam(params, "info-refresh")) {
             addReplyBulkCString(c,"info-refresh");
             addReplyBulkLongLong(c,
                 ri->info_refresh ? (mstime() - ri->info_refresh) : 0);
             fields++;
         }
 
-        if (display_all || (dictFind(section_dict,"role-reported") != NULL)) {
+        if (shouldDisplayParam(params, "role-reported")) {
             addReplyBulkCString(c,"role-reported");
             addReplyBulkCString(c, (ri->role_reported == SRI_MASTER) ? "master" :
                                                                        "slave");
             fields++;
         }
 
-        if (display_all || (dictFind(section_dict,"role-reported-time") != NULL)) {
+        if (shouldDisplayParam(params, "role-reported-time")) {
             addReplyBulkCString(c,"role-reported-time");
             addReplyBulkLongLong(c,mstime() - ri->role_reported_time);
             fields++;    
@@ -3401,49 +3405,49 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, int dis
 
     /* Only masters */
     if (ri->flags & SRI_MASTER) {
-        if (display_all || (dictFind(section_dict,"config-epoch") != NULL)) {
+        if (shouldDisplayParam(params, "config-epoch")) {
             addReplyBulkCString(c,"config-epoch");
             addReplyBulkLongLong(c,ri->config_epoch);
             fields++;     
         }
 
-        if (display_all || (dictFind(section_dict,"num-slaves") != NULL)) {
+        if (shouldDisplayParam(params, "num-slaves")) {
             addReplyBulkCString(c,"num-slaves");
             addReplyBulkLongLong(c,dictSize(ri->slaves));
             fields++;
         }
 
-        if (display_all || (dictFind(section_dict,"num-other-sentinels") != NULL)) {
+        if (shouldDisplayParam(params, "num-other-sentinels")) {
             addReplyBulkCString(c,"num-other-sentinels");
             addReplyBulkLongLong(c,dictSize(ri->sentinels));
             fields++;    
         }
 
-        if (display_all || (dictFind(section_dict,"quorum") != NULL)) {
+        if (shouldDisplayParam(params, "quorum")) {
             addReplyBulkCString(c,"quorum");
             addReplyBulkLongLong(c,ri->quorum);
             fields++;      
         }
 
-        if (display_all || (dictFind(section_dict,"failover-timeout") != NULL)) {
+        if (shouldDisplayParam(params, "failover-timeout")) {
             addReplyBulkCString(c,"failover-timeout");
             addReplyBulkLongLong(c,ri->failover_timeout);
             fields++;
         }
 
-        if (display_all || (dictFind(section_dict,"parallel-syncs") != NULL)) {
+        if (shouldDisplayParam(params, "parallel-syncs")) {
             addReplyBulkCString(c,"parallel-syncs");
             addReplyBulkLongLong(c,ri->parallel_syncs);
             fields++;
         }
 
-        if ((ri->notification_script) && (display_all || (dictFind(section_dict,"notification-script") != NULL))) {
+        if ((ri->notification_script) && shouldDisplayParam(params, "notification-script")) {
             addReplyBulkCString(c,"notification-script");
             addReplyBulkCString(c,ri->notification_script);
             fields++;
         }
 
-        if ((ri->client_reconfig_script) && (display_all || (dictFind(section_dict,"client-reconfig-script") != NULL))) {
+        if ((ri->client_reconfig_script) && shouldDisplayParam(params, "client-reconfig-script")) {
             addReplyBulkCString(c,"client-reconfig-script");
             addReplyBulkCString(c,ri->client_reconfig_script);
             fields++;
@@ -3452,13 +3456,13 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, int dis
 
     /* Only slaves */
     if (ri->flags & SRI_SLAVE) {
-        if (display_all || (dictFind(section_dict,"master-link-down-time") != NULL)) {
+        if (shouldDisplayParam(params, "master-link-down-time")) {
             addReplyBulkCString(c,"master-link-down-time");
             addReplyBulkLongLong(c,ri->master_link_down_time);
             fields++;         
         }
 
-        if (display_all || (dictFind(section_dict,"master-link-status") != NULL)) {
+        if (shouldDisplayParam(params, "master-link-status")) {
             addReplyBulkCString(c,"master-link-status");
             addReplyBulkCString(c,
                 (ri->slave_master_link_status == SENTINEL_MASTER_LINK_STATUS_UP) ?
@@ -3466,32 +3470,32 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, int dis
             fields++;           
         }
 
-        if (display_all || (dictFind(section_dict,"master-host") != NULL)) {
+        if (shouldDisplayParam(params, "master-host")) {
             addReplyBulkCString(c,"master-host");
             addReplyBulkCString(c,
                 ri->slave_master_host ? ri->slave_master_host : "?");
             fields++;             
         }
 
-        if (display_all || (dictFind(section_dict,"master-port") != NULL)) {
+        if (shouldDisplayParam(params, "master-port")) {
             addReplyBulkCString(c,"master-port");
             addReplyBulkLongLong(c,ri->slave_master_port);
             fields++;         
         }
 
-        if (display_all || (dictFind(section_dict,"slave-priority") != NULL)) {
+        if (shouldDisplayParam(params, "slave-priority")) {
             addReplyBulkCString(c,"slave-priority");
             addReplyBulkLongLong(c,ri->slave_priority);
             fields++;
         }
 
-        if (display_all || (dictFind(section_dict,"slave-repl-offset") != NULL)) {
+        if (shouldDisplayParam(params, "slave-repl-offset")) {
             addReplyBulkCString(c,"slave-repl-offset");
             addReplyBulkLongLong(c,ri->slave_repl_offset);
             fields++;
         }
 
-        if (display_all || (dictFind(section_dict,"replica-announced") != NULL)) {
+        if (shouldDisplayParam(params, "replica-announced")) {
             addReplyBulkCString(c,"replica-announced");
             addReplyBulkLongLong(c,ri->replica_announced);
             fields++;
@@ -3500,19 +3504,19 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, int dis
 
     /* Only sentinels */
     if (ri->flags & SRI_SENTINEL) {
-        if (display_all || (dictFind(section_dict,"last-hello-message") != NULL)) {
+        if (shouldDisplayParam(params, "last-hello-message")) {
             addReplyBulkCString(c,"last-hello-message");
             addReplyBulkLongLong(c,mstime() - ri->last_hello_time);
             fields++;    
         }
 
-        if (display_all || (dictFind(section_dict,"voted-leader") != NULL)) {
+        if (shouldDisplayParam(params, "voted-leader")) {
             addReplyBulkCString(c,"voted-leader");
             addReplyBulkCString(c,ri->leader ? ri->leader : "?");
             fields++;    
         }
 
-        if (display_all || (dictFind(section_dict,"voted-leader-epoch") != NULL)) {
+        if (shouldDisplayParam(params, "voted-leader-epoch")) {
             addReplyBulkCString(c,"voted-leader-epoch");
             addReplyBulkLongLong(c,ri->leader_epoch);
             fields++;    
@@ -3730,7 +3734,7 @@ void addReplySentinelDebugInfo(client *c) {
 
 /* Output a number of instances contained inside a dictionary as
  * Redis protocol. */
-void addReplyDictOfRedisInstances(client *c, dict *instances,int display_all, dict *section_dict) {
+void addReplyDictOfRedisInstances(client *c, dict *instances, dict *params) {
     dictIterator *di;
     dictEntry *de;
     long slaves = 0;
@@ -3742,7 +3746,7 @@ void addReplyDictOfRedisInstances(client *c, dict *instances,int display_all, di
 
         /* don't announce unannounced replicas */
         if (ri->flags & SRI_SLAVE && !ri->replica_announced) continue;
-        addReplySentinelRedisInstance(c,ri,display_all,section_dict);
+        addReplySentinelRedisInstance(c,ri,params);
         slaves++;
     }
     dictReleaseIterator(di);
@@ -3817,9 +3821,9 @@ void sentinelCommand(client *c) {
 "IS-MASTER-DOWN-BY-ADDR <ip> <port> <current-epoch> <runid>",
 "    Check if the master specified by ip:port is down from current Sentinel's",
 "    point of view.",
-"MASTER <master-name>",
+"MASTER <master-name> [param, param...]",
 "    Show the state and info of the specified master.",
-"MASTERS",
+"MASTERS [param, param...]",
 "    Show a list of monitored masters and their state.",
 "MONITOR <name> <ip> <port> <quorum>",
 "    Start monitoring a new master with the specified name, ip, port and quorum.",
@@ -3829,11 +3833,11 @@ void sentinelCommand(client *c) {
 "    Get pending scripts information.",
 "REMOVE <master-name>",
 "    Remove master from Sentinel's monitor list.",
-"REPLICAS <master-name>",
+"REPLICAS <master-name> [param, param...]",
 "    Show a list of replicas for this master and their state.",
 "RESET <pattern>",
 "    Reset masters for specific master name matching this pattern.",
-"SENTINELS <master-name>",
+"SENTINELS <master-name> [param, param...]",
 "    Show a list of Sentinel instances for this master and their state.",
 "SET <master-name> <option> <value> [<option> <value> ...]",
 "    Set configuration parameters for certain masters.",
@@ -3843,72 +3847,72 @@ NULL
         };
         addReplyHelp(c, help);
     } else if (!strcasecmp(c->argv[1]->ptr,"masters")) {
-        /* SENTINEL MASTERS [<state> <state>...]*/
-        dict *section_dict = dictCreate(&stateSetDictType);
+        /* SENTINEL MASTERS [<param> <param>...]*/        
         if (c->argc == 2)
-            addReplyDictOfRedisInstances(c,sentinel.masters,1,section_dict);
+            addReplyDictOfRedisInstances(c,sentinel.masters,NULL);
         else {
+            dict *params = dictCreate(&stateSetDictType);
             for (int i = 2; i < c->argc; i++) {
-                sds section = sdsnew(c->argv[i]->ptr);
-                if (dictAdd(section_dict, section, NULL) != DICT_OK)
-                    sdsfree(section);
+                sds param = sdsnew(c->argv[i]->ptr);
+                if (dictAdd(params, param, NULL) != DICT_OK)
+                    sdsfree(param);
             }
-            addReplyDictOfRedisInstances(c,sentinel.masters,0,section_dict);
-        }
-        releaseInfoSectionDict(section_dict);
+            addReplyDictOfRedisInstances(c,sentinel.masters,params);
+            releaseInfoSectionDict(params);
+        }        
     } else if (!strcasecmp(c->argv[1]->ptr,"master")) {
-        /* SENTINEL MASTER <name> [<state> <state>...]*/
+        /* SENTINEL MASTER <name> [<param> <param>...]*/
         sentinelRedisInstance *ri;
         if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2]))
             == NULL) return;
-        dict *section_dict = dictCreate(&stateSetDictType);
         if (c->argc == 3)
-            addReplySentinelRedisInstance(c,ri,1,section_dict);
+            addReplySentinelRedisInstance(c,ri,NULL);
         else {
+            dict *params = dictCreate(&stateSetDictType);
             for (int i = 3; i < c->argc; i++) {
-                sds section = sdsnew(c->argv[i]->ptr);
-                if (dictAdd(section_dict, section, NULL) != DICT_OK)
-                    sdsfree(section);
+                sds param = sdsnew(c->argv[i]->ptr);
+                if (dictAdd(params, param, NULL) != DICT_OK)
+                    sdsfree(param);
             }
-            addReplySentinelRedisInstance(c,ri,0,section_dict);
-        }
-        releaseInfoSectionDict(section_dict);
+            addReplySentinelRedisInstance(c,ri,params);
+            releaseInfoSectionDict(params);
+        }        
     } else if (!strcasecmp(c->argv[1]->ptr,"slaves") ||
                !strcasecmp(c->argv[1]->ptr,"replicas"))
     {
-        /* SENTINEL REPLICAS <master-name> [<state> <state>...]*/
+        /* SENTINEL REPLICAS <master-name> [<param> <param>...]*/
         sentinelRedisInstance *ri;
         if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL)
-            return;
-        dict *section_dict = dictCreate(&stateSetDictType);
+            return;        
         if (c->argc == 3)
-            addReplyDictOfRedisInstances(c,ri->slaves,1,section_dict);
+            addReplyDictOfRedisInstances(c,ri->slaves,NULL);
         else {
+            dict *params = dictCreate(&stateSetDictType);
             for (int i = 3; i < c->argc; i++) {
-                sds section = sdsnew(c->argv[i]->ptr);
-                if (dictAdd(section_dict, section, NULL) != DICT_OK)
-                    sdsfree(section);
+                sds param = sdsnew(c->argv[i]->ptr);
+                if (dictAdd(params, param, NULL) != DICT_OK)
+                    sdsfree(param);
             }
-            addReplyDictOfRedisInstances(c,ri->slaves,0,section_dict);
-        }
-        releaseInfoSectionDict(section_dict);   
+            addReplyDictOfRedisInstances(c,ri->slaves,params);
+            releaseInfoSectionDict(params);   
+        }     
     } else if (!strcasecmp(c->argv[1]->ptr,"sentinels")) {
-        /* SENTINEL SENTINELS <master-name> [<state> <state>...]*/
+        /* SENTINEL SENTINELS <master-name> [<param> <param>...]*/
         sentinelRedisInstance *ri;        
         if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL)
-            return;
-        dict *section_dict = dictCreate(&stateSetDictType);
+            return;        
         if (c->argc == 3)
-            addReplyDictOfRedisInstances(c,ri->sentinels,1,section_dict);
+            addReplyDictOfRedisInstances(c,ri->sentinels,NULL);
         else {
+            dict *params = dictCreate(&stateSetDictType);
             for (int i = 3; i < c->argc; i++) {
-                sds section = sdsnew(c->argv[i]->ptr);
-                if (dictAdd(section_dict, section, NULL) != DICT_OK)
-                    sdsfree(section);
+                sds param = sdsnew(c->argv[i]->ptr);
+                if (dictAdd(params, param, NULL) != DICT_OK)
+                    sdsfree(param);
             }
-            addReplyDictOfRedisInstances(c,ri->sentinels,0,section_dict);
-        }
-        releaseInfoSectionDict(section_dict); 
+            addReplyDictOfRedisInstances(c,ri->sentinels,params);
+            releaseInfoSectionDict(params); 
+        }        
     } else if (!strcasecmp(c->argv[1]->ptr,"myid") && c->argc == 2) {
         /* SENTINEL MYID */
         addReplyBulkCBuffer(c,sentinel.myid,CONFIG_RUN_ID_SIZE);
