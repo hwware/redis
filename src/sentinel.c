@@ -3273,8 +3273,7 @@ const char *sentinelFailoverStateStr(int state) {
 }
 
 /* Redis instance to Redis protocol representation. */
-void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *params) {
-    char *flags = sdsempty();
+void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *params) {   
     void *mbl;
     int fields = 0;
 
@@ -3303,6 +3302,7 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *p
     }
 
     if (shouldDisplayParam(params, "flags")) {
+        char *flags = sdsempty();
         addReplyBulkCString(c,"flags");
         if (ri->flags & SRI_S_DOWN) flags = sdscat(flags,"s_down,");
         if (ri->flags & SRI_O_DOWN) flags = sdscat(flags,"o_down,");
