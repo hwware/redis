@@ -137,10 +137,6 @@ static mstime_t sentinel_default_failover_timeout = 60*3*1000;
 #define SENTINEL_SIMFAILURE_CRASH_AFTER_ELECTION (1<<0)
 #define SENTINEL_SIMFAILURE_CRASH_AFTER_PROMOTION (1<<1)
 
-static inline int shouldDisplayParam(dict *params, const char *param) {
-	return params == NULL || dictFind(params,param) != NULL;
-}
-
 /* The link to a sentinelRedisInstance. When we have the same set of Sentinels
  * monitoring many masters, we have different instances representing the
  * same Sentinels, one per master, and we need to share the hiredis connections
@@ -385,6 +381,10 @@ static int redisAeAttach(aeEventLoop *loop, redisAsyncContext *ac) {
     ac->ev.data = e;
 
     return C_OK;
+}
+
+static inline int isAddParamToReply(dict *params, const char *param) {
+	return params == NULL || dictFind(params,param) != NULL;
 }
 
 /* ============================= Prototypes ================================= */
@@ -3283,25 +3283,25 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *p
     addReplyBulkCString(c,ri->name);
     fields++;
 
-    if (shouldDisplayParam(params, "ip")) {
+    if (isAddParamToReply(params, "ip")) {
         addReplyBulkCString(c,"ip");
         addReplyBulkCString(c,announceSentinelAddr(ri->addr));
         fields++;
     }
 
-    if (shouldDisplayParam(params, "port")) {
+    if (isAddParamToReply(params, "port")) {
         addReplyBulkCString(c,"port");
         addReplyBulkLongLong(c,ri->addr->port);
         fields++;
     }
 
-    if (shouldDisplayParam(params, "runid")) {
+    if (isAddParamToReply(params, "runid")) {
         addReplyBulkCString(c,"runid");
         addReplyBulkCString(c,ri->runid ? ri->runid : "");
         fields++;
     }
 
-    if (shouldDisplayParam(params, "flags")) {
+    if (isAddParamToReply(params, "flags")) {
         char *flags = sdsempty();
         addReplyBulkCString(c,"flags");
         if (ri->flags & SRI_S_DOWN) flags = sdscat(flags,"s_down,");
@@ -3326,55 +3326,55 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *p
         fields++;    
     }
 
-    if (shouldDisplayParam(params, "link-pending-commands")) {
+    if (isAddParamToReply(params, "link-pending-commands")) {
         addReplyBulkCString(c,"link-pending-commands");
         addReplyBulkLongLong(c,ri->link->pending_commands);
         fields++;    
     }
 
-    if (shouldDisplayParam(params, "link-refcount")) {
+    if (isAddParamToReply(params, "link-refcount")) {
         addReplyBulkCString(c,"link-refcount");
         addReplyBulkLongLong(c,ri->link->refcount);
         fields++;
     }
 
-    if ((ri->flags & SRI_FAILOVER_IN_PROGRESS) && shouldDisplayParam(params, "failover-state")) {
+    if ((ri->flags & SRI_FAILOVER_IN_PROGRESS) && isAddParamToReply(params, "failover-state")) {
         addReplyBulkCString(c,"failover-state");
         addReplyBulkCString(c,(char*)sentinelFailoverStateStr(ri->failover_state));
         fields++;
     }
 
-    if (shouldDisplayParam(params, "last-ping-sent")) {
+    if (isAddParamToReply(params, "last-ping-sent")) {
         addReplyBulkCString(c,"last-ping-sent");
         addReplyBulkLongLong(c,ri->link->act_ping_time ? (mstime() - ri->link->act_ping_time) : 0);
         fields++;
     }
 
-    if (shouldDisplayParam(params, "last-ok-ping-reply")) {
+    if (isAddParamToReply(params, "last-ok-ping-reply")) {
         addReplyBulkCString(c,"last-ok-ping-reply");
         addReplyBulkLongLong(c,mstime() - ri->link->last_avail_time);
         fields++;
     }
 
-    if (shouldDisplayParam(params, "last-ping-reply")) {
+    if (isAddParamToReply(params, "last-ping-reply")) {
         addReplyBulkCString(c,"last-ping-reply");
         addReplyBulkLongLong(c,mstime() - ri->link->last_pong_time);
         fields++;
     }
 
-    if ((ri->flags & SRI_S_DOWN) && shouldDisplayParam(params, "s-down-time")) {
+    if ((ri->flags & SRI_S_DOWN) && isAddParamToReply(params, "s-down-time")) {
         addReplyBulkCString(c,"s-down-time");
         addReplyBulkLongLong(c,mstime()-ri->s_down_since_time);
         fields++;
     }
 
-    if ((ri->flags & SRI_O_DOWN) && shouldDisplayParam(params, "o-down-time")) {
+    if ((ri->flags & SRI_O_DOWN) && isAddParamToReply(params, "o-down-time")) {
         addReplyBulkCString(c,"o-down-time");
         addReplyBulkLongLong(c,mstime()-ri->o_down_since_time);
         fields++;
     }
 
-    if (shouldDisplayParam(params, "down-after-milliseconds")) {
+    if (isAddParamToReply(params, "down-after-milliseconds")) {
         addReplyBulkCString(c,"down-after-milliseconds");
         addReplyBulkLongLong(c,ri->down_after_period);
         fields++;
@@ -3382,21 +3382,21 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *p
 
     /* Masters and Slaves */
     if (ri->flags & (SRI_MASTER|SRI_SLAVE)) {
-        if (shouldDisplayParam(params, "info-refresh")) {
+        if (isAddParamToReply(params, "info-refresh")) {
             addReplyBulkCString(c,"info-refresh");
             addReplyBulkLongLong(c,
                 ri->info_refresh ? (mstime() - ri->info_refresh) : 0);
             fields++;
         }
 
-        if (shouldDisplayParam(params, "role-reported")) {
+        if (isAddParamToReply(params, "role-reported")) {
             addReplyBulkCString(c,"role-reported");
             addReplyBulkCString(c, (ri->role_reported == SRI_MASTER) ? "master" :
                                                                        "slave");
             fields++;
         }
 
-        if (shouldDisplayParam(params, "role-reported-time")) {
+        if (isAddParamToReply(params, "role-reported-time")) {
             addReplyBulkCString(c,"role-reported-time");
             addReplyBulkLongLong(c,mstime() - ri->role_reported_time);
             fields++;    
@@ -3405,49 +3405,49 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *p
 
     /* Only masters */
     if (ri->flags & SRI_MASTER) {
-        if (shouldDisplayParam(params, "config-epoch")) {
+        if (isAddParamToReply(params, "config-epoch")) {
             addReplyBulkCString(c,"config-epoch");
             addReplyBulkLongLong(c,ri->config_epoch);
             fields++;     
         }
 
-        if (shouldDisplayParam(params, "num-slaves")) {
+        if (isAddParamToReply(params, "num-slaves")) {
             addReplyBulkCString(c,"num-slaves");
             addReplyBulkLongLong(c,dictSize(ri->slaves));
             fields++;
         }
 
-        if (shouldDisplayParam(params, "num-other-sentinels")) {
+        if (isAddParamToReply(params, "num-other-sentinels")) {
             addReplyBulkCString(c,"num-other-sentinels");
             addReplyBulkLongLong(c,dictSize(ri->sentinels));
             fields++;    
         }
 
-        if (shouldDisplayParam(params, "quorum")) {
+        if (isAddParamToReply(params, "quorum")) {
             addReplyBulkCString(c,"quorum");
             addReplyBulkLongLong(c,ri->quorum);
             fields++;      
         }
 
-        if (shouldDisplayParam(params, "failover-timeout")) {
+        if (isAddParamToReply(params, "failover-timeout")) {
             addReplyBulkCString(c,"failover-timeout");
             addReplyBulkLongLong(c,ri->failover_timeout);
             fields++;
         }
 
-        if (shouldDisplayParam(params, "parallel-syncs")) {
+        if (isAddParamToReply(params, "parallel-syncs")) {
             addReplyBulkCString(c,"parallel-syncs");
             addReplyBulkLongLong(c,ri->parallel_syncs);
             fields++;
         }
 
-        if ((ri->notification_script) && shouldDisplayParam(params, "notification-script")) {
+        if ((ri->notification_script) && isAddParamToReply(params, "notification-script")) {
             addReplyBulkCString(c,"notification-script");
             addReplyBulkCString(c,ri->notification_script);
             fields++;
         }
 
-        if ((ri->client_reconfig_script) && shouldDisplayParam(params, "client-reconfig-script")) {
+        if ((ri->client_reconfig_script) && isAddParamToReply(params, "client-reconfig-script")) {
             addReplyBulkCString(c,"client-reconfig-script");
             addReplyBulkCString(c,ri->client_reconfig_script);
             fields++;
@@ -3456,13 +3456,13 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *p
 
     /* Only slaves */
     if (ri->flags & SRI_SLAVE) {
-        if (shouldDisplayParam(params, "master-link-down-time")) {
+        if (isAddParamToReply(params, "master-link-down-time")) {
             addReplyBulkCString(c,"master-link-down-time");
             addReplyBulkLongLong(c,ri->master_link_down_time);
             fields++;         
         }
 
-        if (shouldDisplayParam(params, "master-link-status")) {
+        if (isAddParamToReply(params, "master-link-status")) {
             addReplyBulkCString(c,"master-link-status");
             addReplyBulkCString(c,
                 (ri->slave_master_link_status == SENTINEL_MASTER_LINK_STATUS_UP) ?
@@ -3470,32 +3470,32 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *p
             fields++;           
         }
 
-        if (shouldDisplayParam(params, "master-host")) {
+        if (isAddParamToReply(params, "master-host")) {
             addReplyBulkCString(c,"master-host");
             addReplyBulkCString(c,
                 ri->slave_master_host ? ri->slave_master_host : "?");
             fields++;             
         }
 
-        if (shouldDisplayParam(params, "master-port")) {
+        if (isAddParamToReply(params, "master-port")) {
             addReplyBulkCString(c,"master-port");
             addReplyBulkLongLong(c,ri->slave_master_port);
             fields++;         
         }
 
-        if (shouldDisplayParam(params, "slave-priority")) {
+        if (isAddParamToReply(params, "slave-priority")) {
             addReplyBulkCString(c,"slave-priority");
             addReplyBulkLongLong(c,ri->slave_priority);
             fields++;
         }
 
-        if (shouldDisplayParam(params, "slave-repl-offset")) {
+        if (isAddParamToReply(params, "slave-repl-offset")) {
             addReplyBulkCString(c,"slave-repl-offset");
             addReplyBulkLongLong(c,ri->slave_repl_offset);
             fields++;
         }
 
-        if (shouldDisplayParam(params, "replica-announced")) {
+        if (isAddParamToReply(params, "replica-announced")) {
             addReplyBulkCString(c,"replica-announced");
             addReplyBulkLongLong(c,ri->replica_announced);
             fields++;
@@ -3504,19 +3504,19 @@ void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *p
 
     /* Only sentinels */
     if (ri->flags & SRI_SENTINEL) {
-        if (shouldDisplayParam(params, "last-hello-message")) {
+        if (isAddParamToReply(params, "last-hello-message")) {
             addReplyBulkCString(c,"last-hello-message");
             addReplyBulkLongLong(c,mstime() - ri->last_hello_time);
             fields++;    
         }
 
-        if (shouldDisplayParam(params, "voted-leader")) {
+        if (isAddParamToReply(params, "voted-leader")) {
             addReplyBulkCString(c,"voted-leader");
             addReplyBulkCString(c,ri->leader ? ri->leader : "?");
             fields++;    
         }
 
-        if (shouldDisplayParam(params, "voted-leader-epoch")) {
+        if (isAddParamToReply(params, "voted-leader-epoch")) {
             addReplyBulkCString(c,"voted-leader-epoch");
             addReplyBulkLongLong(c,ri->leader_epoch);
             fields++;    
@@ -3794,6 +3794,17 @@ int sentinelIsQuorumReachable(sentinelRedisInstance *master, int *usableptr) {
     return result;
 }
 
+void addReplyDictOfRedisInstancesWithParams(client *c, dict *instances, int index) {
+    dict *params = dictCreate(&stateSetDictType);
+    for (int i = index; i < c->argc; i++) {
+        sds param = sdsnew(c->argv[i]->ptr);
+        if (dictAdd(params, param, NULL) != DICT_OK)
+             sdsfree(param);
+    }
+    addReplyDictOfRedisInstances(c,instances,params);
+    releaseInfoSectionDict(params);
+}
+
 void sentinelCommand(client *c) {
     if (c->argc == 2 && !strcasecmp(c->argv[1]->ptr,"help")) {
         const char *help[] = {
@@ -3851,14 +3862,7 @@ NULL
         if (c->argc == 2)
             addReplyDictOfRedisInstances(c,sentinel.masters,NULL);
         else {
-            dict *params = dictCreate(&stateSetDictType);
-            for (int i = 2; i < c->argc; i++) {
-                sds param = sdsnew(c->argv[i]->ptr);
-                if (dictAdd(params, param, NULL) != DICT_OK)
-                    sdsfree(param);
-            }
-            addReplyDictOfRedisInstances(c,sentinel.masters,params);
-            releaseInfoSectionDict(params);
+            addReplyDictOfRedisInstancesWithParams(c, sentinel.masters, 2);
         }        
     } else if (!strcasecmp(c->argv[1]->ptr,"master")) {
         /* SENTINEL MASTER <name> [<param> <param>...]*/
@@ -3887,14 +3891,7 @@ NULL
         if (c->argc == 3)
             addReplyDictOfRedisInstances(c,ri->slaves,NULL);
         else {
-            dict *params = dictCreate(&stateSetDictType);
-            for (int i = 3; i < c->argc; i++) {
-                sds param = sdsnew(c->argv[i]->ptr);
-                if (dictAdd(params, param, NULL) != DICT_OK)
-                    sdsfree(param);
-            }
-            addReplyDictOfRedisInstances(c,ri->slaves,params);
-            releaseInfoSectionDict(params);   
+            addReplyDictOfRedisInstancesWithParams(c, ri->slaves, 3);
         }     
     } else if (!strcasecmp(c->argv[1]->ptr,"sentinels")) {
         /* SENTINEL SENTINELS <master-name> [<param> <param>...]*/
@@ -3904,14 +3901,7 @@ NULL
         if (c->argc == 3)
             addReplyDictOfRedisInstances(c,ri->sentinels,NULL);
         else {
-            dict *params = dictCreate(&stateSetDictType);
-            for (int i = 3; i < c->argc; i++) {
-                sds param = sdsnew(c->argv[i]->ptr);
-                if (dictAdd(params, param, NULL) != DICT_OK)
-                    sdsfree(param);
-            }
-            addReplyDictOfRedisInstances(c,ri->sentinels,params);
-            releaseInfoSectionDict(params); 
+            addReplyDictOfRedisInstancesWithParams(c, ri->sentinels, 3);
         }        
     } else if (!strcasecmp(c->argv[1]->ptr,"myid") && c->argc == 2) {
         /* SENTINEL MYID */
