@@ -35,7 +35,6 @@ test "Renamenx to key that already exists" {
     $nodefrom(link) set $updated_key "val2"
 
     catch {$nodefrom(link) renamenx $key  $updated_key} e
-    puts $e
     if {[string match "1" $e]} {
         fail "Should not rename to already set key"
     }
