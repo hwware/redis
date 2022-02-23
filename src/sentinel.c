@@ -1192,12 +1192,6 @@ int sentinelUpdateSentinelAddressInAllMasters(sentinelRedisInstance *ri) {
 
         if (match == ri) continue; /* Address already updated for it. */
         
-        /* Remove any sentinel with port number set to 0 */
-        if (match->addr->port == 0)
-            dictDelete(master->sentinels,match->name);
-        
-        
-
         /* Update the address of the matching Sentinel by copying the address
          * of the Sentinel object that received the address update. */
         releaseSentinelAddr(match->addr);
@@ -2880,9 +2874,22 @@ void sentinelProcessHelloMessage(char *hello, int hello_len) {
                     getSentinelRedisInstanceByAddrAndRunID(
                         master->sentinels, token[0],port,NULL);
                 if (other) {
+                    /* If there is already other sentinel with same address (but
+                     * different runid) then remove the old one across all masters */
                     sentinelEvent(LL_NOTICE,"+sentinel-invalid-addr",other,"%@");
-                    other->addr->port = 0; /* It means: invalid address. */
-                    sentinelUpdateSentinelAddressInAllMasters(other);
+                    dictIterator *di;
+                    dictEntry *de;
+
+                    /* Keep a copy of runid. 'other' about to be deleted in loop. */
+                    sds runid_obsolete = sdsnew(other->runid);
+
+                    di = dictGetIterator(sentinel.masters);
+                    while((de = dictNext(di)) != NULL) {
+                        sentinelRedisInstance *master = dictGetVal(de);
+                        removeMatchingSentinelFromMaster(master, runid_obsolete);
+                    }
+                    dictReleaseIterator(di);
+                    sdsfree(runid_obsolete);
                 }
             }
 
