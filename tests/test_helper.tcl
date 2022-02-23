@@ -93,11 +93,8 @@ set ::all_tests {
     unit/cluster
     unit/client-eviction
     unit/violations
-<<<<<<< HEAD
     unit/replybufsize
-=======
     unit/client
->>>>>>> Added tests for client commands
 }
 # Index to the next test to run in the ::all_tests list.
 set ::next_test 0
