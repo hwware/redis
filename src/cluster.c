@@ -252,6 +252,7 @@ int clusterLoadConfig(char *filename) {
         if (nodename) {
             *nodename = '\0';
             nodename++;
+            zfree(n->nodename);
             n->nodename = sdscpy(n->nodename, nodename);
         } else if (sdslen(n->nodename) != 0) {
             sdsclear(n->nodename);
@@ -2018,9 +2019,8 @@ int writeNodenamePingExt(clusterMsgPingExt **cursor) {
     if (sdslen(myself->nodename) == 0) return 0;
 
     /* Add the nodename information at the extension cursor */
-    clusterMsgPingExtNodename *ext = &(*cursor)->ext[1].nodename;
-    size_t nodename_len = sdslen(myself->nodename);
-    memcpy(ext->nodename, myself->nodename, nodename_len);
+    clusterMsgPingExtNodename *ext = &(*cursor)->ext[0].nodename;
+    memcpy(ext->nodename, myself->nodename, sdslen(myself->nodename));
     uint32_t extension_size = getNodenamePingExtSize();
 
     /* Move the write cursor */
@@ -3044,7 +3044,7 @@ void clusterSendPing(clusterLink *link, int type) {
         extensions++;
     }
 
-    if (myself->nodename) {
+    if (sdslen(myself->nodename) != 0) {
         hdr->mflags[0] |= CLUSTERMSG_FLAG0_EXT_DATA;
         totlen += writeNodenamePingExt(&cursor);
         extensions++;
@@ -4030,6 +4030,8 @@ void clusterCron(void) {
 
     clusterUpdateMyselfHostname();
     clusterUpdateMyselfNodename();
+    // updateAnnouncedNodename(myself, server.cluster_announce_nodename); REMOVE THIS
+
     /* The handshake timeout is the time after which a handshake node that was
      * not turned into a normal node is removed from the nodes. Usually it is
      * just the NODE_TIMEOUT value, but when NODE_TIMEOUT is too small we use
@@ -4648,16 +4650,6 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
 
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
-    // ci = sdscatfmt(ci, " %s:%i@%i" , 
-    //         node->ip,
-    //         port,
-    //         node->cport);
-    // if (sdslen(node->hostname) != 0)
-    //     ci = sdscatfmt(ci, ",%s", node->hostname);
-    // if (sdslen(node->nodename) != 0)
-    //     ci = sdscatfmt(ci, "-%s", node->nodename);
-    // ci = sdscatlen(ci," ",1);
-
     if (sdslen(node->hostname) != 0 && sdslen(node->nodename) != 0) {
         ci = sdscatfmt(ci," %s:%i@%i,%s-%s ",
             node->ip,
