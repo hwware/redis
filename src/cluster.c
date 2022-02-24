@@ -4029,7 +4029,7 @@ void clusterCron(void) {
     iteration++; /* Number of times this function was called so far. */
 
     clusterUpdateMyselfHostname();
-    clusterUpdateMyselfHostname();
+    clusterUpdateMyselfNodename();
     /* The handshake timeout is the time after which a handshake node that was
      * not turned into a normal node is removed from the nodes. Usually it is
      * just the NODE_TIMEOUT value, but when NODE_TIMEOUT is too small we use
@@ -4647,7 +4647,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     int port = use_pport && node->pport ? node->pport : node->port;
 
     /* Node coordinates */
-    // ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
+    ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
     // ci = sdscatfmt(ci, " %s:%i@%i" , 
     //         node->ip,
     //         port,
@@ -4658,7 +4658,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     //     ci = sdscatfmt(ci, "-%s", node->nodename);
     // ci = sdscatlen(ci," ",1);
 
-    if (sdslen(node->hostname) != 0 && sdslen(node->hostname) != 0) {
+    if (sdslen(node->hostname) != 0 && sdslen(node->nodename) != 0) {
         ci = sdscatfmt(ci," %s:%i@%i,%s-%s ",
             node->ip,
             port,
@@ -4671,7 +4671,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
             port,
             node->cport,
             node->hostname);
-    } else if (sdslen(node->hostname) != 0) {
+    } else if (sdslen(node->nodename) != 0) {
         ci = sdscatfmt(ci," %s:%i@%i-%s ",
             node->ip,
             port,
