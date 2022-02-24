@@ -253,9 +253,9 @@ int clusterLoadConfig(char *filename) {
             *nodename = '\0';
             nodename++;
             zfree(n->nodename);
-            n->nodename = zstrdup(nodename);
-        } else {
-            n->nodename = NULL;
+            n->nodename = sdscpy(n->nodename, nodename);
+        } else if (sdslen(n->nodename) != 0) {
+            sdsclear(n->nodename);
         }
 
         /* The plaintext port for client in a TLS cluster (n->pport) is not
@@ -593,20 +593,15 @@ static void updateAnnouncedHostname(clusterNode *node, char *new) {
 
 /* Update the nodename for the specified node with the provided C string. */
 static void updateAnnouncedNodename(clusterNode *node, char *new) {
-    if (!node->nodename && !new) {
-        return;
-    }
-
     /* Previous and new nodename are the same, no need to update. */
-    if (new && node->nodename && !strcmp(new, node->nodename)) {
+    if (new && !strcmp(new, node->nodename)) {
         return;
     }
 
-    if (node->nodename) zfree(node->nodename);
     if (new) {
-        node->nodename = zstrdup(new);
-    } else {
-        node->nodename = NULL;
+        node->nodename = sdscpy(node->nodename, new);
+    } else if (sdslen(node->nodename) != 0) {
+        sdsclear(node->nodename);
     }
 }
 
@@ -989,7 +984,7 @@ clusterNode *createClusterNode(char *nodename, int flags) {
     node->inbound_link = NULL;
     memset(node->ip,0,sizeof(node->ip));
     node->hostname = sdsempty();
-    node->nodename = NULL;
+    node->nodename = sdsempty();
     node->port = 0;
     node->cport = 0;
     node->pport = 0;
@@ -1156,7 +1151,7 @@ void freeClusterNode(clusterNode *n) {
     serverAssert(dictDelete(server.cluster->nodes,nodename) == DICT_OK);
     sdsfree(nodename);
     sdsfree(n->hostname);
-    zfree(n->nodename);
+    sdsfree(n->nodename);
 
     /* Release links and associated data structures. */
     if (n->link) freeClusterLink(n->link);
@@ -1990,7 +1985,7 @@ int getHostnamePingExtSize() {
  * will be 8 byte padded. */
 int getNodenamePingExtSize() {
     /* If nodename is not set, we don't send this extension */
-    if (!myself->nodename) return 0;
+    if (sdslen(myself->nodename) == 0) return 0;
 
     int totlen = sizeof(clusterMsgPingExt) + EIGHT_BYTE_ALIGN(strlen(myself->nodename) + 1);
     return totlen;
@@ -2021,19 +2016,18 @@ int writeHostnamePingExt(clusterMsgPingExt **cursor) {
  * will return the amount of bytes written. */
 int writeNodenamePingExt(clusterMsgPingExt **cursor) {
     /* If nodename is not set, we don't send this extension */
-    if (!myself->nodename) return 0;
+    if (sdslen(myself->nodename) == 0) return 0;
 
     /* Add the nodename information at the extension cursor */
-    clusterMsgPingExtNodename *ext = &(*cursor)->ext[1].nodename;
-    size_t nodename_len = strlen(myself->nodename);
-    memcpy(ext->nodename, myself->nodename, nodename_len);
+    clusterMsgPingExtNodename *ext = &(*cursor)->ext[0].nodename;
+    memcpy(ext->nodename, myself->nodename, sdslen(myself->nodename));
     uint32_t extension_size = getNodenamePingExtSize();
 
     /* Move the write cursor */
     (*cursor)->type = CLUSTERMSG_EXT_TYPE_NODENAME;
     (*cursor)->length = htonl(extension_size);
     /* Make sure the string is NULL terminated by adding 1 */
-    *cursor = (clusterMsgPingExt *) (ext->nodename + EIGHT_BYTE_ALIGN(strlen(myself->nodename) + 1));
+    *cursor = (clusterMsgPingExt *) (ext->nodename + EIGHT_BYTE_ALIGN(sdslen(myself->nodename) + 1));
     return extension_size;
 }
 
@@ -3050,7 +3044,7 @@ void clusterSendPing(clusterLink *link, int type) {
         extensions++;
     }
 
-    if (myself->nodename) {
+    if (sdslen(myself->nodename) != 0) {
         hdr->mflags[0] |= CLUSTERMSG_FLAG0_EXT_DATA;
         totlen += writeNodenamePingExt(&cursor);
         extensions++;
@@ -4035,7 +4029,9 @@ void clusterCron(void) {
     iteration++; /* Number of times this function was called so far. */
 
     clusterUpdateMyselfHostname();
-    updateAnnouncedNodename(myself, server.cluster_announce_nodename);
+    clusterUpdateMyselfNodename();
+    // updateAnnouncedNodename(myself, server.cluster_announce_nodename); REMOVE THIS
+
     /* The handshake timeout is the time after which a handshake node that was
      * not turned into a normal node is removed from the nodes. Usually it is
      * just the NODE_TIMEOUT value, but when NODE_TIMEOUT is too small we use
@@ -4654,7 +4650,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
 
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
-    if (sdslen(node->hostname) != 0 && node->nodename) {
+    if (sdslen(node->hostname) != 0 && sdslen(node->nodename) != 0) {
         ci = sdscatfmt(ci," %s:%i@%i,%s-%s ",
             node->ip,
             port,
@@ -4667,7 +4663,7 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
             port,
             node->cport,
             node->hostname);
-    } else if (node->nodename) {
+    } else if (sdslen(node->nodename) != 0) {
         ci = sdscatfmt(ci," %s:%i@%i-%s ",
             node->ip,
             port,
@@ -4894,7 +4890,7 @@ const char *getPreferredEndpoint(clusterNode *n) {
     switch(server.cluster_preferred_endpoint_type) {
     case CLUSTER_ENDPOINT_TYPE_IP: return n->ip;
     case CLUSTER_ENDPOINT_TYPE_HOSTNAME: return (sdslen(n->hostname) != 0) ? n->hostname : "?";
-    case CLUSTER_ENDPOINT_TYPE_HOSTNAME: return n->hostname ? n->hostname : "?";
+    case CLUSTER_ENDPOINT_TYPE_NODENAME: return (sdslen(n->nodename) != 0) ? n->nodename : "?";
     case CLUSTER_ENDPOINT_TYPE_UNKNOWN_ENDPOINT: return "";
     }
     return "unknown";
@@ -4990,7 +4986,7 @@ void addNodeToNodeReply(client *c, clusterNode *node) {
     } else if (server.cluster_preferred_endpoint_type == CLUSTER_ENDPOINT_TYPE_HOSTNAME) {
         addReplyBulkCString(c, sdslen(node->hostname) != 0 ? node->hostname : "?");
     } else if (server.cluster_preferred_endpoint_type == CLUSTER_ENDPOINT_TYPE_NODENAME) {
-        addReplyBulkCString(c, node->nodename ? node->nodename : "?");
+        addReplyBulkCString(c, sdslen(node->nodename) != 0 ? node->nodename : "?");
     } else if (server.cluster_preferred_endpoint_type == CLUSTER_ENDPOINT_TYPE_UNKNOWN_ENDPOINT) {
         addReplyNull(c);
     } else {
@@ -5020,7 +5016,7 @@ void addNodeToNodeReply(client *c, clusterNode *node) {
         length++;
     }
     if (server.cluster_preferred_endpoint_type != CLUSTER_ENDPOINT_TYPE_NODENAME
-        && node->nodename)
+        && sdslen(node->nodename) != 0)
     {
         addReplyBulkCString(c, "nodename");
         addReplyBulkCString(c, node->nodename);
