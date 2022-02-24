@@ -2178,7 +2178,7 @@ void clusterProcessPingExtensions(clusterMsg *hdr, clusterLink *link) {
                                      CLUSTER_TODO_SAVE_CONFIG);
             }
         } else if (type == CLUSTERMSG_EXT_TYPE_NODENAME) {
-            clusterMsgPingExtNodename *nodename_ext = (clusterMsgPingExtNodename *) &(ext->ext[1].nodename);
+            clusterMsgPingExtNodename *nodename_ext = (clusterMsgPingExtNodename *) &(ext->ext[0].nodename);
             ext_nodename = nodename_ext->nodename;
         } else {
             /* Unknown type, we will ignore it but log what happened. */
