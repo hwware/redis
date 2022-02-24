@@ -1377,9 +1377,9 @@ void clusterHandleConfigEpochCollision(clusterNode *sender) {
     myself->configEpoch = server.cluster->currentEpoch;
     clusterSaveConfigOrDie(1);
     serverLog(LL_VERBOSE,
-        "WARNING: configEpoch collision with node %.40s."
+        "WARNING: configEpoch collision with node %.40s %s."
         " configEpoch set to %llu",
-        sender->name,
+        sender->name, sender->nodename,
         (unsigned long long) myself->configEpoch);
 }
 
@@ -1495,7 +1495,7 @@ void markNodeAsFailingIfNeeded(clusterNode *node) {
     if (failures < needed_quorum) return; /* No weak agreement from masters. */
 
     serverLog(LL_NOTICE,
-        "Marking node %.40s as failing (quorum reached).", node->name);
+        "Marking node %.40s %s as failing (quorum reached).", node->name, node->nodename);
 
     /* Mark the node as failing. */
     node->flags &= ~CLUSTER_NODE_PFAIL;
@@ -1523,8 +1523,8 @@ void clearNodeFailureIfNeeded(clusterNode *node) {
      * node again. */
     if (nodeIsSlave(node) || node->numslots == 0) {
         serverLog(LL_NOTICE,
-            "Clear FAIL state for node %.40s: %s is reachable again.",
-                node->name,
+            "Clear FAIL state for node %.40s %s: %s is reachable again.",
+                node->name, node->nodename,
                 nodeIsSlave(node) ? "replica" : "master without slots");
         node->flags &= ~CLUSTER_NODE_FAIL;
         clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|CLUSTER_TODO_SAVE_CONFIG);
@@ -1539,8 +1539,8 @@ void clearNodeFailureIfNeeded(clusterNode *node) {
         (server.cluster_node_timeout * CLUSTER_FAIL_UNDO_TIME_MULT))
     {
         serverLog(LL_NOTICE,
-            "Clear FAIL state for node %.40s: is reachable again and nobody is serving its slots after some time.",
-                node->name);
+            "Clear FAIL state for node %.40s %s: is reachable again and nobody is serving its slots after some time.",
+                node->name, node->nodename);
         node->flags &= ~CLUSTER_NODE_FAIL;
         clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|CLUSTER_TODO_SAVE_CONFIG);
     }
@@ -1660,15 +1660,17 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 if (flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_PFAIL)) {
                     if (clusterNodeAddFailureReport(node,sender)) {
                         serverLog(LL_VERBOSE,
-                            "Node %.40s reported node %.40s as not reachable.",
-                            sender->name, node->name);
+                            "Node %.40s %s reported node %.40s %s as not reachable.",
+                            sender->name, sender->nodename,
+                            node->name, node->nodename);
                     }
                     markNodeAsFailingIfNeeded(node);
                 } else {
                     if (clusterNodeDelFailureReport(node,sender)) {
                         serverLog(LL_VERBOSE,
-                            "Node %.40s reported node %.40s is back online.",
-                            sender->name, node->name);
+                            "Node %.40s %s reported node %.40s %s is back online.",
+                            sender->name, sender->nodename,
+                            node->name, node->nodename);
                     }
                 }
             }
@@ -2291,8 +2293,8 @@ int clusterProcessPacket(clusterLink *link) {
                  * IP/port of the node with the new one. */
                 if (sender) {
                     serverLog(LL_VERBOSE,
-                        "Handshake: we already know node %.40s, "
-                        "updating the address if needed.", sender->name);
+                        "Handshake: we already know node %.40s %s, "
+                        "updating the address if needed.", sender->name, sender->nodename);
 
                     if (nodeUpdateAddressIfNeeded(sender,link,hdr))
                     {
@@ -2319,8 +2321,9 @@ int clusterProcessPacket(clusterLink *link) {
                 /* If the reply has a non matching node ID we
                  * disconnect this node and set it as not having an associated
                  * address. */
-                serverLog(LL_DEBUG,"PONG contains mismatching sender ID. About node %.40s added %d ms ago, having flags %d",
+                serverLog(LL_DEBUG,"PONG contains mismatching sender ID. About node %.40s %s added %d ms ago, having flags %d",
                     link->node->name,
+                    link->node->nodename,
                     (int)(now-(link->node->ctime)),
                     link->node->flags);
                 link->node->flags |= CLUSTER_NODE_NOADDR;
@@ -2467,8 +2470,9 @@ int clusterProcessPacket(clusterLink *link) {
                     {
                         serverLog(LL_VERBOSE,
                             "Node %.40s has old slots configuration, sending "
-                            "an UPDATE message about %.40s ",
-                                sender->name, server.cluster->slots[j]->name);
+                            "an UPDATE message about %.40s %s",
+                                sender->name, server.cluster->slots[j]->name,
+                                sender->nodename);
                         clusterSendUpdate(sender->link,
                             server.cluster->slots[j]);
 
@@ -2504,8 +2508,8 @@ int clusterProcessPacket(clusterLink *link) {
                 !(failing->flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_MYSELF)))
             {
                 serverLog(LL_NOTICE,
-                    "FAIL message received from %.40s about %.40s",
-                    hdr->sender, hdr->data.fail.about.nodename);
+                    "FAIL message received from %.40s about %.40s %s",
+                    hdr->sender, hdr->data.fail.about.nodename, failing->nodename);
                 failing->flags |= CLUSTER_NODE_FAIL;
                 failing->fail_time = now;
                 failing->flags &= ~CLUSTER_NODE_PFAIL;
@@ -2656,8 +2660,8 @@ void clusterLinkConnectHandler(connection *conn) {
 
     /* Check if connection succeeded */
     if (connGetState(conn) != CONN_STATE_CONNECTED) {
-        serverLog(LL_VERBOSE, "Connection with Node %.40s at %s:%d failed: %s",
-                node->name, node->ip, node->cport,
+        serverLog(LL_VERBOSE, "Connection with Node %.40s %s at %s:%d failed: %s",
+                node->name, node->nodename, node->ip, node->cport,
                 connGetLastError(conn));
         freeClusterLink(link);
         return;
@@ -3337,8 +3341,8 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
      * request, if the request epoch was greater. */
     if (requestCurrentEpoch < server.cluster->currentEpoch) {
         serverLog(LL_WARNING,
-            "Failover auth denied to %.40s: reqEpoch (%llu) < curEpoch(%llu)",
-            node->name,
+            "Failover auth denied to %.40s %s: reqEpoch (%llu) < curEpoch(%llu)",
+            node->name, node->nodename,
             (unsigned long long) requestCurrentEpoch,
             (unsigned long long) server.cluster->currentEpoch);
         return;
@@ -3347,8 +3351,8 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     /* I already voted for this epoch? Return ASAP. */
     if (server.cluster->lastVoteEpoch == server.cluster->currentEpoch) {
         serverLog(LL_WARNING,
-                "Failover auth denied to %.40s: already voted for epoch %llu",
-                node->name,
+                "Failover auth denied to %.40s %s: already voted for epoch %llu",
+                node->name, node->nodename,
                 (unsigned long long) server.cluster->currentEpoch);
         return;
     }
@@ -3361,16 +3365,16 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     {
         if (nodeIsMaster(node)) {
             serverLog(LL_WARNING,
-                    "Failover auth denied to %.40s: it is a master node",
-                    node->name);
+                    "Failover auth denied to %.40s %s: it is a master node",
+                    node->name, node->nodename);
         } else if (master == NULL) {
             serverLog(LL_WARNING,
-                    "Failover auth denied to %.40s: I don't know its master",
-                    node->name);
+                    "Failover auth denied to %.40s %s: I don't know its master",
+                    node->name, node->nodename);
         } else if (!nodeFailed(master)) {
             serverLog(LL_WARNING,
-                    "Failover auth denied to %.40s: its master is up",
-                    node->name);
+                    "Failover auth denied to %.40s %s: its master is up",
+                    node->name, node->nodename);
         }
         return;
     }
@@ -3381,9 +3385,9 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     if (mstime() - node->slaveof->voted_time < server.cluster_node_timeout * 2)
     {
         serverLog(LL_WARNING,
-                "Failover auth denied to %.40s: "
+                "Failover auth denied to %.40s %s: "
                 "can't vote about this master before %lld milliseconds",
-                node->name, 
+                node->name, node->nodename,
                 (long long) ((server.cluster_node_timeout*2)-
                              (mstime() - node->slaveof->voted_time)));
         return;
@@ -3403,9 +3407,9 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
          * is served by a master with a greater configEpoch than the one claimed
          * by the slave requesting our vote. Refuse to vote for this slave. */
         serverLog(LL_WARNING,
-                "Failover auth denied to %.40s: "
+                "Failover auth denied to %.40s %s: "
                 "slot %d epoch (%llu) > reqEpoch (%llu)",
-                node->name, j,
+                node->name, node->nodename, j,
                 (unsigned long long) server.cluster->slots[j]->configEpoch,
                 (unsigned long long) requestConfigEpoch);
         return;
@@ -4184,8 +4188,8 @@ void clusterCron(void) {
             /* Timeout reached. Set the node as possibly failing if it is
              * not already in this state. */
             if (!(node->flags & (CLUSTER_NODE_PFAIL|CLUSTER_NODE_FAIL))) {
-                serverLog(LL_DEBUG,"*** NODE %.40s possibly failing",
-                    node->name);
+                serverLog(LL_DEBUG,"*** NODE %.40s %s possibly failing",
+                    node->name, node->nodename);
                 node->flags |= CLUSTER_NODE_PFAIL;
                 update_state = 1;
             }
@@ -4650,31 +4654,43 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
 
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
-    if (sdslen(node->hostname) != 0 && sdslen(node->nodename) != 0) {
-        ci = sdscatfmt(ci," %s:%i@%i,%s-%s ",
-            node->ip,
-            port,
-            node->cport,
-            node->hostname,
-            node->nodename);
-    } else if (sdslen(node->hostname) != 0) {
-        ci = sdscatfmt(ci," %s:%i@%i,%s ",
-            node->ip,
-            port,
-            node->cport,
-            node->hostname);
-    } else if (sdslen(node->nodename) != 0) {
-        ci = sdscatfmt(ci," %s:%i@%i-%s ",
-            node->ip,
-            port,
-            node->cport,
-            node->nodename);
-    } else {
-        ci = sdscatfmt(ci," %s:%i@%i ",
-            node->ip,
-            port,
-            node->cport);
+    ci = sdscatfmt(ci," %s:%i@%i",
+        node->ip,
+        port,
+        node->cport);
+    if (sdslen(node->hostname) != 0) {
+        ci = sdscatfmt(ci,",%s", node->hostname);
     }
+    if (sdslen(node->nodename) != 0) {
+        ci = sdscatfmt(ci,"-%s", node->nodename);
+    }
+    ci = sdscatlen(ci," ",1);
+
+    // if (sdslen(node->hostname) != 0 && sdslen(node->nodename) != 0) {
+    //     ci = sdscatfmt(ci," %s:%i@%i,%s-%s ",
+    //         node->ip,
+    //         port,
+    //         node->cport,
+    //         node->hostname,
+    //         node->nodename);
+    // } else if (sdslen(node->hostname) != 0) {
+    //     ci = sdscatfmt(ci," %s:%i@%i,%s ",
+    //         node->ip,
+    //         port,
+    //         node->cport,
+    //         node->hostname);
+    // } else if (sdslen(node->nodename) != 0) {
+    //     ci = sdscatfmt(ci," %s:%i@%i-%s ",
+    //         node->ip,
+    //         port,
+    //         node->cport,
+    //         node->nodename);
+    // } else {
+    //     ci = sdscatfmt(ci," %s:%i@%i ",
+    //         node->ip,
+    //         port,
+    //         node->cport);
+    // }
 
     /* Flags */
     ci = representClusterNodeFlags(ci, node->flags);
