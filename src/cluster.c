@@ -5180,13 +5180,6 @@ void addNodeToNodeReply(client *c, clusterNode *node) {
         addReplyBulkCString(c, node->hostname);
         length++;
     }
-    if (server.cluster_preferred_endpoint_type != CLUSTER_ENDPOINT_TYPE_NODENAME
-        && sdslen(node->nodename) != 0)
-    {
-        addReplyBulkCString(c, "nodename");
-        addReplyBulkCString(c, node->nodename);
-        length++;
-    }
     setDeferredMapLen(c, deflen, length);
 }
 
