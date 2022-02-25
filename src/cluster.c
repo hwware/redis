@@ -4034,7 +4034,6 @@ void clusterCron(void) {
 
     clusterUpdateMyselfHostname();
     clusterUpdateMyselfNodename();
-    // updateAnnouncedNodename(myself, server.cluster_announce_nodename); REMOVE THIS
 
     /* The handshake timeout is the time after which a handshake node that was
      * not turned into a normal node is removed from the nodes. Usually it is
@@ -4666,32 +4665,6 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
     }
     ci = sdscatlen(ci," ",1);
 
-    // if (sdslen(node->hostname) != 0 && sdslen(node->nodename) != 0) {
-    //     ci = sdscatfmt(ci," %s:%i@%i,%s-%s ",
-    //         node->ip,
-    //         port,
-    //         node->cport,
-    //         node->hostname,
-    //         node->nodename);
-    // } else if (sdslen(node->hostname) != 0) {
-    //     ci = sdscatfmt(ci," %s:%i@%i,%s ",
-    //         node->ip,
-    //         port,
-    //         node->cport,
-    //         node->hostname);
-    // } else if (sdslen(node->nodename) != 0) {
-    //     ci = sdscatfmt(ci," %s:%i@%i-%s ",
-    //         node->ip,
-    //         port,
-    //         node->cport,
-    //         node->nodename);
-    // } else {
-    //     ci = sdscatfmt(ci," %s:%i@%i ",
-    //         node->ip,
-    //         port,
-    //         node->cport);
-    // }
-
     /* Flags */
     ci = representClusterNodeFlags(ci, node->flags);
 
@@ -4906,7 +4879,6 @@ const char *getPreferredEndpoint(clusterNode *n) {
     switch(server.cluster_preferred_endpoint_type) {
     case CLUSTER_ENDPOINT_TYPE_IP: return n->ip;
     case CLUSTER_ENDPOINT_TYPE_HOSTNAME: return (sdslen(n->hostname) != 0) ? n->hostname : "?";
-    case CLUSTER_ENDPOINT_TYPE_NODENAME: return (sdslen(n->nodename) != 0) ? n->nodename : "?";
     case CLUSTER_ENDPOINT_TYPE_UNKNOWN_ENDPOINT: return "";
     }
     return "unknown";
@@ -5001,8 +4973,6 @@ void addNodeToNodeReply(client *c, clusterNode *node) {
         addReplyBulkCString(c, node->ip);
     } else if (server.cluster_preferred_endpoint_type == CLUSTER_ENDPOINT_TYPE_HOSTNAME) {
         addReplyBulkCString(c, sdslen(node->hostname) != 0 ? node->hostname : "?");
-    } else if (server.cluster_preferred_endpoint_type == CLUSTER_ENDPOINT_TYPE_NODENAME) {
-        addReplyBulkCString(c, sdslen(node->nodename) != 0 ? node->nodename : "?");
     } else if (server.cluster_preferred_endpoint_type == CLUSTER_ENDPOINT_TYPE_UNKNOWN_ENDPOINT) {
         addReplyNull(c);
     } else {
@@ -5029,13 +4999,6 @@ void addNodeToNodeReply(client *c, clusterNode *node) {
     {
         addReplyBulkCString(c, "hostname");
         addReplyBulkCString(c, node->hostname);
-        length++;
-    }
-    if (server.cluster_preferred_endpoint_type != CLUSTER_ENDPOINT_TYPE_NODENAME
-        && sdslen(node->nodename) != 0)
-    {
-        addReplyBulkCString(c, "nodename");
-        addReplyBulkCString(c, node->nodename);
         length++;
     }
     setDeferredMapLen(c, deflen, length);
