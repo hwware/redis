@@ -468,7 +468,7 @@ dictType stateSetDictType = {
     NULL,                       /* key dup */
     NULL,                       /* val dup */
     distCStrKeyCaseCompare,     /* key compare */
-    dictSdsDestructor,          /* key destructor */
+    NULL,                       /* key destructor */
     NULL,                       /* val destructor */
     NULL                        /* allow to expand */
 };
@@ -3796,11 +3796,8 @@ int sentinelIsQuorumReachable(sentinelRedisInstance *master, int *usableptr) {
 
 void addReplyDictOfRedisInstancesWithParams(client *c, dict *instances, int index) {
     dict *params = dictCreate(&stateSetDictType);
-    for (int i = index; i < c->argc; i++) {
-        sds param = sdsnew(c->argv[i]->ptr);
-        if (dictAdd(params, param, NULL) != DICT_OK)
-             sdsfree(param);
-    }
+    for (int i = index; i < c->argc; i++) 
+        dictAdd(params, c->argv[i]->ptr, NULL);
     addReplyDictOfRedisInstances(c,instances,params);
     releaseInfoSectionDict(params);
 }
@@ -3873,11 +3870,9 @@ NULL
             addReplySentinelRedisInstance(c,ri,NULL);
         else {
             dict *params = dictCreate(&stateSetDictType);
-            for (int i = 3; i < c->argc; i++) {
-                sds param = sdsnew(c->argv[i]->ptr);
-                if (dictAdd(params, param, NULL) != DICT_OK)
-                    sdsfree(param);
-            }
+            for (int i = 3; i < c->argc; i++) 
+                dictAdd(params, c->argv[i]->ptr, NULL);
+
             addReplySentinelRedisInstance(c,ri,params);
             releaseInfoSectionDict(params);
         }        
