@@ -27,14 +27,14 @@ test "check sentinel master params" {
     assert { [string match "*role-reported*" $info] }
     assert { [string match "*num-slaves*" $info] }
     assert { ![string match "*info-refresh*" $info] }
-    assert { ![string match "*quorum*" $info] }    
+    assert { ![string match "*quorum*" $info] }
 }
 
 test "check sentinel replicas params" {
-    set param1 "config-epoch"   
-    set param2 "master-link-status"   
-    set param3 "master-port"   
-    
+    set param1 "config-epoch"
+    set param2 "master-link-status"
+    set param3 "master-port"
+
     set info [S 0 SENTINEL replicas mymaster $param1 $param2 $param3]
     assert { ![string match "*config-epoch*" $info] }
     assert { [string match "*master-link-status*" $info] }
@@ -42,8 +42,8 @@ test "check sentinel replicas params" {
 }
 
 test "check sentinel sentinels params" {
-    set param1 "info-refresh"   
-    set param2 "last-hello-message"   
+    set param1 "info-refresh"
+    set param2 "last-hello-message"
     set param3 "master-port"
 
     set info [S 0 SENTINEL sentinels mymaster $param1 $param2 $param3]
