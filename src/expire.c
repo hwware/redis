@@ -726,19 +726,23 @@ void pexpiretimeCommand(client *c) {
     ttlGenericCommand(c, 1, 1);
 }
 
-/* PERSIST key */
 void persistCommand(client *c) {
-    if (lookupKeyWrite(c->db,c->argv[1])) {
-        if (removeExpire(c->db,c->argv[1])) {
-            signalModifiedKey(c,c->db,c->argv[1]);
-            notifyKeyspaceEvent(NOTIFY_GENERIC,"persist",c->argv[1],c->db->id);
-            addReply(c,shared.cone);
-            server.dirty++;
+    addReplyArrayLen(c,c->argc - 1);
+    int matches = 0;
+    for (int i = 1; i < c->argc; i++){
+        matches++;
+        if (lookupKeyWrite(c->db,c->argv[i])) {
+            if (removeExpire(c->db,c->argv[i])) {
+                signalModifiedKey(c,c->db,c->argv[i]);
+                notifyKeyspaceEvent(NOTIFY_GENERIC,"persist",c->argv[i],c->db->id);
+                addReply(c,shared.cone);
+                server.dirty++;
+            } else {
+                addReply(c,shared.czero);
+            }
         } else {
             addReply(c,shared.czero);
         }
-    } else {
-        addReply(c,shared.czero);
     }
 }
 
