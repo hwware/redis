@@ -4,17 +4,9 @@ start_server {} {
         set _ $err
     } {ERR*wrong number of arguments*}
 
-    test {CLIENT Caching wrong argument} {
-        catch {r client caching maybe} err
-        set _ $err
-    } {ERR*when the client is in tracking mode*}
-
-    test {CLIENT Caching OFF without optout} {
-        catch {r client caching off} err
-        set _ $err
-    } {ERR*when the client is in tracking mode*}
-
-    test {CLIENT Caching ON without optin} {
+    test {CLIENT Caching test tracking} {
+        # Checks if the CLIENT_TRACKING flag is working as intended
+        r CLIENT TRACKING off optout
         catch {r client caching on} err
         set _ $err
     } {ERR*when the client is in tracking mode*}
@@ -24,20 +16,9 @@ start_server {} {
         catch {r client caching on} err
         set _ $err
     } {ERR*syntax*}
-    
-    test {CLIENT Caching OFF with optin} {
-        r CLIENT TRACKING off optout 
-        catch {r client caching on} err
-        set _ $err
-    } {ERR*when the client is in tracking mode*}
 
-    test {CLIENT kill wrong address} {
-        catch {r client kill 000.123.321.567:0000} err
-        set _ $err
-    } {ERR*No such*}
-
-    test {CLIENT kill no port} {
-        catch {r client kill 127.0.0.1:} err
+    test {CLIENT kill wrong address or no port} {
+        catch {r client kill 999.999.999.000:} err
         set _ $err
     } {ERR*No such*}
 
