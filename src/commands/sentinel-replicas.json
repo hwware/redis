@@ -16,6 +16,12 @@
             {
                 "name": "master-name",
                 "type": "string"
+            },
+            {
+                "name": "param",
+                "type": "string",
+                "optional": true,
+                "multiple": true
             }
         ]
     }

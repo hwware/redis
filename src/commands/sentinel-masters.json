@@ -11,6 +11,14 @@
             "ADMIN",
             "SENTINEL",
             "ONLY_SENTINEL"
+        ],
+        "arguments": [
+            {
+                "name": "param",
+                "type": "string",
+                "optional": true,
+                "multiple": true
+            }
         ]
     }
 }
