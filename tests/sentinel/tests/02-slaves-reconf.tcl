@@ -57,6 +57,7 @@ foreach_sentinel_id id {
 
 02_test_slaves_replication
 
+
 test "Kill a slave instance" {
     foreach_redis_id id {
         if {$id == $master_id} continue
