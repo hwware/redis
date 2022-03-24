@@ -259,6 +259,16 @@ int clusterLoadConfig(char *filename) {
         } else if (sdslen(n->nodename) != 0) {
             sdsclear(n->nodename);
         }
+        /* Nodename is an optional argument */
+        char *nodename = strchr(p, '-');
+        if (nodename) {
+            *nodename = '\0';
+            nodename++;
+            zfree(n->nodename);
+            n->nodename = sdscpy(n->nodename, nodename);
+        } else if (sdslen(n->nodename) != 0) {
+            sdsclear(n->nodename);
+        }
 
         /* The plaintext port for client in a TLS cluster (n->pport) is not
          * stored in nodes.conf. It is received later over the bus protocol. */
