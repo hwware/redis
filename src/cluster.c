@@ -244,20 +244,9 @@ int clusterLoadConfig(char *filename) {
         if (hostname) {
             *hostname = '\0';
             hostname++;
-            zfree(n->hostname);
-            n->hostname = zstrdup(hostname);
-        } else {
-            n->hostname = NULL;
-        }
-        /* Nodename is an optional argument */
-        char *nodename = strchr(p, '-');
-        if (nodename) {
-            *nodename = '\0';
-            nodename++;
-            zfree(n->nodename);
-            n->nodename = sdscpy(n->nodename, nodename);
-        } else if (sdslen(n->nodename) != 0) {
-            sdsclear(n->nodename);
+            n->hostname = sdscpy(n->hostname, hostname);
+        } else if (sdslen(n->hostname) != 0) {
+            sdsclear(n->hostname);
         }
         /* Nodename is an optional argument */
         char *nodename = strchr(p, '-');
