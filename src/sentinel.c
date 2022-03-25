@@ -3895,8 +3895,6 @@ NULL
     } else if (!strcasecmp(c->argv[1]->ptr,"master")) {
         /* SENTINEL MASTER <name> [<param> <param>...]*/
         sentinelRedisInstance *ri;
-
-        if (c->argc != 3) goto numargserr;
         if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2]))
             == NULL) return;
         if (c->argc == 3)
@@ -3914,8 +3912,6 @@ NULL
     {
         /* SENTINEL REPLICAS <master-name> [<param> <param>...]*/
         sentinelRedisInstance *ri;
-
-        if (c->argc != 3) goto numargserr;
         if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL)
             return;
         if (c->argc == 3)
