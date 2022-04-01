@@ -324,7 +324,7 @@ jobs:
         repository: ${{ env.GITHUB_REPOSITORY }}
         ref: ${{ env.GITHUB_HEAD_REF }}
     - name: make
-      run: make valgrind CFLAGS="-DNO_MALLOC_USABLE_SIZE -DREDIS_TEST" REDIS_CFLAGS='-Werror'
+      run: make valgrind CFLAGS="-DNO_MALLOC_USABLE_SIZE"
     - name: testprep
       run: |
         sudo apt-get update
@@ -573,34 +573,6 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' && github.repository == 'redis/redis')) && !contains(github.event.inputs.skipjobs, 'freebsd')
-    timeout-minutes: 14400
-    steps:
-    - name: prep
-      if: github.event_name == 'workflow_dispatch'
-      run: |
-        echo "GITHUB_REPOSITORY=${{github.event.inputs.use_repo}}" >> $GITHUB_ENV
-        echo "GITHUB_HEAD_REF=${{github.event.inputs.use_git_ref}}" >> $GITHUB_ENV
-    - uses: actions/checkout@v3
-      with:
-        repository: ${{ env.GITHUB_REPOSITORY }}
-        ref: ${{ env.GITHUB_HEAD_REF }}
-    - name: test
-      uses: vmactions/freebsd-vm@v0.1.6
-      with:
-        usesh: true
-        sync: rsync
-        copyback: false
-        prepare: pkg install -y bash gmake lang/tcl86 lang/tclx
-        run: >
-          gmake || exit 1 ;
-          if echo "${{github.event.inputs.skiptests}}" | grep -vq redis ; then ./runtest --verbose --timeout 2400 --no-latency --dump-logs ${{github.event.inputs.test_args}} || exit 1 ; fi ;
-          if echo "${{github.event.inputs.skiptests}}" | grep -vq modules ; then MAKE=gmake ./runtest-moduleapi --verbose --timeout 2400 --no-latency --dump-logs ${{github.event.inputs.test_args}} || exit 1 ; fi ;
-
-  test-freebsd-sentinel:
-    runs-on: macos-10.15
-    if: |
-      (github.event_name == 'workflow_dispatch' || (github.event_name != 'workflow_dispatch' && github.repository == 'redis/redis')) &&
-      !contains(github.event.inputs.skipjobs, 'freebsd') && !contains(github.event.inputs.skiptests, 'sentinel')
     timeout-minutes: 14400
     steps:
     - name: prep
