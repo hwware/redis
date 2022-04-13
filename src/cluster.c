@@ -2077,7 +2077,7 @@ int getNodenamePingExtSize() {
     /* If nodename is not set, we don't send this extension */
     if (sdslen(myself->nodename) == 0) return 0;
 
-    int totlen = sizeof(clusterMsgPingExt) + EIGHT_BYTE_ALIGN(strlen(myself->nodename) + 1);
+    int totlen = sizeof(clusterMsgPingExt) + EIGHT_BYTE_ALIGN(sdslen(myself->nodename) + 1);
     return totlen;
 }
 
@@ -2644,7 +2644,7 @@ int clusterProcessPacket(clusterLink *link) {
                 !(failing->flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_MYSELF)))
             {
                 serverLog(LL_NOTICE,
-                    "FAIL message received from %.40s about %.40s %s",
+                    "FAIL message received from %.40s about %.40s (%s)",
                     hdr->sender, hdr->data.fail.about.nodename, failing->nodename);
                 failing->flags |= CLUSTER_NODE_FAIL;
                 failing->fail_time = now;
