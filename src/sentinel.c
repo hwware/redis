@@ -384,7 +384,7 @@ static int redisAeAttach(aeEventLoop *loop, redisAsyncContext *ac) {
 }
 
 static inline int isAddParamToReply(dict *params, const char *param) {
-	return params == NULL || dictFind(params,param) != NULL;
+    return params == NULL || dictFind(params,param) != NULL;
 }
 
 /* ============================= Prototypes ================================= */
@@ -3304,7 +3304,7 @@ const char *sentinelFailoverStateStr(int state) {
 }
 
 /* Redis instance to Redis protocol representation. */
-void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *params) {   
+void addReplySentinelRedisInstance(client *c, sentinelRedisInstance *ri, dict *params) {
     void *mbl;
     int fields = 0;
 
@@ -3827,7 +3827,7 @@ int sentinelIsQuorumReachable(sentinelRedisInstance *master, int *usableptr) {
 
 void addReplyDictOfRedisInstancesWithParams(client *c, dict *instances, int index) {
     dict *params = dictCreate(&stateSetDictType);
-    for (int i = index; i < c->argc; i++) 
+    for (int i = index; i < c->argc; i++)
         dictAdd(params, c->argv[i]->ptr, NULL);
     addReplyDictOfRedisInstances(c,instances,params);
     releaseInfoSectionDict(params);
@@ -3901,7 +3901,7 @@ NULL
             addReplySentinelRedisInstance(c,ri,NULL);
         else {
             dict *params = dictCreate(&stateSetDictType);
-            for (int i = 3; i < c->argc; i++) 
+            for (int i = 3; i < c->argc; i++)
                 dictAdd(params, c->argv[i]->ptr, NULL);
 
             addReplySentinelRedisInstance(c,ri,params);
@@ -3910,7 +3910,7 @@ NULL
     } else if (!strcasecmp(c->argv[1]->ptr,"slaves") ||
                !strcasecmp(c->argv[1]->ptr,"replicas"))
     {
-        /* SENTINEL REPLICAS <master-name> [<param> <param>...]*/
+        /* SENTINEL REPLICAS <master-name> [<param> <param>...] */
         sentinelRedisInstance *ri;
         if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL)
             return;
@@ -3918,9 +3918,9 @@ NULL
             addReplyDictOfRedisInstances(c,ri->slaves,NULL);
         else {
             addReplyDictOfRedisInstancesWithParams(c, ri->slaves, 3);
-        }     
+        }
     } else if (!strcasecmp(c->argv[1]->ptr,"sentinels")) {
-        /* SENTINEL SENTINELS <master-name> [<param> <param>...]*/
+        /* SENTINEL SENTINELS <master-name> [<param> <param>...] */
         sentinelRedisInstance *ri;
         if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL)
             return;
@@ -4346,8 +4346,7 @@ void sentinelGetCommand(client *c) {
         } else {
             has_get_all = 1;
         }
-    }
-    else{
+    } else {
         if ((ri = sentinelGetMasterByNameOrReplyError(c,c->argv[2])) == NULL)
             return;
         option = c->argv[3]->ptr;
