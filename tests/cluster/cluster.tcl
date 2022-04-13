@@ -218,6 +218,17 @@ proc are_hostnames_propagated {match_string} {
     return 1
 }
 
+# Check if cluster's view of nodename is consistent
+proc are_nodenames_propagated {match_string} {
+    for {set j 0} {$j < $::cluster_master_nodes + $::cluster_replica_nodes} {incr j} {
+        set cfg [R $j cluster nodes]
+        if {! [string match $match_string $cfg]} {
+            return 0
+        }
+        return 1
+    }
+}
+
 # Returns a parsed CLUSTER LINKS output of the instance identified
 # by the given `id` as a list of dictionaries, with each dictionary
 # corresponds to a link.
