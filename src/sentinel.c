@@ -3228,45 +3228,47 @@ badfmt:
 
 /* SENTINEL CONFIG GET <option> */
 void sentinelConfigGetCommand(client *c) {
-    robj *o = c->argv[3];
-    const char *pattern = o->ptr;
     void *replylen = addReplyDeferredLen(c);
     int matches = 0;
 
-    if (stringmatch(pattern,"resolve-hostnames",1)) {
-        addReplyBulkCString(c,"resolve-hostnames");
-        addReplyBulkCString(c,sentinel.resolve_hostnames ? "yes" : "no");
-        matches++;
-    }
+    for (int i = 3; i < c->argc; i++) {
+        robj *o = c->argv[i];
+        const char *pattern = o->ptr;
+        if (stringmatch(pattern,"resolve-hostnames",1)) {
+            addReplyBulkCString(c,"resolve-hostnames");
+            addReplyBulkCString(c,sentinel.resolve_hostnames ? "yes" : "no");
+            matches++;
+        }
 
-    if (stringmatch(pattern, "announce-hostnames", 1)) {
-        addReplyBulkCString(c,"announce-hostnames");
-        addReplyBulkCString(c,sentinel.announce_hostnames ? "yes" : "no");
-        matches++;
-    }
+        if (stringmatch(pattern, "announce-hostnames", 1)) {
+            addReplyBulkCString(c,"announce-hostnames");
+            addReplyBulkCString(c,sentinel.announce_hostnames ? "yes" : "no");
+            matches++;
+        }
 
-    if (stringmatch(pattern, "announce-ip", 1)) {
-        addReplyBulkCString(c,"announce-ip");
-        addReplyBulkCString(c,sentinel.announce_ip ? sentinel.announce_ip : "");
-        matches++;
-    }
+        if (stringmatch(pattern, "announce-ip", 1)) {
+            addReplyBulkCString(c,"announce-ip");
+            addReplyBulkCString(c,sentinel.announce_ip ? sentinel.announce_ip : "");
+            matches++;
+        }
 
-    if (stringmatch(pattern, "announce-port", 1)) {
-        addReplyBulkCString(c, "announce-port");
-        addReplyBulkLongLong(c, sentinel.announce_port);
-        matches++;
-    }
+        if (stringmatch(pattern, "announce-port", 1)) {
+            addReplyBulkCString(c, "announce-port");
+            addReplyBulkLongLong(c, sentinel.announce_port);
+            matches++;
+        }
 
-    if (stringmatch(pattern, "sentinel-user", 1)) {
-        addReplyBulkCString(c, "sentinel-user");
-        addReplyBulkCString(c, sentinel.sentinel_auth_user ? sentinel.sentinel_auth_user : "");
-        matches++;
-    }
+        if (stringmatch(pattern, "sentinel-user", 1)) {
+            addReplyBulkCString(c, "sentinel-user");
+            addReplyBulkCString(c, sentinel.sentinel_auth_user ? sentinel.sentinel_auth_user : "");
+            matches++;
+        }
 
-    if (stringmatch(pattern, "sentinel-pass", 1)) {
-        addReplyBulkCString(c, "sentinel-pass");
-        addReplyBulkCString(c, sentinel.sentinel_auth_pass ? sentinel.sentinel_auth_pass : "");
-        matches++;
+        if (stringmatch(pattern, "sentinel-pass", 1)) {
+            addReplyBulkCString(c, "sentinel-pass");
+            addReplyBulkCString(c, sentinel.sentinel_auth_pass ? sentinel.sentinel_auth_pass : "");
+            matches++;
+        }
     }
 
     setDeferredMapLen(c, replylen, matches);
@@ -4014,7 +4016,7 @@ NULL
         if (c->argc < 3) goto numargserr;
         if (!strcasecmp(c->argv[2]->ptr,"set") && c->argc == 5)
             sentinelConfigSetCommand(c);
-        else if (!strcasecmp(c->argv[2]->ptr,"get") && c->argc == 4)
+        else if (!strcasecmp(c->argv[2]->ptr,"get") && c->argc >= 4)
             sentinelConfigGetCommand(c);
         else
             addReplyError(c, "Only SENTINEL CONFIG GET <option> / SET <option> <value> are supported.");
