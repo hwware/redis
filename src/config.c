@@ -1821,10 +1821,16 @@ static int sdsConfigSet(standardConfig *config, sds *argv, int argc, const char 
     UNUSED(argc);
     if (config->data.sds.is_valid_fn && !config->data.sds.is_valid_fn(argv[0], err))
         return 0;
+
     sds prev = config->flags & MODULE_CONFIG ? getModuleStringConfig(config->privdata) : *config->data.sds.config;
     sds new = (config->data.string.convert_empty_to_null && (sdslen(argv[0]) == 0)) ? NULL : argv[0];
+
+    /* if prev and new configuration are not equal, set the new one */
     if (new != prev && (new == NULL || prev == NULL || sdscmp(prev, new))) {
+        /* If MODULE_CONFIG flag is set, then free temporary prev getModuleStringConfig returned.
+         * Otherwise, free the actual previous config value Redis held (Same action, different reasons) */
         sdsfree(prev);
+
         if (config->flags & MODULE_CONFIG) {
             return setModuleStringConfig(config->privdata, new, err);
         }
@@ -1848,7 +1854,7 @@ static sds sdsConfigGet(standardConfig *config) {
 static void sdsConfigRewrite(standardConfig *config, const char *name, struct rewriteConfigState *state) {
     sds val = config->flags & MODULE_CONFIG ? getModuleStringConfig(config->privdata) : *config->data.sds.config;
     rewriteConfigSdsOption(state, name, val, config->data.sds.default_value);
-    if (val) sdsfree(val);
+    if ((val) && (config->flags & MODULE_CONFIG)) sdsfree(val);
 }
 
 
@@ -2641,7 +2647,7 @@ static int setConfigOOMScoreAdjValuesOption(standardConfig *config, sds *argv, i
 
         if (*eptr != '\0' || val < -2000 || val > 2000) {
             if (err) *err = "Invalid oom-score-adj-values, elements must be between -2000 and 2000.";
-            return -1;
+            return 0;
         }
 
         values[i] = val;
@@ -2971,6 +2977,7 @@ standardConfig static_configs[] = {
     /* Unsigned int configs */
     createUIntConfig("maxclients", NULL, MODIFIABLE_CONFIG, 1, UINT_MAX, server.maxclients, 10000, INTEGER_CONFIG, NULL, updateMaxclients),
     createUIntConfig("unixsocketperm", NULL, IMMUTABLE_CONFIG, 0, 0777, server.unixsocketperm, 0, OCTAL_CONFIG, NULL, NULL),
+    createUIntConfig("socket-mark-id", NULL, IMMUTABLE_CONFIG, 0, UINT_MAX, server.socket_mark_id, 0, INTEGER_CONFIG, NULL, NULL),
 
     /* Unsigned Long configs */
     createULongConfig("active-defrag-max-scan-fields", NULL, MODIFIABLE_CONFIG, 1, LONG_MAX, server.active_defrag_max_scan_fields, 1000, INTEGER_CONFIG, NULL, NULL), /* Default: keys with more than 1000 fields will be processed separately */
