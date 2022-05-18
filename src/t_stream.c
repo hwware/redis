@@ -1692,7 +1692,7 @@ size_t streamReplyWithRange(client *c, stream *s, streamID *start, streamID *end
 
     if (!(flags & STREAM_RWR_RAWENTRIES))
         arraylen_ptr = addReplyDeferredLen(c);
-    streamIteratorStart(&si,s,start,end,rev);
+    streamIteratorStart(&si,s,start,end,rev);    
     while(streamIteratorGetID(&si,&id,&numfields)) {
         /* Update the group last_id if needed. */
         if (group && streamCompareID(&id,&group->last_id) > 0) {
@@ -2259,16 +2259,25 @@ void xreadCommand(client *c) {
         /* If a group was specified, than we need to be sure that the
          * key and group actually exist. */
         if (groupname) {
-            if (o == NULL ||
-                (group = streamLookupCG(o->ptr,groupname->ptr)) == NULL)
-            {
-                addReplyErrorFormat(c, "-NOGROUP No such key '%s' or consumer "
-                                       "group '%s' in XREADGROUP with GROUP "
-                                       "option",
-                                    (char*)key->ptr,(char*)groupname->ptr);
-                goto cleanup;
+            if (o == NULL) {
+                addReplyErrorFormat(c, "No such key '%s'",
+                                     (char*)key->ptr);
+                goto cleanup;                
             }
-            groups[id_idx] = group;
+            group = streamLookupCG(o->ptr,groupname->ptr);
+            if(group == NULL) {                 
+                streamID id;
+                id.ms = 0;
+                id.seq = 0;
+                group = streamCreateCG(o->ptr,groupname->ptr,strlen(groupname->ptr),&id,SCG_INVALID_ENTRIES_READ);
+                if(group) {
+                    server.dirty++;
+                    notifyKeyspaceEvent(NOTIFY_STREAM,"xgroup-create",key,c->db->id);
+                } else {
+                    addReplyErrorFormat(c, "Create consumer group '%s' in XREADGROUP failed" , (char*)groupname->ptr);
+                }
+            }
+            groups[id_idx] = group;               
         }
 
         if (strcmp(c->argv[i]->ptr,"$") == 0) {
@@ -2331,7 +2340,7 @@ void xreadCommand(client *c) {
             } else if (s->length) {
                 /* We also want to serve a consumer in a consumer group
                  * synchronously in case the group top item delivered is smaller
-                 * than what the stream has inside. */
+                 * than what the stream has inside. */                
                 streamID maxid, *last = &groups[i]->last_id;
                 streamLastValidID(s, &maxid);
                 if (streamCompareID(&maxid, last) > 0) {
@@ -2375,7 +2384,7 @@ void xreadCommand(client *c) {
                                                         spi.groupname,
                                                         consumer->name);
                 }
-            }
+            }            
             int flags = 0;
             if (noack) flags |= STREAM_RWR_NOACK;
             if (serve_history) flags |= STREAM_RWR_HISTORY;
@@ -2385,8 +2394,8 @@ void xreadCommand(client *c) {
             if (groups) server.dirty++;
         }
     }
-
-     /* We replied synchronously! Set the top array len and return to caller. */
+    
+    /* We replied synchronously! Set the top array len and return to caller. */
     if (arraylen) {
         if (c->resp == 2)
             setDeferredArrayLen(c,arraylen_ptr,arraylen);
@@ -2934,13 +2943,24 @@ void xpendingCommand(client *c) {
     streamCG *group;
 
     if (checkType(c,o,OBJ_STREAM)) return;
-    if (o == NULL ||
-        (group = streamLookupCG(o->ptr,groupname->ptr)) == NULL)
-    {
-        addReplyErrorFormat(c, "-NOGROUP No such key '%s' or consumer "
-                               "group '%s'",
-                               (char*)key->ptr,(char*)groupname->ptr);
+    if (o == NULL) {
+        addReplyErrorFormat(c, "No such key '%s'",
+                                     (char*)key->ptr);
         return;
+    }
+    group = streamLookupCG(o->ptr,groupname->ptr);
+    if(group == NULL) {                 
+        streamID id;
+        id.ms = 0;
+        id.seq = 0;
+        group = streamCreateCG(o->ptr,groupname->ptr,strlen(groupname->ptr),&id,SCG_INVALID_ENTRIES_READ);
+        if(group) {
+            server.dirty++;
+            notifyKeyspaceEvent(NOTIFY_STREAM,"xgroup-create",key,c->db->id);
+        } else {
+            addReplyErrorFormat(c, "Create consumer group '%s' in XPENDING failed" , (char*)groupname->ptr);
+            return;
+        }
     }
 
     /* XPENDING <key> <group> variant. */
