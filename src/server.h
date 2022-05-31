@@ -155,9 +155,10 @@ typedef long long ustime_t; /* microsecond time type. */
 /* Instantaneous metrics tracking. */
 #define STATS_METRIC_SAMPLES 16     /* Number of samples per metric. */
 #define STATS_METRIC_COMMAND 0      /* Number of commands executed. */
-#define STATS_METRIC_NET_INPUT 1    /* Bytes read to network .*/
+#define STATS_METRIC_NET_INPUT 1    /* Bytes read to network. */
 #define STATS_METRIC_NET_OUTPUT 2   /* Bytes written to network. */
-#define STATS_METRIC_COUNT 3
+#define STATS_METRIC_NET_TOTAL_REPLICATION 3   /* Bytes written and read to network during replication. */
+#define STATS_METRIC_COUNT 4
 
 /* Protocol and I/O related defines */
 #define PROTO_IOBUF_LEN         (1024*16)  /* Generic I/O buffer size */
@@ -1228,7 +1229,7 @@ struct sharedObjectsStruct {
     *time, *pxat, *absttl, *retrycount, *force, *justid, *entriesread,
     *lastid, *ping, *setid, *keepttl, *load, *createconsumer,
     *getack, *special_asterick, *special_equals, *default_username, *redacted,
-    *ssubscribebulk,*sunsubscribebulk,
+    *ssubscribebulk,*sunsubscribebulk, *smessagebulk,
     *select[PROTO_SHARED_SELECT_CMDS],
     *integers[OBJ_SHARED_INTEGERS],
     *mbulkhdr[OBJ_SHARED_BULKHDR_LEN], /* "*<value>\r\n" */
@@ -1586,6 +1587,8 @@ struct redisServer {
     struct malloc_stats cron_malloc_stats; /* sampled in serverCron(). */
     redisAtomic long long stat_net_input_bytes; /* Bytes read from network. */
     redisAtomic long long stat_net_output_bytes; /* Bytes written to network. */
+    redisAtomic long long stat_net_repl_input_bytes; /* Bytes read during replication, added to stat_net_input_bytes in 'info'. */
+    redisAtomic long long stat_net_repl_output_bytes; /* Bytes written during replication, added to stat_net_output_bytes in 'info'. */
     size_t stat_current_cow_peak;   /* Peak size of copy on write bytes. */
     size_t stat_current_cow_bytes;  /* Copy on write bytes while child is active. */
     monotime stat_current_cow_updated;  /* Last update time of stat_current_cow_bytes */
@@ -2991,7 +2994,7 @@ void pubsubUnsubscribeShardChannels(robj **channels, unsigned int count);
 int pubsubUnsubscribeAllPatterns(client *c, int notify);
 int pubsubPublishMessage(robj *channel, robj *message, int sharded);
 int pubsubPublishMessageAndPropagateToCluster(robj *channel, robj *message, int sharded);
-void addReplyPubsubMessage(client *c, robj *channel, robj *msg);
+void addReplyPubsubMessage(client *c, robj *channel, robj *msg, robj *message_bulk);
 int serverPubsubSubscriptionCount();
 int serverPubsubShardSubscriptionCount();
 
