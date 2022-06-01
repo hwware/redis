@@ -639,6 +639,11 @@ int isMutuallyExclusiveChildType(int type) {
     return type == CHILD_TYPE_RDB || type == CHILD_TYPE_AOF || type == CHILD_TYPE_MODULE;
 }
 
+/* Returns true when we're inside a long command that yielded to the event loop. */
+int isInsideYieldingLongCommand() {
+    return scriptIsTimedout() || server.busy_module_yield_flags;
+}
+
 /* Return true if this instance has persistence completely turned off:
  * both RDB and AOF are disabled. */
 int allPersistenceDisabled(void) {
@@ -3628,19 +3633,33 @@ int processCommand(client *c) {
         }
     }
 
-    int is_read_command = (c->cmd->flags & CMD_READONLY) ||
+    /* If we're executing a script, try to extract a set of command flags from
+     * it, in case it declared them. Note this is just an attempt, we don't yet
+     * know the script command is well formed.*/
+    uint64_t cmd_flags = c->cmd->flags;
+    if (c->cmd->proc == evalCommand || c->cmd->proc == evalShaCommand ||
+        c->cmd->proc == evalRoCommand || c->cmd->proc == evalShaRoCommand ||
+        c->cmd->proc == fcallCommand || c->cmd->proc == fcallroCommand)
+    {
+        if (c->cmd->proc == fcallCommand || c->cmd->proc == fcallroCommand)
+            cmd_flags = fcallGetCommandFlags(c, cmd_flags);
+        else
+            cmd_flags = evalGetCommandFlags(c, cmd_flags);
+    }
+
+    int is_read_command = (cmd_flags & CMD_READONLY) ||
                            (c->cmd->proc == execCommand && (c->mstate.cmd_flags & CMD_READONLY));
-    int is_write_command = (c->cmd->flags & CMD_WRITE) ||
+    int is_write_command = (cmd_flags & CMD_WRITE) ||
                            (c->cmd->proc == execCommand && (c->mstate.cmd_flags & CMD_WRITE));
-    int is_denyoom_command = (c->cmd->flags & CMD_DENYOOM) ||
+    int is_denyoom_command = (cmd_flags & CMD_DENYOOM) ||
                              (c->cmd->proc == execCommand && (c->mstate.cmd_flags & CMD_DENYOOM));
-    int is_denystale_command = !(c->cmd->flags & CMD_STALE) ||
+    int is_denystale_command = !(cmd_flags & CMD_STALE) ||
                                (c->cmd->proc == execCommand && (c->mstate.cmd_inv_flags & CMD_STALE));
-    int is_denyloading_command = !(c->cmd->flags & CMD_LOADING) ||
+    int is_denyloading_command = !(cmd_flags & CMD_LOADING) ||
                                  (c->cmd->proc == execCommand && (c->mstate.cmd_inv_flags & CMD_LOADING));
-    int is_may_replicate_command = (c->cmd->flags & (CMD_WRITE | CMD_MAY_REPLICATE)) ||
+    int is_may_replicate_command = (cmd_flags & (CMD_WRITE | CMD_MAY_REPLICATE)) ||
                                    (c->cmd->proc == execCommand && (c->mstate.cmd_flags & (CMD_WRITE | CMD_MAY_REPLICATE)));
-    int is_deny_async_loading_command = (c->cmd->flags & CMD_NO_ASYNC_LOADING) ||
+    int is_deny_async_loading_command = (cmd_flags & CMD_NO_ASYNC_LOADING) ||
                                         (c->cmd->proc == execCommand && (c->mstate.cmd_flags & CMD_NO_ASYNC_LOADING));
     int obey_client = mustObeyClient(c);
 
@@ -3728,7 +3747,7 @@ int processCommand(client *c) {
      * the event loop since there is a busy Lua script running in timeout
      * condition, to avoid mixing the propagation of scripts with the
      * propagation of DELs due to eviction. */
-    if (server.maxmemory && !scriptIsTimedout()) {
+    if (server.maxmemory && !isInsideYieldingLongCommand()) {
         int out_of_memory = (performEvictions() == EVICT_FAIL);
 
         /* performEvictions may evict keys, so we need flush pending tracking
@@ -3760,18 +3779,12 @@ int processCommand(client *c) {
             return C_OK;
         }
 
-        /* Save out_of_memory result at script start, otherwise if we check OOM
-         * until first write within script, memory used by lua stack and
-         * arguments might interfere. */
-        if (c->cmd->proc == evalCommand ||
-            c->cmd->proc == evalRoCommand ||
-            c->cmd->proc == evalShaCommand ||
-            c->cmd->proc == evalShaRoCommand ||
-            c->cmd->proc == fcallCommand ||
-            c->cmd->proc == fcallroCommand)
-        {
-            server.script_oom = out_of_memory;
-        }
+        /* Save out_of_memory result at command start, otherwise if we check OOM
+         * in the first write within script, memory used by lua stack and
+         * arguments might interfere. We need to save it for EXEC and module
+         * calls too, since these can call EVAL, but avoid saving it during an
+         * interrupted / yielding busy script / module. */
+        server.pre_command_oom_state = out_of_memory;
     }
 
     /* Make sure to use a reasonable amount of memory for client side
@@ -3799,6 +3812,8 @@ int processCommand(client *c) {
             }
         } else {
             sds err = writeCommandsGetDiskErrorMessage(deny_write_type);
+            /* remove the newline since rejectCommandSds adds it. */
+            sdssubstr(err, 0, sdslen(err)-2);
             rejectCommandSds(c, err);
             return C_OK;
         }
@@ -3871,7 +3886,7 @@ int processCommand(client *c) {
      * the MULTI plus a few initial commands refused, then the timeout
      * condition resolves, and the bottom-half of the transaction gets
      * executed, see Github PR #7022. */
-    if ((scriptIsTimedout() || server.busy_module_yield_flags) && !(c->cmd->flags & CMD_ALLOW_BUSY)) {
+    if (isInsideYieldingLongCommand() && !(c->cmd->flags & CMD_ALLOW_BUSY)) {
         if (server.busy_module_yield_flags && server.busy_module_yield_reply) {
             rejectCommandFormat(c, "-BUSY %s", server.busy_module_yield_reply);
         } else if (server.busy_module_yield_flags) {
@@ -3912,7 +3927,7 @@ int processCommand(client *c) {
         c->cmd->proc != quitCommand &&
         c->cmd->proc != resetCommand)
     {
-        queueMultiCommand(c);
+        queueMultiCommand(c, cmd_flags);
         addReply(c,shared.queued);
     } else {
         call(c,CMD_CALL_FULL);
@@ -4238,7 +4253,7 @@ sds writeCommandsGetDiskErrorMessage(int error_code) {
         ret = sdsdup(shared.bgsaveerr->ptr);
     } else {
         ret = sdscatfmt(sdsempty(),
-                "-MISCONF Errors writing to the AOF file: %s",
+                "-MISCONF Errors writing to the AOF file: %s\r\n",
                 strerror(server.aof_last_write_errno));
     }
     return ret;
@@ -4324,7 +4339,7 @@ void addReplyFlagsForCommand(client *c, struct redisCommand *cmd) {
         {CMD_ASKING,            "asking"},
         {CMD_FAST,              "fast"},
         {CMD_NO_AUTH,           "no_auth"},
-        {CMD_MAY_REPLICATE,     "may_replicate"},
+        /* {CMD_MAY_REPLICATE,     "may_replicate"},, Hidden on purpose */
         /* {CMD_SENTINEL,          "sentinel"}, Hidden on purpose */
         /* {CMD_ONLY_SENTINEL,     "only_sentinel"}, Hidden on purpose */
         {CMD_NO_MANDATORY_KEYS, "no_mandatory_keys"},

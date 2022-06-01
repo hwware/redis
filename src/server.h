@@ -1081,6 +1081,7 @@ typedef struct {
 
 typedef struct client {
     uint64_t id;            /* Client incremental unique ID. */
+    uint64_t flags;         /* Client flags: CLIENT_* macros. */
     connection *conn;
     int resp;               /* RESP protocol version. Can be 2 or 3. */
     redisDb *db;            /* Pointer to currently SELECTed DB. */
@@ -1114,7 +1115,6 @@ typedef struct client {
     int slot;               /* The slot the client is executing against. Set to -1 if no slot is being used */
     time_t lastinteraction; /* Time of the last interaction, used for timeout */
     time_t obuf_soft_limit_reached_time;
-    uint64_t flags;         /* Client flags: CLIENT_* macros. */
     int authenticated;      /* Needed when the default user requires auth. */
     int replstate;          /* Replication state if this is a slave. */
     int repl_start_cmd_stream_on_ack; /* Install slave write handler on first ACK. */
@@ -1889,7 +1889,7 @@ struct redisServer {
     /* Scripting */
     client *script_caller;       /* The client running script right now, or NULL */
     mstime_t busy_reply_threshold;  /* Script / module timeout in milliseconds */
-    int script_oom;                    /* OOM detected when script start */
+    int pre_command_oom_state;         /* OOM before command (script?) was started */
     int script_disable_deny_script;    /* Allow running commands marked "no-script" inside a script. */
     /* Lazy free */
     int lazyfree_lazy_eviction;
@@ -2592,7 +2592,7 @@ void listElementsRemoved(client *c, robj *key, int where, robj *o, long count, i
 void unwatchAllKeys(client *c);
 void initClientMultiState(client *c);
 void freeClientMultiState(client *c);
-void queueMultiCommand(client *c);
+void queueMultiCommand(client *c, uint64_t cmd_flags);
 size_t multiStateMemOverhead(client *c);
 void touchWatchedKey(redisDb *db, robj *key);
 int isWatchedKeyExpired(client *c);
@@ -3201,6 +3201,9 @@ void sha1hex(char *digest, char *script, size_t len);
 unsigned long evalMemory();
 dict* evalScriptsDict();
 unsigned long evalScriptsMemory();
+uint64_t evalGetCommandFlags(client *c, uint64_t orig_flags);
+uint64_t fcallGetCommandFlags(client *c, uint64_t orig_flags);
+int isInsideYieldingLongCommand();
 
 typedef struct luaScript {
     uint64_t flags;
