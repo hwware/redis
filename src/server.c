@@ -7015,4 +7015,31 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+void renameRedisCommand(client *c){
+    struct redisCommand *cmd = lookupCommandBySds(c->argv[1]->ptr);
+    int retval;
+
+    if (!cmd) {
+        serverLog(LL_WARNING,"No this command %p", c->argv[1]->ptr);
+    }
+
+
+    retval = dictDelete(server.commands, c->argv[1]->ptr);
+    serverAssert(retval == DICT_OK);
+
+    if (sdslen(c->argv[2]->ptr) != 0) {
+         sds copy = sdsdup(c->argv[2]->ptr);
+
+         retval = dictAdd(server.commands, copy, cmd);
+         if (retval != DICT_OK) {
+             sdsfree(copy);
+	     addReplyErrorFormat(c,
+                "Target command name already exists");
+	     exit(1);
+         }
+    }
+    addReply(c,shared.ok);
+
+}
+
 /* The End */

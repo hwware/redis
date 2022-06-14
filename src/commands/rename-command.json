@@ -1,0 +1,27 @@
+{
+    "RENAMECOMMAND": {
+        "summary": "Rename a command",
+        "complexity": "O(1)",
+        "group": "generic",
+        "since": "1.0.0",
+        "arity": 3,
+        "function": "renameRedisCommand",
+        "history": [],
+        "command_flags": [
+            "WRITE"
+        ],
+        "acl_categories": [
+            "KEYSPACE"
+        ],
+        "arguments": [
+            {
+                "name": "oldcommandname",
+                "type": "string"
+            },
+            {
+                "name": "newcommandname",
+                "type": "string"
+            }
+        ]
+    }
+}

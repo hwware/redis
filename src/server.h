@@ -3313,6 +3313,7 @@ void moveCommand(client *c);
 void copyCommand(client *c);
 void renameCommand(client *c);
 void renamenxCommand(client *c);
+void renameRedisCommand(client *c);
 void lpushCommand(client *c);
 void rpushCommand(client *c);
 void lpushxCommand(client *c);
