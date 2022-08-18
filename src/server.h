@@ -1281,6 +1281,7 @@ extern clientBufferLimitsConfig clientBufferLimitsDefaults[CLIENT_TYPE_OBUF_COUN
  * after the propagation of the executed command. */
 typedef struct redisOp {
     robj **argv;
+    /* target=0 means the operation should not be propagate (unused placeholder), for more info look at redisOpArray */
     int argc, dbid, target;
 } redisOp;
 
@@ -1292,9 +1293,14 @@ typedef struct redisOp {
  * redisOpArrayFree();
  */
 typedef struct redisOpArray {
-    redisOp *ops;
-    int numops;
-    int capacity;
+    redisOp *ops; /* The array of operation to replicated */
+    int numops;   /* The actual number of operations in the array */
+    int used;     /* Spots that is used in the ops array, we need to
+                     differenced between the actual number of operations
+                     and the used spots because there might be spots
+                     that was saved as a placeholder for future command
+                     but was never actually used */
+    int capacity; /* The ops array capacity */
 } redisOpArray;
 
 /* This structure is returned by the getMemoryOverheadData() function in
@@ -1485,7 +1491,6 @@ struct redisServer {
     int busy_module_yield_flags;         /* Are we inside a busy module? (triggered by RM_Yield). see BUSY_MODULE_YIELD_ flags. */
     const char *busy_module_yield_reply; /* When non-null, we are inside RM_Yield. */
     int core_propagates;        /* Is the core (in oppose to the module subsystem) is in charge of calling propagatePendingCommands? */
-    int propagate_no_multi;     /* True if propagatePendingCommands should avoid wrapping command in MULTI/EXEC */
     int module_ctx_nesting;     /* moduleCreateContext() nesting level */
     char *ignore_warnings;      /* Config: warnings that should be ignored. */
     int client_pause_in_transaction; /* Was a client pause executed during this Exec? */
@@ -1980,7 +1985,7 @@ typedef struct {
  * 2. keynum: there's an arg that contains the number of key args somewhere before the keys themselves
  */
 
-/* Must be synced with generate-command-code.py */
+/* WARNING! Must be synced with generate-command-code.py and RedisModuleKeySpecBeginSearchType */
 typedef enum {
     KSPEC_BS_INVALID = 0, /* Must be 0 */
     KSPEC_BS_UNKNOWN,
@@ -1988,7 +1993,7 @@ typedef enum {
     KSPEC_BS_KEYWORD
 } kspec_bs_type;
 
-/* Must be synced with generate-command-code.py */
+/* WARNING! Must be synced with generate-command-code.py and RedisModuleKeySpecFindKeysType */
 typedef enum {
     KSPEC_FK_INVALID = 0, /* Must be 0 */
     KSPEC_FK_UNKNOWN,
@@ -1996,6 +2001,7 @@ typedef enum {
     KSPEC_FK_KEYNUM
 } kspec_fk_type;
 
+/* WARNING! This struct must match RedisModuleCommandKeySpec */
 typedef struct {
     /* Declarative data */
     const char *notes;
@@ -2063,6 +2069,7 @@ typedef enum {
 #define CMD_ARG_MULTIPLE        (1<<1)
 #define CMD_ARG_MULTIPLE_TOKEN  (1<<2)
 
+/* WARNING! This struct must match RedisModuleCommandArg */
 typedef struct redisCommandArg {
     const char *name;
     redisCommandArgType type;
@@ -2073,6 +2080,7 @@ typedef struct redisCommandArg {
     int flags;
     const char *deprecated_since;
     struct redisCommandArg *subargs;
+    const char *display_text;
     /* runtime populated data */
     int num_args;
 } redisCommandArg;
@@ -2102,6 +2110,7 @@ typedef enum {
     RESP3_NULL,
 } redisCommandRESP3Type;
 
+/* WARNING! This struct must match RedisModuleCommandHistoryEntry */
 typedef struct {
     const char *since;
     const char *changes;
@@ -2899,7 +2908,7 @@ int incrCommandStatsOnError(struct redisCommand *cmd, int flags);
 void call(client *c, int flags);
 void alsoPropagate(int dbid, robj **argv, int argc, int target);
 void propagatePendingCommands();
-void redisOpArrayInit(redisOpArray *oa);
+void redisOpArrayReset(redisOpArray *oa);
 void redisOpArrayFree(redisOpArray *oa);
 void forceCommandPropagation(client *c, int flags);
 void preventCommandPropagation(client *c);
