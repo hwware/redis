@@ -231,6 +231,28 @@ int clusterLoadConfig(char *filename) {
         /* Format for the node address information: 
          * ip:port[@cport][,hostname][-nodename] */
 
+        /* Hostname is an optional argument that defines the endpoint
+         * that can be reported to clients instead of IP. */
+        char *hostname = strchr(argv[1], ',');
+        if (hostname) {
+            *hostname = '\0';
+            hostname++;
+            n->hostname = sdscpy(n->hostname, hostname);
+        } else if (sdslen(n->hostname) != 0) {
+            sdsclear(n->hostname);
+        }
+
+	/* Nodename is an optional argument */
+        char *nodename = strchr(argv[1], '-');
+        if (nodename) {
+            *nodename = '\0';
+            nodename++;
+            zfree(n->nodename);
+            n->nodename = sdscpy(n->nodename, nodename);
+        } else if (sdslen(n->nodename) != 0) {
+            sdsclear(n->nodename);
+        }
+
         /* Address and port */
         if ((p = strrchr(argv[1],':')) == NULL) {
             sdsfreesplitres(argv,argc);
@@ -249,28 +271,6 @@ int clusterLoadConfig(char *filename) {
          * In this case we set it to the default offset of 10000 from the
          * base port. */
         n->cport = busp ? atoi(busp) : n->port + CLUSTER_PORT_INCR;
-
-        /* Hostname is an optional argument that defines the endpoint
-         * that can be reported to clients instead of IP. */
-        char *hostname = strchr(p, ',');
-        if (hostname) {
-            *hostname = '\0';
-            hostname++;
-            n->hostname = sdscpy(n->hostname, hostname);
-        } else if (sdslen(n->hostname) != 0) {
-            sdsclear(n->hostname);
-        }
-
-        /* Nodename is an optional argument */
-        char *nodename = strchr(p, '-');
-        if (nodename) {
-            *nodename = '\0';
-            nodename++;
-            zfree(n->nodename);
-            n->nodename = sdscpy(n->nodename, nodename);
-        } else if (sdslen(n->nodename) != 0) {
-            sdsclear(n->nodename);
-        }
 
         /* The plaintext port for client in a TLS cluster (n->pport) is not
          * stored in nodes.conf. It is received later over the bus protocol. */
@@ -876,10 +876,15 @@ void setClusterNodeToInboundClusterLink(clusterNode *node, clusterLink *link) {
         /* A peer may disconnect and then reconnect with us, and it's not guaranteed that
          * we would always process the disconnection of the existing inbound link before
          * accepting a new existing inbound link. Therefore, it's possible to have more than
-         * one inbound link from the same node at the same time. */
+         * one inbound link from the same node at the same time. Our cleanup logic assumes
+         * a one to one relationship between nodes and inbound links, so we need to kill
+         * one of the links. The existing link is more likely the outdated one, but it's
+         * possible the the other node may need to open another link. */
         serverLog(LL_DEBUG, "Replacing inbound link fd %d from node %.40s with fd %d",
                 node->inbound_link->conn->fd, node->name, link->conn->fd);
+        freeClusterLink(node->inbound_link);
     }
+    serverAssert(!node->inbound_link);
     node->inbound_link = link;
     link->node = node;
 }
@@ -1004,6 +1009,7 @@ unsigned int keyHashSlot(char *key, int keylen) {
 /* -----------------------------------------------------------------------------
  * CLUSTER node API
  * -------------------------------------------------------------------------- */
+
 /* Create a new cluster node, with the specified flags.
  * If "nodename" is NULL this is considered a first handshake and a random
  * node name is assigned to this node (it will be fixed later when we'll
@@ -1280,9 +1286,7 @@ clusterNode *clusterLookupNode(const char *name, int length) {
     sds s = sdsnewlen(name, length);
     dictEntry *de = dictFind(server.cluster->nodes, s);
     sdsfree(s);
-    if (de == NULL) {
-        return NULL;
-    }
+    if (de == NULL) return NULL;
     return dictGetVal(de);
 }
 
@@ -1446,7 +1450,7 @@ void clusterHandleConfigEpochCollision(clusterNode *sender) {
     serverLog(LL_VERBOSE,
         "WARNING: configEpoch collision with node %.40s (%s)."
         " configEpoch set to %llu",
-        sender->name, sender->nodename,
+        sender->name,sender->nodename,
         (unsigned long long) myself->configEpoch);
 }
 
@@ -1590,8 +1594,8 @@ void clearNodeFailureIfNeeded(clusterNode *node) {
      * node again. */
     if (nodeIsSlave(node) || node->numslots == 0) {
         serverLog(LL_NOTICE,
-            "Clear FAIL state for node %.40s (%s): %s is reachable again.",
-                node->name, node->nodename,
+            "Clear FAIL state for node %.40s (%s):%s is reachable again.",
+                node->name,node->nodename,
                 nodeIsSlave(node) ? "replica" : "master without slots");
         node->flags &= ~CLUSTER_NODE_FAIL;
         clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|CLUSTER_TODO_SAVE_CONFIG);
@@ -1727,17 +1731,15 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 if (flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_PFAIL)) {
                     if (clusterNodeAddFailureReport(node,sender)) {
                         serverLog(LL_VERBOSE,
-                            "Node %.40s (%s) reported node %.40s (%s) as not reachable.",
-                            sender->name, sender->nodename,
-                            node->name, node->nodename);
+                            "Node %.40s (%s) reported node %.40s (%s)as not reachable.",
+                            sender->name, sender->nodename, node->name, node->nodename);
                     }
                     markNodeAsFailingIfNeeded(node);
                 } else {
                     if (clusterNodeDelFailureReport(node,sender)) {
                         serverLog(LL_VERBOSE,
                             "Node %.40s (%s) reported node %.40s (%s) is back online.",
-                            sender->name, sender->nodename,
-                            node->name, node->nodename);
+                            sender->name, sender->nodename, node->name, node->nodename);
                     }
                 }
             }
@@ -2008,7 +2010,13 @@ void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoc
         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|
                              CLUSTER_TODO_UPDATE_STATE|
                              CLUSTER_TODO_FSYNC_CONFIG);
-    } else if (myself->slaveof && myself->slaveof->slaveof) {
+    } else if (myself->slaveof && myself->slaveof->slaveof &&
+               /* In some rare case when CLUSTER FAILOVER TAKEOVER is used, it
+                * can happen that myself is a replica of a replica of myself. If
+                * this happens, we do nothing to avoid a crash and wait for the
+                * admin to repair the cluster. */
+               myself->slaveof->slaveof != myself)
+    {
         /* Safeguard against sub-replicas. A replica's master can turn itself
          * into a replica if its last slot is removed. If no other node takes
          * over the slot, there is nothing else to trigger replica migration. */
@@ -2136,37 +2144,16 @@ int writeNodenamePingExt(clusterMsgPingExt **cursor) {
     return extension_size;
 }
 
-/* Write the nodename ping extension at the start of the cursor. This function
- * will update the cursor to point to the end of the written extension and
- * will return the amount of bytes written. */
-int writeNodenamePingExt(clusterMsgPingExt **cursor) {
-    /* If nodename is not set, we don't send this extension */
-    if (sdslen(myself->nodename) == 0) return 0;
-
-    /* Add the nodename information at the extension cursor */
-    clusterMsgPingExtNodename *ext = &(*cursor)->ext[0].nodename;
-    memcpy(ext->nodename, myself->nodename, sdslen(myself->nodename));
-    uint32_t extension_size = getNodenamePingExtSize();
-
-    /* Move the write cursor */
-    (*cursor)->type = CLUSTERMSG_EXT_TYPE_NODENAME;
-    (*cursor)->length = htonl(extension_size);
-    /* Make sure the string is NULL terminated by adding 1 */
-    *cursor = (clusterMsgPingExt *) (ext->nodename + EIGHT_BYTE_ALIGN(sdslen(myself->nodename) + 1));
-    return extension_size;
-}
-
 /* We previously validated the extensions, so this function just needs to
  * handle the extensions. */
 void clusterProcessPingExtensions(clusterMsg *hdr, clusterLink *link) {
     clusterNode *sender = link->node ? link->node : clusterLookupNode(hdr->sender, CLUSTER_NAMELEN);
     char *ext_hostname = NULL;
-    char *ext_nodename = NULL;
     uint16_t extensions = ntohs(hdr->extensions);
     /* Loop through all the extensions and process them */
     clusterMsgPingExt *ext = getInitialPingExt(hdr, ntohs(hdr->count));
     while (extensions--) {
-        uint16_t type = ext->type;
+        uint16_t type = ntohs(ext->type);
         if (type == CLUSTERMSG_EXT_TYPE_HOSTNAME) {
             clusterMsgPingExtHostname *hostname_ext = (clusterMsgPingExtHostname *) &(ext->ext[0].hostname);
             ext_hostname = hostname_ext->hostname;
@@ -2183,9 +2170,6 @@ void clusterProcessPingExtensions(clusterMsg *hdr, clusterLink *link) {
                 clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|
                                      CLUSTER_TODO_SAVE_CONFIG);
             }
-        } else if (type == CLUSTERMSG_EXT_TYPE_NODENAME) {
-            clusterMsgPingExtNodename *nodename_ext = (clusterMsgPingExtNodename *) &(ext->ext[0].nodename);
-            ext_nodename = nodename_ext->nodename;
         } else {
             /* Unknown type, we will ignore it but log what happened. */
             serverLog(LL_WARNING, "Received unknown extension type %d", type);
@@ -2198,7 +2182,6 @@ void clusterProcessPingExtensions(clusterMsg *hdr, clusterLink *link) {
      * they don't have an announced hostname. Otherwise, we'll
      * set it now. */
     updateAnnouncedHostname(sender, ext_hostname);
-    updateAnnouncedNodename(sender, ext_nodename);
 }
 
 static clusterNode *getNodeFromLinkAndMsg(clusterLink *link, clusterMsg *hdr) {
@@ -2431,7 +2414,6 @@ int clusterProcessPacket(clusterLink *link) {
                     serverLog(LL_VERBOSE,
                         "Handshake: we already know node %.40s (%s), "
                         "updating the address if needed.", sender->name, sender->nodename);
-
                     if (nodeUpdateAddressIfNeeded(sender,link,hdr))
                     {
                         clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG|
@@ -2459,7 +2441,7 @@ int clusterProcessPacket(clusterLink *link) {
                  * address. */
                 serverLog(LL_DEBUG,"PONG contains mismatching sender ID. About node %.40s (%s) added %d ms ago, having flags %d",
                     link->node->name,
-                    link->node->nodename,
+		    link->node->nodename,
                     (int)(now-(link->node->ctime)),
                     link->node->flags);
                 link->node->flags |= CLUSTER_NODE_NOADDR;
@@ -2607,8 +2589,7 @@ int clusterProcessPacket(clusterLink *link) {
                         serverLog(LL_VERBOSE,
                             "Node %.40s has old slots configuration, sending "
                             "an UPDATE message about %.40s (%s)",
-                                sender->name, server.cluster->slots[j]->name,
-                                sender->nodename);
+                                sender->name, server.cluster->slots[j]->name, sender->nodename);
                         clusterSendUpdate(sender->link,
                             server.cluster->slots[j]);
 
@@ -2965,7 +2946,7 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     hdr->sig[3] = 'b';
     hdr->type = htons(type);
     memcpy(hdr->sender,myself->name,CLUSTER_NAMELEN);
-    
+
     /* If cluster-announce-ip option is enabled, force the receivers of our
      * packets to use the specified address for this node. Otherwise if the
      * first byte is zero, they'll do auto discovery. */
@@ -3090,8 +3071,7 @@ void clusterSendPing(clusterLink *link, int type) {
     estlen += (sizeof(clusterMsgDataGossip)*(wanted + pfail_wanted));
     estlen += getHostnamePingExtSize();
     estlen += dictSize(server.cluster->nodes_black_list) *
-        (sizeof(clusterMsgPingExt) + sizeof(clusterMsgPingExtForgottenNode));
-    estlen += sizeof(clusterMsgPingExt) + getHostnamePingExtSize() + getNodenamePingExtSize();
+        (sizeof(clusterMsgPingExt) + sizeof(clusterMsgPingExtForgottenNode) + getHostnamePingExtSize() + getNodenamePingExtSize());
 
     /* Note: clusterBuildMessageHdr() expects the buffer to be always at least
      * sizeof(clusterMsg) or more. */
@@ -3172,6 +3152,12 @@ void clusterSendPing(clusterLink *link, int type) {
         extensions++;
     }
 
+    if (sdslen(myself->nodename) != 0) {
+        hdr->mflags[0] |= CLUSTERMSG_FLAG0_EXT_DATA;
+        totlen += writeNodenamePingExt(&cursor);
+        extensions++;
+    }
+
     /* Gossip forgotten nodes */
     if (dictSize(server.cluster->nodes_black_list) > 0) {
         dictIterator *di = dictGetIterator(server.cluster->nodes_black_list);
@@ -3186,12 +3172,6 @@ void clusterSendPing(clusterLink *link, int type) {
             extensions++;
         }
         dictReleaseIterator(di);
-    }
-
-    if (sdslen(myself->nodename) != 0) {
-        hdr->mflags[0] |= CLUSTERMSG_FLAG0_EXT_DATA;
-        totlen += writeNodenamePingExt(&cursor);
-        extensions++;
     }
 
     /* Compute the actual total length and send! */
@@ -3481,7 +3461,8 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     if (requestCurrentEpoch < server.cluster->currentEpoch) {
         serverLog(LL_WARNING,
             "Failover auth denied to %.40s (%s): reqEpoch (%llu) < curEpoch(%llu)",
-            node->name, node->nodename,
+            node->name,
+	    node->nodename,
             (unsigned long long) requestCurrentEpoch,
             (unsigned long long) server.cluster->currentEpoch);
         return;
@@ -3491,7 +3472,8 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
     if (server.cluster->lastVoteEpoch == server.cluster->currentEpoch) {
         serverLog(LL_WARNING,
                 "Failover auth denied to %.40s (%s): already voted for epoch %llu",
-                node->name, node->nodename,
+                node->name,
+		node->nodename,
                 (unsigned long long) server.cluster->currentEpoch);
         return;
     }
@@ -3526,7 +3508,7 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
         serverLog(LL_WARNING,
                 "Failover auth denied to %.40s (%s): "
                 "can't vote about this master before %lld milliseconds",
-                node->name, node->nodename,
+                node->name,node->nodename,
                 (long long) ((server.cluster_node_timeout*2)-
                              (mstime() - node->slaveof->voted_time)));
         return;
@@ -4808,36 +4790,15 @@ sds clusterGenNodeDescription(clusterNode *node, int use_pport) {
 
     /* Node coordinates */
     ci = sdscatlen(sdsempty(),node->name,CLUSTER_NAMELEN);
-    if (sdslen(node->hostname) != 0 && node->nodename) {
-        ci = sdscatfmt(ci," %s:%i@%i,%s-%s ",
-            node->ip,
-            port,
-            node->cport,
-            node->hostname,
-            node->nodename);
-    } else if (sdslen(node->hostname) != 0) {
-	ci = sdscatfmt(ci," %s:%i@%i,%s ",
-            node->ip,
-            port,
-            node->cport,
-            node->hostname);
-    } else if (node->hostname) {
-        ci = sdscatfmt(ci," %s:%i@%i,%s ",
-            node->ip,
-            port,
-            node->cport,
-            node->hostname);
-    } else if (node->nodename) {
-        ci = sdscatfmt(ci," %s:%i@%i-%s ",
-            node->ip,
-            port,
-            node->cport,
-            node->nodename);
-    } else {
-        ci = sdscatfmt(ci," %s:%i@%i ",
-            node->ip,
-            port,
-            node->cport);
+    ci = sdscatfmt(ci," %s:%i@%i",
+        node->ip,
+        port,
+        node->cport);
+    if (sdslen(node->hostname) != 0) {
+        ci = sdscatfmt(ci,",%s", node->hostname);
+    }
+    if (sdslen(node->nodename) != 0) {
+        ci = sdscatfmt(ci,"-%s", node->nodename);
     }
     ci = sdscatlen(ci," ",1);
 
