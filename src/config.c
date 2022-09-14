@@ -2609,7 +2609,6 @@ int updateClusterNodename(const char **err) {
     return 1;
 }
 
-#ifdef USE_OPENSSL
 static int applyTlsCfg(const char **err) {
     UNUSED(err);
 

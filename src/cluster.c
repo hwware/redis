@@ -2136,26 +2136,6 @@ int writeNodenamePingExt(clusterMsgPingExt **cursor) {
     return extension_size;
 }
 
-/* Write the nodename ping extension at the start of the cursor. This function
- * will update the cursor to point to the end of the written extension and
- * will return the amount of bytes written. */
-int writeNodenamePingExt(clusterMsgPingExt **cursor) {
-    /* If nodename is not set, we don't send this extension */
-    if (sdslen(myself->nodename) == 0) return 0;
-
-    /* Add the nodename information at the extension cursor */
-    clusterMsgPingExtNodename *ext = &(*cursor)->ext[0].nodename;
-    memcpy(ext->nodename, myself->nodename, sdslen(myself->nodename));
-    uint32_t extension_size = getNodenamePingExtSize();
-
-    /* Move the write cursor */
-    (*cursor)->type = CLUSTERMSG_EXT_TYPE_NODENAME;
-    (*cursor)->length = htonl(extension_size);
-    /* Make sure the string is NULL terminated by adding 1 */
-    *cursor = (clusterMsgPingExt *) (ext->nodename + EIGHT_BYTE_ALIGN(sdslen(myself->nodename) + 1));
-    return extension_size;
-}
-
 /* We previously validated the extensions, so this function just needs to
  * handle the extensions. */
 void clusterProcessPingExtensions(clusterMsg *hdr, clusterLink *link) {
