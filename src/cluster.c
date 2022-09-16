@@ -48,6 +48,7 @@ clusterNode *myself = NULL;
 
 clusterNode *createClusterNode(char *nodename, int flags);
 void clusterAddNode(clusterNode *node);
+void setClusterNodeName(clusterNode *node);
 void clusterAcceptHandler(aeEventLoop *el, int fd, void *privdata, int mask);
 void clusterReadHandler(connection *conn);
 void clusterSendPing(clusterLink *link, int type);
@@ -979,6 +980,23 @@ unsigned int keyHashSlot(char *key, int keylen) {
  * CLUSTER node API
  * -------------------------------------------------------------------------- */
 
+/* Assign a human readable name to nodes for clusters*/
+void setClusterNodeName(clusterNode *node){
+    char *name;
+    int post_digits;
+    if (node->port == 0){
+        post_digits = 0;
+    }
+    else{
+        post_digits = floor(log10(abs(node->port))) + 1;
+    }
+    int allocate_len = sizeof(node->ip) + post_digits + 2;
+    name = zmalloc(allocate_len);
+    snprintf(name, "%s%s%d", node->ip, "_", node->port);
+    node->hname = name;
+}
+
+
 /* Create a new cluster node, with the specified flags.
  * If "nodename" is NULL this is considered a first handshake and a random
  * node name is assigned to this node (it will be fixed later when we'll
@@ -1660,6 +1678,7 @@ int clusterStartHandshake(char *ip, int port, int cport) {
     memcpy(n->ip,norm_ip,sizeof(n->ip));
     n->port = port;
     n->cport = cport;
+    setClusterNodeName(n);
     clusterAddNode(n);
     return 1;
 }
@@ -1751,6 +1770,7 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
                 node->flags &= ~CLUSTER_NODE_NOADDR;
+		setClusterNodeName(node);
             }
         } else {
             /* If it's not in NOADDR state and we don't have it, we
@@ -1772,6 +1792,7 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
                 node->port = ntohs(g->port);
                 node->pport = ntohs(g->pport);
                 node->cport = ntohs(g->cport);
+		setClusterNodeName(node);
                 clusterAddNode(node);
             }
         }
@@ -1818,7 +1839,7 @@ int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
     int port = ntohs(hdr->port);
     int pport = ntohs(hdr->pport);
     int cport = ntohs(hdr->cport);
-
+    setClusterNodeName(node);
     /* We don't proceed if the link is the same as the sender link, as this
      * function is designed to see if the node link is consistent with the
      * symmetric link that is used to receive PINGs from the node.
