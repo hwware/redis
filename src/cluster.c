@@ -992,7 +992,7 @@ void setClusterNodeName(clusterNode *node){
     }
     int allocate_len = sizeof(node->ip) + post_digits + 2;
     name = zmalloc(allocate_len);
-    snprintf(name, "%s%s%d", node->ip, "_", node->port);
+    //snprintf(name, "%s%s%d", node->ip, "_", node->port);
     node->hname = name;
 }
 
@@ -1271,7 +1271,21 @@ clusterNode *clusterLookupNode(const char *name, int length) {
     sds s = sdsnewlen(name, length);
     dictEntry *de = dictFind(server.cluster->nodes, s);
     sdsfree(s);
-    if (de == NULL) return NULL;
+    if (de == NULL){
+        dictIterator *di;
+        dictEntry *de2;
+
+        di = dictGetSafeIterator(server.cluster->nodes);
+        while((de2 = dictNext(di)) != NULL) {
+            clusterNode *node = dictGetVal(de2);
+	    if (node->hname){
+                if (strcmp(node->hname,name ) == 0)
+                    return node;
+            }
+        }
+        dictReleaseIterator(di);
+        return NULL;
+    } 
     return dictGetVal(de);
 }
 
@@ -2325,6 +2339,7 @@ int clusterProcessPacket(clusterLink *link) {
                 strcmp(ip,myself->ip))
             {
                 memcpy(myself->ip,ip,NET_IP_STR_LEN);
+		setClusterNodeName(myself);
                 serverLog(LL_WARNING,"IP address for this node updated to %s",
                     myself->ip);
                 clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
@@ -2343,6 +2358,7 @@ int clusterProcessPacket(clusterLink *link) {
             node->port = ntohs(hdr->port);
             node->pport = ntohs(hdr->pport);
             node->cport = ntohs(hdr->cport);
+	    setClusterNodeName(myself);
             clusterAddNode(node);
             clusterDoBeforeSleep(CLUSTER_TODO_SAVE_CONFIG);
         }
