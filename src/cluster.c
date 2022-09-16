@@ -5332,6 +5332,8 @@ void clusterCommand(client *c) {
 "    Connect nodes into a working cluster.",
 "MYID",
 "    Return the node id.",
+"MYNAME",
+"    Return the node name.",
 "NODES",
 "    Return cluster configuration seen by node. Output format:",
 "    <id> <ip:port> <flags> <master> <pings> <pongs> <epoch> <link> <slot> ...",
@@ -5398,6 +5400,12 @@ NULL
     } else if (!strcasecmp(c->argv[1]->ptr,"myid") && c->argc == 2) {
         /* CLUSTER MYID */
         addReplyBulkCBuffer(c,myself->name, CLUSTER_NAMELEN);
+    } else if (!strcasecmp(c->argv[1]->ptr,"myname") && c->argc == 2) {
+        /* CLUSTER MYNAME */
+	if(myself->hname)
+          addReplyBulkCBuffer(c,myself->hname, strlen(myself->hname));
+	else
+          addReplyError(c,"Node is not assigned name yet.");
     } else if (!strcasecmp(c->argv[1]->ptr,"slots") && c->argc == 2) {
         /* CLUSTER SLOTS */
         clusterReplyMultiBulkSlots(c);
