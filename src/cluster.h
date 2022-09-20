@@ -138,6 +138,7 @@ typedef struct clusterNode {
     long long repl_offset;      /* Last known repl offset for this node. */
     char ip[NET_IP_STR_LEN];    /* Latest known IP address of this node */
     sds hostname;               /* The known hostname for this node */
+    sds nodename;               /* The known human readable nodename for this node */
     int port;                   /* Latest known clients port (TLS or plain). */
     int pport;                  /* Latest known clients plaintext port. Only used
                                    if the main clients port is for TLS. */
@@ -254,6 +255,7 @@ typedef struct {
 typedef enum {
     CLUSTERMSG_EXT_TYPE_HOSTNAME,
     CLUSTERMSG_EXT_TYPE_FORGOTTEN_NODE,
+    CLUSTERMSG_EXT_TYPE_NODENAME,
 } clusterMsgPingtypes; 
 
 /* Helper function for making sure extensions are eight byte aligned. */
@@ -262,6 +264,10 @@ typedef enum {
 typedef struct {
     char hostname[1]; /* The announced hostname, ends with \0. */
 } clusterMsgPingExtHostname;
+
+typedef struct {
+    char nodename[1]; /* The announced nodename, ends with \0. */
+} clusterMsgPingExtNodename;
 
 typedef struct {
     char name[CLUSTER_NAMELEN]; /* Node name. */
@@ -277,6 +283,7 @@ typedef struct {
     union {
         clusterMsgPingExtHostname hostname;
         clusterMsgPingExtForgottenNode forgotten_node;
+	clusterMsgPingExtNodename nodename;
     } ext[]; /* Actual extension information, formatted so that the data is 8 
               * byte aligned, regardless of its content. */
 } clusterMsgPingExt;
@@ -407,5 +414,6 @@ void clusterUpdateMyselfIp(void);
 void slotToChannelAdd(sds channel);
 void slotToChannelDel(sds channel);
 void clusterUpdateMyselfHostname(void);
+void clusterUpdateMyselfNodename(void);
 
 #endif /* __CLUSTER_H */
