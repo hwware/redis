@@ -6222,6 +6222,7 @@ struct redisCommandArg XADD_Args[] = {
 /* XAUTOCLAIM history */
 commandHistory XAUTOCLAIM_History[] = {
 {"7.0.0","Added an element to the reply array, containing deleted entries the command cleared from the PEL"},
+{"7.2.0","Added MKGROUP option for creating consumer group if it does not exist"},
 {0}
 };
 
@@ -6240,13 +6241,17 @@ struct redisCommandArg XAUTOCLAIM_Args[] = {
 {"start",ARG_TYPE_STRING,-1,NULL,NULL,NULL,CMD_ARG_NONE},
 {"count",ARG_TYPE_INTEGER,-1,"COUNT",NULL,NULL,CMD_ARG_OPTIONAL},
 {"justid",ARG_TYPE_PURE_TOKEN,-1,"JUSTID",NULL,NULL,CMD_ARG_OPTIONAL},
+{"mkgroup",ARG_TYPE_PURE_TOKEN,-1,"MKGROUP",NULL,"7.2.0",CMD_ARG_OPTIONAL},
 {0}
 };
 
 /********** XCLAIM ********************/
 
 /* XCLAIM history */
-#define XCLAIM_History NULL
+commandHistory XCLAIM_History[] = {
+{"7.2.0","Added MKGROUP option for creating consumer group if it does not exist"},
+{0}
+};
 
 /* XCLAIM tips */
 const char *XCLAIM_tips[] = {
@@ -6267,6 +6272,7 @@ struct redisCommandArg XCLAIM_Args[] = {
 {"force",ARG_TYPE_PURE_TOKEN,-1,"FORCE",NULL,NULL,CMD_ARG_OPTIONAL},
 {"justid",ARG_TYPE_PURE_TOKEN,-1,"JUSTID",NULL,NULL,CMD_ARG_OPTIONAL},
 {"lastid",ARG_TYPE_STRING,-1,"LASTID",NULL,NULL,CMD_ARG_OPTIONAL},
+{"mkgroup",ARG_TYPE_PURE_TOKEN,-1,"MKGROUP",NULL,"7.2.0",CMD_ARG_OPTIONAL},
 {0}
 };
 
@@ -6519,6 +6525,7 @@ struct redisCommandArg XLEN_Args[] = {
 /* XPENDING history */
 commandHistory XPENDING_History[] = {
 {"6.2.0","Added the `IDLE` option and exclusive range intervals."},
+{"7.2.0","Added MKGROUP option for creating consumer group if it does not exist"},
 {0}
 };
 
@@ -6593,7 +6600,10 @@ struct redisCommandArg XREAD_Args[] = {
 /********** XREADGROUP ********************/
 
 /* XREADGROUP history */
-#define XREADGROUP_History NULL
+commandHistory XREADGROUP_History[] = {
+{"7.2.0","Added MKGROUP option for creating consumer group if it does not exist"},
+{0}
+};
 
 /* XREADGROUP tips */
 #define XREADGROUP_tips NULL
