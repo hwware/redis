@@ -6549,8 +6549,8 @@ struct redisCommandArg XPENDING_filters_Subargs[] = {
 struct redisCommandArg XPENDING_Args[] = {
 {"key",ARG_TYPE_KEY,0,NULL,NULL,NULL,CMD_ARG_NONE},
 {"group",ARG_TYPE_STRING,-1,NULL,NULL,NULL,CMD_ARG_NONE},
-{"filters",ARG_TYPE_BLOCK,-1,NULL,NULL,NULL,CMD_ARG_OPTIONAL,.subargs=XPENDING_filters_Subargs},
 {"mkgroup",ARG_TYPE_PURE_TOKEN,-1,"MKGROUP",NULL,"7.2.0",CMD_ARG_OPTIONAL},
+{"filters",ARG_TYPE_BLOCK,-1,NULL,NULL,NULL,CMD_ARG_OPTIONAL,.subargs=XPENDING_filters_Subargs},
 {0}
 };
 
