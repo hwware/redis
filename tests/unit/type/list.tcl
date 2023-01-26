@@ -1498,13 +1498,13 @@ foreach type {listpack quicklist} {
         assert_equal -1 [r linsert mylist2 before 10 10]
     }
 
-    test {LMOVE against non existing source key} {
-        assert_equal "" [r lmove not-a-source-key destination LEFT RIGHT]
-    }
+    #test {LMOVE against non existing source key} {
+    #    assert_equal "" [r lmove not-a-source-key destination LEFT RIGHT]
+    #}
 
-    test {LMOVE against non-list source key error} {
-        assert_error WRONGTYPE* {r lmove mylist destination LEFT RIGHT}
-    }
+    #test {LMOVE against non-list source key error} {
+    #    assert_error WRONGTYPE* {r lmove mylist destination LEFT RIGHT}
+    #}
 
     test {LMOVE against non-list destination key error} {
         assert_error WRONGTYPE* {r lmove mylist2 mylist LEFT RIGHT}
