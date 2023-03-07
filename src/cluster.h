@@ -261,6 +261,7 @@ typedef struct {
  * consistent manner. */
 typedef enum {
     CLUSTERMSG_EXT_TYPE_HOSTNAME,
+    CLUSTERMSG_EXT_TYPE_HUMAN_NODENAME,
     CLUSTERMSG_EXT_TYPE_FORGOTTEN_NODE,
     CLUSTERMSG_EXT_TYPE_SHARDID,
     //nodename feature CLUSTERMSG_EXT_TYPE_NODENAME,
@@ -272,6 +273,10 @@ typedef enum {
 typedef struct {
     char hostname[1]; /* The announced hostname, ends with \0. */
 } clusterMsgPingExtHostname;
+
+typedef struct {
+    char human_nodename[1]; /* The announced nodename, ends with \0. */
+} clusterMsgPingExtHumanNodename;
 
 typedef struct {
     char name[CLUSTER_NAMELEN]; /* Node name. */
@@ -296,6 +301,7 @@ typedef struct {
     uint16_t unused; /* 16 bits of padding to make this structure 8 byte aligned. */
     union {
         clusterMsgPingExtHostname hostname;
+        clusterMsgPingExtHumanNodename human_nodename;
         clusterMsgPingExtForgottenNode forgotten_node;
         clusterMsgPingExtShardId shard_id;
         //nodename feature clusterMsgPingExtNodename nodename;
