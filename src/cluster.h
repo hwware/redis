@@ -264,7 +264,6 @@ typedef enum {
     CLUSTERMSG_EXT_TYPE_HUMAN_NODENAME,
     CLUSTERMSG_EXT_TYPE_FORGOTTEN_NODE,
     CLUSTERMSG_EXT_TYPE_SHARDID,
-    //nodename feature CLUSTERMSG_EXT_TYPE_NODENAME,
 } clusterMsgPingtypes; 
 
 /* Helper function for making sure extensions are eight byte aligned. */
@@ -289,12 +288,6 @@ typedef struct {
     char shard_id[CLUSTER_NAMELEN]; /* The shard_id, 40 bytes fixed. */
 } clusterMsgPingExtShardId;
 
-/* nodename feature
-typedef struct {
-    char nodename[1]; The announced nodename, ends with \0. 
-} clusterMsgPingExtNodename;
-*/
-
 typedef struct {
     uint32_t length; /* Total length of this extension message (including this header) */
     uint16_t type; /* Type of this extension message (see clusterMsgPingExtTypes) */
@@ -304,7 +297,6 @@ typedef struct {
         clusterMsgPingExtHumanNodename human_nodename;
         clusterMsgPingExtForgottenNode forgotten_node;
         clusterMsgPingExtShardId shard_id;
-        //nodename feature clusterMsgPingExtNodename nodename;
     } ext[]; /* Actual extension information, formatted so that the data is 8 
               * byte aligned, regardless of its content. */
 } clusterMsgPingExt;

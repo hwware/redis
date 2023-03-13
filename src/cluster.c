@@ -2476,69 +2476,6 @@ uint32_t writePingExt(clusterMsg *hdr, int gossipcount)  {
 
     return totlen;
 }
-/* Returns the exact size needed to store the nodename. The returned value
- * will be 8 byte padded. */
-/* nodename feature
-int getNodenamePingExtSize() {
-    if (sdslen(myself->nodename) == 0) return 0;
-
-    int totlen = sizeof(clusterMsgPingExt) + EIGHT_BYTE_ALIGN(sdslen(myself->nodename) + 1);
-    return totlen;
-}
-*/
-
-/* Write the hostname ping extension at the start of the cursor. This function
- * will update the cursor to point to the end of the written extension and
- * will return the amount of bytes written. */
-/* nodename feature
-int writeHostnamePingExt(clusterMsgPingExt **cursor) {
-    if (sdslen(myself->hostname) == 0) return 0;
-
-    clusterMsgPingExtHostname *ext = &(*cursor)->ext[0].hostname;
-    memcpy(ext->hostname, myself->hostname, sdslen(myself->hostname));
-    uint32_t extension_size = getHostnamePingExtSize();
-
-    (*cursor)->type = htons(CLUSTERMSG_EXT_TYPE_HOSTNAME);
-    (*cursor)->length = htonl(extension_size);
-    *cursor = (clusterMsgPingExt *) ((intptr_t)ext + EIGHT_BYTE_ALIGN(sdslen(myself->hostname) + 1));
-    return extension_size;
-}
-*/
-
-/* Write the forgotten node ping extension at the start of the cursor, update
- * the cursor to point to the end of the written extension and return the number
- * of bytes written. */
-/* nodename feature
-int writeForgottenNodePingExt(clusterMsgPingExt **cursor, sds name, uint64_t ttl) {
-    serverAssert(sdslen(name) == CLUSTER_NAMELEN);
-    clusterMsgPingExtForgottenNode *ext = &(*cursor)->ext[0].forgotten_node;
-    memcpy(ext->name, name, CLUSTER_NAMELEN);
-    ext->ttl = htonu64(ttl);
-    uint32_t extension_size = sizeof(clusterMsgPingExt) + sizeof(clusterMsgPingExtForgottenNode);
-    (*cursor)->type = htons(CLUSTERMSG_EXT_TYPE_FORGOTTEN_NODE);
-    (*cursor)->length = htonl(extension_size);
-    *cursor = (clusterMsgPingExt *) (ext + 1);
-    return extension_size;
-}
-*/
-
-/* Write the nodename ping extension at the start of the cursor. This function
- * will update the cursor to point to the end of the written extension and
- * will return the amount of bytes written. */
-/* nodename feature
-int writeNodenamePingExt(clusterMsgPingExt **cursor) {
-    if (sdslen(myself->nodename) == 0) return 0;
-
-    clusterMsgPingExtNodename *ext = &(*cursor)->ext[0].nodename;
-    memcpy(ext->nodename, myself->nodename, sdslen(myself->nodename));
-    uint32_t extension_size = getNodenamePingExtSize();
-
-    (*cursor)->type = CLUSTERMSG_EXT_TYPE_NODENAME;
-    (*cursor)->length = htonl(extension_size);
-    *cursor = (clusterMsgPingExt *) (ext->nodename + EIGHT_BYTE_ALIGN(sdslen(myself->nodename) + 1));
-    return extension_size;
-}
-*/
 
 /* We previously validated the extensions, so this function just needs to
  * handle the extensions. */
@@ -2847,13 +2784,6 @@ int clusterProcessPacket(clusterLink *link) {
                 /* If the reply has a non matching node ID we
                  * disconnect this node and set it as not having an associated
                  * address. */
-                /* nodename feature
-                serverLog(LL_DEBUG,"PONG contains mismatching sender ID. About node %.40s (%s) added %d ms ago, having flags %d",
-                    link->node->name,
-		    link->node->human_nodename,
-                    (int)(now-(link->node->ctime)),
-                    link->node->flags);
-                */
                 serverLog(LL_DEBUG,"PONG contains mismatching sender ID. About node %.40s added %d ms ago, having flags %d",
                     link->node->name,
                     (int)(now-(link->node->ctime)),
@@ -3510,12 +3440,6 @@ void clusterSendPing(clusterLink *link, int type) {
     estlen = sizeof(clusterMsg) - sizeof(union clusterMsgData);
     estlen += (sizeof(clusterMsgDataGossip)*(wanted + pfail_wanted));
     estlen += writePingExt(NULL, 0);
-    /* nodename feature
-    estlen += getHostnamePingExtSize();
-    estlen += dictSize(server.cluster->nodes_black_list) *
-        (sizeof(clusterMsgPingExt) + sizeof(clusterMsgPingExtForgottenNode) + getHostnamePingExtSize() + getNodenamePingExtSize());
-    */
-
     /* Note: clusterBuildMessageHdr() expects the buffer to be always at least
      * sizeof(clusterMsg) or more. */
     if (estlen < (int)sizeof(clusterMsg)) estlen = sizeof(clusterMsg);
@@ -3581,40 +3505,7 @@ void clusterSendPing(clusterLink *link, int type) {
         dictReleaseIterator(di);
     }
 
-    /* nodename feature 
-    int totlen = 0;
-    int extensions = 0;
-    clusterMsgPingExt *cursor = getInitialPingExt(hdr, gossipcount);
-    if (sdslen(myself->hostname) != 0) {
-        hdr->mflags[0] |= CLUSTERMSG_FLAG0_EXT_DATA;
-        totlen += writeHostnamePingExt(&cursor);
-        extensions++;
-    }
-
-    if (sdslen(myself->nodename) != 0) {
-        hdr->mflags[0] |= CLUSTERMSG_FLAG0_EXT_DATA;
-        totlen += writeNodenamePingExt(&cursor);
-        extensions++;
-    }
-
-    if (dictSize(server.cluster->nodes_black_list) > 0) {
-        dictIterator *di = dictGetIterator(server.cluster->nodes_black_list);
-        dictEntry *de;
-        while ((de = dictNext(di)) != NULL) {
-            sds name = dictGetKey(de);
-            uint64_t expire = dictGetUnsignedIntegerVal(de);
-            if ((time_t)expire < server.unixtime) continue; 
-            uint64_t ttl = expire - server.unixtime;
-            hdr->mflags[0] |= CLUSTERMSG_FLAG0_EXT_DATA;
-            totlen += writeForgottenNodePingExt(&cursor, name, ttl);
-            extensions++;
-        }
-        dictReleaseIterator(di);
-    }
-    */
-
     /* Compute the actual total length and send! */
-    /* nodename feature deleted */
     uint32_t totlen = 0;
     totlen += writePingExt(hdr, gossipcount);
     totlen += sizeof(clusterMsg)-sizeof(union clusterMsgData);
@@ -4547,10 +4438,6 @@ void clusterCron(void) {
     iteration++; /* Number of times this function was called so far. */
 
     clusterUpdateMyselfHostname();
-    /* nodename feature
-    clusterUpdateMyselfNodename();
-    */
-
     /* The handshake timeout is the time after which a handshake node that was
      * not turned into a normal node is removed from the nodes. Usually it is
      * just the NODE_TIMEOUT value, but when NODE_TIMEOUT is too small we use
