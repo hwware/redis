@@ -3905,7 +3905,7 @@ NULL
             addReplyLongLong(c,inactive);
         }
         raxStop(&ri);
-    } else if (!strcasecmp(opt,"GROUPS") && c->argc == 3) {
+    } else if (!strcasecmp(opt,"GROUPS")) {
         /* XINFO GROUPS <key>. */
         if (s->cgroups == NULL) {
             addReplyArrayLen(c,0);
@@ -3917,24 +3917,50 @@ NULL
         raxStart(&ri,s->cgroups);
         raxSeek(&ri,"^",NULL,0);
         while(raxNext(&ri)) {
-            streamCG *cg = ri.data;
-            addReplyMapLen(c,6);
-            addReplyBulkCString(c,"name");
-            addReplyBulkCBuffer(c,ri.key,ri.key_len);
-            addReplyBulkCString(c,"consumers");
-            addReplyLongLong(c,raxSize(cg->consumers));
-            addReplyBulkCString(c,"pending");
-            addReplyLongLong(c,raxSize(cg->pel));
-            addReplyBulkCString(c,"last-delivered-id");
-            addReplyStreamID(c,&cg->last_id);
-            addReplyBulkCString(c,"entries-read");
-            if (cg->entries_read != SCG_INVALID_ENTRIES_READ) {
-                addReplyLongLong(c,cg->entries_read);
+            if (c->argc == 3 || (c->argc == 4 && !strcasecmp(c->argv[3]->ptr,"*"))) {
+                streamCG *cg = ri.data;
+                addReplyMapLen(c,6);
+                addReplyBulkCString(c,"name");
+                addReplyBulkCBuffer(c,ri.key,ri.key_len);
+                addReplyBulkCString(c,"consumers");
+                addReplyLongLong(c,raxSize(cg->consumers));
+                addReplyBulkCString(c,"pending");
+                addReplyLongLong(c,raxSize(cg->pel));
+                addReplyBulkCString(c,"last-delivered-id");
+                addReplyStreamID(c,&cg->last_id);
+                addReplyBulkCString(c,"entries-read");
+                if (cg->entries_read != SCG_INVALID_ENTRIES_READ) {
+                    addReplyLongLong(c,cg->entries_read);
+                } else {
+                    addReplyNull(c);
+                }
+                addReplyBulkCString(c,"lag");
+                streamReplyWithCGLag(c,s,cg);
             } else {
-                addReplyNull(c);
+                char *str = (char *)ri.key;
+                streamCG *cg = ri.data;
+                for (int i = 3; (i < c->argc) && !strncasecmp(c->argv[i]->ptr,str,ri.key_len); ++i)
+                {
+//                 streamCG *cg = ri.data;
+                    addReplyMapLen(c,6);
+                    addReplyBulkCString(c,"name");
+                    addReplyBulkCBuffer(c,ri.key,ri.key_len);
+                    addReplyBulkCString(c,"consumers");
+                    addReplyLongLong(c,raxSize(cg->consumers));
+                    addReplyBulkCString(c,"pending");
+                    addReplyLongLong(c,raxSize(cg->pel));
+                    addReplyBulkCString(c,"last-delivered-id");
+                    addReplyStreamID(c,&cg->last_id);
+                    addReplyBulkCString(c,"entries-read");
+                    if (cg->entries_read != SCG_INVALID_ENTRIES_READ) {
+                        addReplyLongLong(c,cg->entries_read);
+                    } else {
+                        addReplyNull(c);
+                    }
+                    addReplyBulkCString(c,"lag");
+                    streamReplyWithCGLag(c,s,cg);
+                }
             }
-            addReplyBulkCString(c,"lag");
-            streamReplyWithCGLag(c,s,cg);
         }
         raxStop(&ri);
     } else if (!strcasecmp(opt,"STREAM")) {
