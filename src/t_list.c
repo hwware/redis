@@ -562,7 +562,15 @@ void linsertCommand(client *c) {
     iter = listTypeInitIterator(subject,0,LIST_TAIL);
     while (listTypeNext(iter,&entry)) {
         if (listTypeEqual(&entry,c->argv[3])) {
-            listTypeInsert(&entry,c->argv[4],where);
+            if (where == LIST_TAIL) {
+                for (int element = 4; element < c->argc; element++) {
+                    listTypeInsert(&entry,c->argv[element],where);
+                }
+            } else if (where == LIST_HEAD) {
+                for (int element = c->argc-1; element>=4; element--) {
+                    listTypeInsert(&entry,c->argv[element],where);
+                }
+            }
             inserted = 1;
             break;
         }
