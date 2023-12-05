@@ -1412,6 +1412,16 @@ foreach {pop} {BLPOP BLMPOP_LEFT} {
         }
     }
 
+    test {LINSERT multi element insert} {
+        assert_equal 4 [r rpush mullist a b c d] "new list mullist"
+        assert_equal "a b c d" [r lrange mullist 0 -1] "print list"
+        assert_equal 7 [r linsert mullist before b 11 22 33] "before b multi elements"
+        assert_equal "a 11 22 33 b c d" [r lrange mullist 0 -1] "print list"
+        assert_equal 10 [r linsert mullist after c qq ww ee] "after c multi elements"
+        assert_equal "a 11 22 33 b c qq ww ee d" [r lrange mullist 0 -1] "print list"
+        r flushdb
+    }
+
     test {LINSERT raise error on bad syntax} {
         catch {[r linsert xlist aft3r aa 42]} e
         set e
